@@ -1,0 +1,144 @@
+@use "@/styles/variables" as *;
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $line-soft;
+  flex-shrink: 0;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+}
+
+.title {
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-hint;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: $space-1;
+  gap: $space-1;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  width: 100%;
+  min-width: 0;
+  padding: $space-2;
+  border: 0;
+  border-radius: $radius;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $card-hover;
+  }
+
+  &.itemActive {
+    background: $surface2;
+  }
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.itemName {
+  font-size: $text-body;
+  color: $text-sub;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .itemActive & {
+    color: $text;
+    font-weight: $fw-medium;
+  }
+}
+
+.itemMeta {
+  font-size: $text-small;
+  color: $text-hint;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemSide {
+  font-size: $text-micro;
+  color: $text-hint;
+  font-weight: $fw-bold;
+  background: $surface2;
+  padding: 0 $space-1;
+  border-radius: $radius;
+  flex-shrink: 0;
+}
+
+.itemDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $line;
+  flex-shrink: 0;
+
+  .itemActive & {
+    background: $primary;
+  }
+
+  &.dotOk {
+    background: $primary;
+  }
+
+  &.dotWarning {
+    background: $warning;
+  }
+
+  &.dotError {
+    background: $danger;
+  }
+}
+
+.footer {
+  padding: $space-2;
+  border-top: 1px solid $line-soft;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .header {
+    padding: $space-3;
+  }
+
+  .list {
+    padding: $space-2;
+  }
+
+  .footer {
+    padding: $space-3;
+  }
+}

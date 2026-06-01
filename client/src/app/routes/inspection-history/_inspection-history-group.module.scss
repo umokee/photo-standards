@@ -1,0 +1,15 @@
+@use "@/styles/variables" as *;
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-2;
+  margin-top: $space-3;
+}
+
+@media (max-width: 767px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}

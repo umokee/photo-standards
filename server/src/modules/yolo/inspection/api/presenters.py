@@ -1,0 +1,132 @@
+from modules.yolo.inspection.adapters.payloads import build_model_name
+from modules.yolo.inspection.models import InspectionResult
+from modules.yolo.inspection.use_cases.start_inspection import InspectionStartResult
+
+from .schemas import (
+    InspectionHistoryItemResponse,
+    InspectionResultResponse,
+    InspectionSaveResponse,
+    InspectionSegmentResultResponse,
+    InspectionStartResponse,
+)
+
+
+def start_result(result: InspectionStartResult) -> InspectionStartResponse:
+    return InspectionStartResponse(
+        kind=result.kind,
+        task_id=result.task_id,
+        session_id=result.session_id,
+        status=result.status,
+        message=result.message,
+    )
+
+
+def save_result(
+    inspection: InspectionResult,
+    *,
+    message: str,
+) -> InspectionSaveResponse:
+    return InspectionSaveResponse(
+        inspection_id=inspection.id,
+        status=inspection.status,
+        message=message,
+    )
+
+
+def history_item(inspection: InspectionResult) -> InspectionHistoryItemResponse:
+    return build_inspection_history_item_response(inspection)
+
+
+def inspection_result(inspection: InspectionResult) -> InspectionResultResponse:
+    return build_inspection_result_response(inspection)
+
+
+def build_inspection_history_item_response(
+    inspection: InspectionResult,
+) -> InspectionHistoryItemResponse:
+    standard = inspection.standard
+    model = inspection.ml_model
+    camera = inspection.camera
+
+    return InspectionHistoryItemResponse(
+        id=inspection.id,
+        group_id=(
+            standard.group_id
+            if standard is not None
+            else model.group_id
+            if model is not None
+            else None
+        ),
+        standard_id=inspection.standard_id,
+        standard_name=standard.name if standard is not None else None,
+        standard_reference_path=_get_standard_reference_path(standard),
+        model_id=inspection.model_id,
+        model_name=build_model_name(model) if model is not None else None,
+        camera_id=inspection.camera_id,
+        camera_name=camera.name if camera is not None else None,
+        mode=inspection.mode,
+        status=inspection.status,
+        image_path=inspection.image_path,
+        result_image_path=inspection.result_image_path,
+        total_segments=inspection.total_segments,
+        matched_segments=inspection.matched_segments,
+        notes=inspection.notes,
+        inspected_at=inspection.inspected_at,
+    )
+
+
+def build_inspection_result_response(
+    inspection: InspectionResult,
+) -> InspectionResultResponse:
+    standard = inspection.standard
+    model = inspection.ml_model
+    camera = inspection.camera
+    user = inspection.user
+
+    return InspectionResultResponse(
+        id=inspection.id,
+        group_id=(
+            standard.group_id
+            if standard is not None
+            else model.group_id
+            if model is not None
+            else None
+        ),
+        standard_id=inspection.standard_id,
+        standard_name=standard.name if standard is not None else None,
+        standard_reference_path=_get_standard_reference_path(standard),
+        model_id=inspection.model_id,
+        model_name=build_model_name(model) if model is not None else None,
+        camera_id=inspection.camera_id,
+        camera_name=camera.name if camera is not None else None,
+        user_id=inspection.user_id,
+        user_name=user.full_name if user is not None else None,
+        mode=inspection.mode,
+        status=inspection.status,
+        image_path=inspection.image_path,
+        result_image_path=inspection.result_image_path,
+        total_segments=inspection.total_segments,
+        matched_segments=inspection.matched_segments,
+        alignment_status=inspection.alignment_status,
+        alignment_inlier_count=inspection.alignment_inlier_count,
+        alignment_raw_match_count=inspection.alignment_raw_match_count,
+        homography=inspection.homography,
+        notes=inspection.notes,
+        debug_payload=inspection.debug_payload,
+        inspected_at=inspection.inspected_at,
+        segment_results=[
+            InspectionSegmentResultResponse.model_validate(item)
+            for item in inspection.segment_results
+        ],
+    )
+
+
+def _get_standard_reference_path(standard: object | None) -> str | None:
+    if standard is None:
+        return None
+
+    for image in getattr(standard, "images", []):
+        if getattr(image, "is_reference", False):
+            return image.image_path
+
+    return None

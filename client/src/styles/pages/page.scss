@@ -1,0 +1,28 @@
+@use "../variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: $space-6;
+  max-width: $content-max;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.section {
+  padding: $space-5 0;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  border-radius: $radius;
+  padding: $space-2 $space-3;
+  gap: $space-1;
+  color: $text-hint;
+
+  &:hover {
+    background: $page2;
+  }
+}

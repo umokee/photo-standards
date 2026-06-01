@@ -1,0 +1,42 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-2 0;
+  border-bottom: 1px solid $line-soft;
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+
+  .name {
+    min-width: 0;
+    color: $text-sub;
+    font-size: $text-small;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .count {
+    flex-shrink: 0;
+    color: $text;
+    font-family: $font-mono;
+    font-size: $text-small;
+    font-weight: $fw-medium;
+  }
+}

@@ -1,0 +1,159 @@
+@use "@/styles/variables" as *;
+
+.root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: $space-4;
+}
+
+.summary {
+  display: grid;
+  gap: $space-3;
+  padding: 0 0 $space-5;
+  border-bottom: 1px solid $line-soft;
+}
+
+.summaryHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.eyebrow {
+  color: $text-hint;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summaryBody {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: $space-4;
+  align-items: start;
+}
+
+.summaryValue {
+  color: $text;
+  font-size: 40px;
+  font-weight: $fw-semibold;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.summaryValueMuted {
+  color: $text-hint;
+  font-size: 24px;
+  font-weight: $fw-medium;
+}
+
+.summaryContent {
+  min-width: 0;
+  display: grid;
+  gap: $space-2;
+}
+
+.summaryTitle {
+  color: $text;
+  font-size: 22px;
+  font-weight: $fw-semibold;
+  line-height: 1.35;
+}
+
+.summaryText {
+  color: $text-sub;
+  line-height: 1.5;
+}
+
+.summaryHint {
+  color: $text-hint;
+  font-size: $text-small;
+}
+
+.saveDock {
+  display: grid;
+  gap: $space-3;
+  padding: $space-5 0 0;
+  border-top: 1px solid $line-soft;
+  background: $page2;
+}
+
+.saveHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.saveBody {
+  display: grid;
+  gap: $space-3;
+  padding-bottom: $space-1;
+}
+
+.saveState {
+  display: grid;
+  gap: $space-1;
+  padding: $space-3 0;
+}
+
+.saveStateTitle {
+  color: $text;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+}
+
+.saveStateText {
+  color: $text-hint;
+  font-size: $text-small;
+}
+
+.alignmentNotice {
+  display: grid;
+  gap: $space-2;
+  padding: $space-4 $space-3;
+  margin: $space-4 0;
+  background: rgba(184, 70, 70, 0.08);
+  border: 1px solid rgba(184, 70, 70, 0.25);
+  border-radius: 12px;
+}
+
+.alignmentNoticeTitle {
+  color: $text;
+  font-weight: $fw-semibold;
+}
+
+.alignmentNoticeText {
+  color: $text-sub;
+  line-height: 1.5;
+}
+
+.saveActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-3;
+}
+
+.saveActionsSingle {
+  display: grid;
+}
+
+@media (max-width: 767px) {
+  .root {
+    padding: $space-3;
+  }
+
+  .summaryBody {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
+
+  .summaryValue {
+    font-size: 34px;
+  }
+}

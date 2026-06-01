@@ -1,0 +1,76 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-3;
+  border: 1px solid $line;
+  border-radius: $radius;
+  background: $surface;
+
+  &.transparent {
+    background: transparent;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.headerWithAside {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $space-3;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.title {
+  color: $text;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+}
+
+.hint {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.5;
+}
+
+.aside {
+  flex-shrink: 0;
+}
+
+.content {
+  display: flex;
+  gap: $space-1;
+
+  &.column {
+    flex-direction: column;
+  }
+
+  &.row {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  .headerWithAside {
+    flex-direction: column;
+  }
+
+  .aside {
+    width: 100%;
+  }
+}

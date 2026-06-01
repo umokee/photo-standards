@@ -1,0 +1,47 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: $surface2;
+  border: 1px solid $line-soft;
+}
+
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: $primary;
+
+  &.warn {
+    background: $warning;
+  }
+}
+
+.label {
+  font-size: $text-small;
+  color: $text-sub;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: right;
+}
+
+.warn {
+  color: $warning;
+  flex-shrink: 0;
+}
+
+.iconSlot {
+  width: 14px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}

@@ -1,0 +1,257 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: $surface2;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  min-width: 0;
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $line;
+  background: $surface;
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
+    min-width: 0;
+
+    .title {
+      min-width: 0;
+      color: $text;
+      font-size: $text-body;
+      font-weight: $fw-semibold;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      min-width: 0;
+      color: $text-hint;
+      font-size: $text-small;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-2;
+    flex-shrink: 0;
+  }
+}
+
+.viewer {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #111;
+}
+
+.imageViewer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #111;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  object-fit: contain;
+}
+
+.deviceCaptureVideo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.centerState {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: $space-5;
+  background: $surface2;
+}
+
+.emptyCard {
+  display: grid;
+  place-items: center;
+  gap: $space-3;
+  width: min(100%, 460px);
+  padding: $space-6;
+  border: 1px dashed $line;
+  border-radius: $radius;
+  background: $surface;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: $surface2;
+  color: $text-hint;
+}
+
+.emptyTitle {
+  color: $text;
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+}
+
+.emptyText {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.5;
+}
+
+.referenceThumbDock {
+  position: absolute;
+  right: $space-4;
+  bottom: $space-4;
+  z-index: 15;
+  width: 180px;
+  max-width: calc(100% - 32px);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 244, 239, 0.72);
+  pointer-events: auto;
+}
+
+.streamError {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: $space-4;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .root {
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-1;
+    width: 100%;
+
+    & > * {
+      min-width: 0;
+    }
+
+    & > :only-child {
+      grid-column: 1 / -1;
+    }
+
+    & button {
+      width: 100%;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+
+  .viewer {
+    position: relative;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: $surface2;
+  }
+
+  .imageViewer {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: #111;
+  }
+
+  .video {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
+  }
+
+  .centerState {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: $space-3;
+  }
+
+  .emptyCard {
+    width: 100%;
+    padding: $space-4;
+  }
+
+  .referenceThumbDock {
+    position: absolute;
+    right: $space-2;
+    bottom: $space-2;
+    z-index: 15;
+    width: 116px;
+    max-width: calc(100% - 16px);
+  }
+}

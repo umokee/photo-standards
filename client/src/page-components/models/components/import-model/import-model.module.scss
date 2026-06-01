@@ -1,0 +1,162 @@
+@use "@/styles/variables" as *;
+
+.fileRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $space-3;
+  flex-wrap: wrap;
+}
+
+.fileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: min(100%, 260px);
+}
+
+.fileName {
+  color: $text;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileStatus {
+  color: $text-sub;
+  font-size: $text-small;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mappings {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.mappingRow {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: calc($radius + 2px);
+  background: $surface2;
+}
+
+.mappingTop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mappingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.nativeName {
+  color: $text;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  overflow-wrap: anywhere;
+}
+
+.nativeMeta {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.nativeMetaAuto {
+  color: $primary-text;
+}
+
+.autoMatchLabel {
+  font-weight: $fw-semibold;
+}
+
+.autoMatchValue {
+  color: $text;
+}
+
+.mappingControls {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.modeTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.modeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: transparent;
+  color: $text-sub;
+  font-size: $text-small;
+  font-weight: $fw-medium;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+
+  &:hover {
+    background: $surface;
+    color: $text;
+  }
+}
+
+.modeBtnActive {
+  color: $primary-text;
+  border-color: $primary-bd;
+  background: $primary-bg;
+}
+
+.existingRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.newGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr) minmax(0, 1fr);
+  gap: $space-2;
+}
+
+.inlineMeta {
+  color: $text-sub;
+  font-size: $text-micro;
+}
+
+@media (max-width: 900px) {
+  .newGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modeTabs {
+    grid-template-columns: 1fr;
+  }
+}

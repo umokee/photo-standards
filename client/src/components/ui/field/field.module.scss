@@ -1,0 +1,25 @@
+@use "@/styles/variables" as *;
+
+.root {
+  margin-bottom: $space-3;
+
+  &.noMargin {
+    margin-bottom: 0;
+  }
+}
+
+.label {
+  display: block;
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-hint;
+  margin-bottom: $space-1;
+}
+
+.errorMsg {
+  font-size: $text-micro;
+  color: $danger-text;
+  margin-top: $space-1;
+}

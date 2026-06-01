@@ -1,0 +1,68 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding: $space-4;
+  border: 1px solid $line;
+  border-radius: $radius;
+  background: $surface;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+
+  .label {
+    font-size: $text-body;
+    color: $text-sub;
+  }
+
+  .value {
+    display: flex;
+    align-items: baseline;
+    gap: $space-2;
+    font-family: $font-mono;
+    font-size: $text-stat;
+    color: $text;
+  }
+}
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: $space-3;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border: 1px solid $line;
+  border-radius: $radius;
+  background: $surface2;
+
+  .label {
+    font-size: $text-body;
+    color: $text-hint;
+  }
+
+  .value {
+    font-family: $font-mono;
+    font-size: $text-stat;
+    line-height: 1.1;
+    color: $text;
+    font-weight: $fw-medium;
+  }
+}
+
+@media (max-width: 900px) {
+  .summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

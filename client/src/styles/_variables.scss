@@ -1,0 +1,81 @@
+$font-sans: "Inter", "Segoe UI", sans-serif;
+$font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+
+$text-micro: 11px;
+$text-small: 12px;
+$text-body: 13px;
+$text-title: 14px;
+$text-page: clamp(16px, 2vw, 20px);
+$text-stat: clamp(18px, 2.5vw, 24px);
+
+$fw-regular: 400;
+$fw-medium: 500;
+$fw-semibold: 600;
+$fw-bold: 700;
+$fw-extrabold: 800;
+
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: clamp(12px, 1.5vw, 16px);
+$space-5: clamp(14px, 2vw, 20px);
+$space-6: clamp(16px, 2.5vw, 24px);
+$space-7: clamp(22px, 3vw, 32px);
+$space-8: clamp(30px, 3.5vw, 40px);
+
+$radius: 5px;
+
+$nav-height: clamp(44px, 6vh, 48px);
+$sidebar-width: 240px;
+$panel-width: 360px;
+$content-max: 1100px;
+
+$primary: hsl(150, 44%, 43%);
+$primary-hover: hsl(150, 44%, 38%);
+$primary-active: hsl(150, 48%, 34%);
+$primary-text: hsl(150, 44%, 48%);
+$primary-bg: hsla(150, 44%, 43%, 0.1);
+$primary-bd: hsla(150, 44%, 43%, 0.22);
+
+$ml: hsl(264, 49%, 55%);
+$ml-hover: hsl(264, 42%, 49%);
+$ml-text: hsl(264, 51%, 64%);
+$ml-bg: hsla(264, 49%, 55%, 0.1);
+$ml-bd: hsla(264, 49%, 55%, 0.22);
+
+$warning: hsl(42, 66%, 46%);
+$warning-hover: hsl(42, 69%, 40%);
+$warning-text: hsl(42, 65%, 51%);
+$warning-bg: hsla(42, 66%, 46%, 0.1);
+$warning-bd: hsla(42, 66%, 46%, 0.22);
+
+$danger: hsl(0, 59%, 45%);
+$danger-hover: hsl(0, 59%, 40%);
+$danger-text: hsl(0, 55%, 51%);
+$danger-bg: hsla(0, 59%, 45%, 0.1);
+$danger-bd: hsla(0, 59%, 45%, 0.22);
+
+$page: hsl(40, 18%, 89%);
+$page2: hsl(40, 16%, 86%);
+$surface: hsl(42, 29%, 93%);
+$surface2: hsl(40, 20%, 90%);
+$card-hover: hsl(42, 22%, 91%);
+
+$line: hsl(42, 13%, 77%);
+$line-soft: hsl(42, 12%, 82%);
+
+$text: hsl(100, 13%, 11%);
+$text-sub: hsl(102, 8%, 32%);
+$text-hint: hsl(102, 7%, 54%);
+$text-off: hsl(100, 6%, 72%);
+$text-white: hsl(0, 0%, 100%);
+
+$nav-bg: hsl(100, 13%, 11%);
+$nav-border: hsl(105, 13%, 16%);
+$nav-text: hsl(100, 10%, 42%);
+$nav-text-hover: hsl(100, 9%, 62%);
+$nav-active-bg: hsla(0, 0%, 100%, 0.12);
+$nav-active-text: hsl(42, 26%, 92%);
+$nav-avatar-bg: hsla(0, 0%, 100%, 0.08);
+$nav-avatar-text: hsl(100, 10%, 42%);
+$nav-meta: hsl(100, 10%, 42%);

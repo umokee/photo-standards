@@ -1,0 +1,151 @@
+@use "@/styles/variables" as *;
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $line;
+  border-radius: $radius;
+  background: $surface;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+
+  &:hover {
+    border-color: $line-soft;
+  }
+}
+
+.cardExpanded {
+  border-color: $primary;
+  box-shadow: 0 0 0 1px $primary-bd;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: $card-hover;
+  }
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+  min-width: 0;
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  min-width: 0;
+  color: $text-hint;
+  font-size: $text-small;
+  line-height: 1.4;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+.title {
+  min-width: 0;
+  color: $text;
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaItem {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:not(:last-child)::after {
+    content: "·";
+    margin-left: $space-2;
+    color: $text-off;
+  }
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: $text-hint;
+  transition: transform 120ms ease;
+
+  .cardExpanded & {
+    transform: rotate(90deg);
+  }
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+  padding-top: $space-1;
+  border-top: 1px solid $line-soft;
+}
+
+.summaryValue {
+  color: $text;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  line-height: 1.3;
+}
+
+.summaryText {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.3;
+}
+
+.summaryTextSuccess {
+  color: $primary-hover;
+}
+
+.summaryTextDanger {
+  color: $danger-hover;
+}
+
+.body {
+  padding: $space-4;
+  border-top: 1px solid $line;
+  background: $surface2;
+}
+
+@media (max-width: 640px) {
+  .headerTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-2;
+  }
+
+  .status {
+    width: 100%;
+  }
+}

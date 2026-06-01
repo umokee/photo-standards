@@ -1,0 +1,40 @@
+@use "../variables" as *;
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  &__head-row {
+    background: $surface2;
+    border-bottom: 1px solid $line;
+  }
+
+  &__head-cell {
+    font-size: $text-micro;
+    font-weight: $fw-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $text-hint;
+    text-align: left;
+    padding: $space-2 $space-4;
+    white-space: nowrap;
+  }
+
+  &__row {
+    border-bottom: 1px solid $line-soft;
+
+    &:last-child {
+      border-bottom: none;
+    }
+    &:hover {
+      background: $card-hover;
+    }
+  }
+
+  &__cell {
+    padding: $space-3 $space-4;
+    font-size: $text-small;
+    color: $text-sub;
+    vertical-align: middle;
+  }
+}

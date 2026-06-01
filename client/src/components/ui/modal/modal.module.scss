@@ -1,0 +1,100 @@
+@use "@/styles/variables" as *;
+
+.overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  inset: 0;
+  position: fixed;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+}
+
+.overlayBottom {
+  align-items: flex-end;
+}
+
+.root {
+  background: $surface;
+  border: 1px solid $line;
+  border-radius: $radius;
+  width: 420px;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rootBottom {
+  width: min(100%, 560px);
+  max-width: 100vw;
+  max-height: min(88vh, 720px);
+  border-radius: $radius $radius 0 0;
+  border-bottom: 0;
+}
+
+.wide {
+  width: 520px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $space-3 $space-4 $space-3;
+  border-bottom: 1px solid $line-soft;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: $text-title;
+  font-weight: $fw-bold;
+  color: $text;
+}
+
+.close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: $radius;
+  color: $text-hint;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  &:hover {
+    background: $surface2;
+    color: $text;
+  }
+}
+
+.body {
+  padding: $space-4;
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.footer {
+  padding: $space-3 $space-4;
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+  border-top: 1px solid $line-soft;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .rootBottom {
+    width: 100%;
+  }
+}

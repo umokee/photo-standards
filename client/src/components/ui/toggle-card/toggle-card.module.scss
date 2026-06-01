@@ -1,0 +1,37 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface2;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.title {
+  color: $text;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+}
+
+.hint {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .root {
+    align-items: flex-start;
+  }
+}

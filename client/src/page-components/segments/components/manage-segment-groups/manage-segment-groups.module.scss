@@ -1,0 +1,155 @@
+@use "@/styles/variables" as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  flex: 1;
+  min-height: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-height: 420px;
+  gap: $space-1;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface;
+}
+
+.groupRow,
+.segmentRow {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: 6px $space-2;
+
+  &:hover {
+    background: $surface2;
+  }
+}
+
+.segmentRow {
+  padding-left: 32px;
+  border-top: 1px solid $line-soft;
+  background: $surface2;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: $text-hint;
+  cursor: pointer;
+  transform: rotate(0deg);
+  transition: transform 140ms ease;
+
+  .group.collapsed & {
+    transform: rotate(0deg);
+  }
+}
+
+.expanded {
+  transform: rotate(90deg);
+}
+
+.colorTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: $radius;
+  background: none;
+}
+
+.colorOpen {
+  background: $surface2;
+}
+
+.colorField {
+  flex-shrink: 0;
+}
+
+.colorSwatch {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(#000, 0.08);
+  border-radius: 4px;
+}
+
+.colorPanel {
+  padding: 8px 10px 10px 34px;
+  border-top: 1px solid $line-soft;
+  background: $surface2;
+}
+
+.nameInput {
+  min-width: 0;
+  flex: 1;
+  padding: 1px 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: $text;
+  font-size: $text-body;
+
+  &::placeholder {
+    color: $text-hint;
+  }
+
+  &:focus {
+    margin-bottom: -1px;
+    border-bottom: 1px solid $primary;
+  }
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: $radius;
+  background: none;
+  color: $text-hint;
+
+  &:hover {
+    background: $primary-bg;
+    color: $primary-text;
+  }
+}
+
+.removeButton:hover {
+  background: $danger-bg;
+  color: $danger-text;
+}
+
+.segmentDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+@media (max-width: 767px) {
+  .list {
+    max-height: min(420px, calc(92dvh - 220px));
+  }
+}

@@ -1,0 +1,28 @@
+Metadata-Version: 2.4
+Name: server
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: python-multipart
+Requires-Dist: sqlalchemy
+Requires-Dist: asyncpg
+Requires-Dist: psycopg[binary]
+Requires-Dist: pydantic-settings
+Requires-Dist: pydantic
+Requires-Dist: alembic
+Requires-Dist: bcrypt
+Requires-Dist: numpy
+Requires-Dist: pillow
+Requires-Dist: opencv-python
+Requires-Dist: requests
+Requires-Dist: psutil
+Requires-Dist: torch
+Requires-Dist: ultralytics
+Requires-Dist: shapely
+Requires-Dist: structlog
+Requires-Dist: rich
+Requires-Dist: aiortc
+Requires-Dist: av
+Requires-Dist: SAM-2 @ https://github.com/facebookresearch/sam2/archive/refs/heads/main.tar.gz
+Requires-Dist: lightglue @ https://github.com/cvg/LightGlue/archive/refs/heads/main.tar.gz

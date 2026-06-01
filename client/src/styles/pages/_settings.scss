@@ -1,0 +1,70 @@
+@use "../variables" as *;
+
+.settings {
+  &__name {
+    font-size: $text-page;
+    font-weight: $fw-bold;
+    margin-bottom: $space-4;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: $space-3;
+    border-bottom: 1px solid $line;
+    margin-bottom: $space-4;
+
+    &-tab {
+      color: $text-hint;
+      padding: $space-2 $space-3;
+
+      &.active {
+        color: $primary;
+        font-weight: $fw-bold;
+        border-bottom: 1px solid $primary;
+      }
+    }
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    overflow-y: auto;
+  }
+}
+
+.users-card {
+  display: flex;
+  flex-direction: column;
+  background: $surface;
+  border-radius: $radius;
+  overflow: hidden;
+  flex: 1;
+
+  &__header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: $space-3 $space-4;
+    gap: $space-3;
+
+    .input {
+      margin-bottom: 0;
+    }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    border-top: 1px solid $line-soft;
+
+    &-item {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr 1fr 1fr auto auto;
+      align-items: center;
+      padding: $space-3 $space-4;
+      border-top: 1px solid $line-soft;
+      gap: $space-3;
+    }
+  }
+}

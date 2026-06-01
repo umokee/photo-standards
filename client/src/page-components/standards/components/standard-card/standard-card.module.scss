@@ -1,0 +1,384 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  background: $surface;
+  border-radius: $radius;
+  border: 1px solid $line;
+  margin-bottom: $space-2;
+  overflow: hidden;
+
+  &.expanded {
+    border: 1px solid $primary;
+  }
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  gap: $space-3;
+
+  &:hover {
+    background: $card-hover;
+  }
+}
+
+.reference {
+  width: 54px;
+  height: 40px;
+  border-radius: $radius;
+  background: $surface2;
+  border: 1px solid $line;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: $line;
+    stroke-width: 1;
+  }
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.name {
+  font-size: $text-body;
+  font-weight: $fw-medium;
+  color: $text;
+}
+.meta {
+  font-size: $text-small;
+  color: $text-hint;
+}
+
+.chevron {
+  color: $text-hint;
+  flex-shrink: 0;
+
+  .root.expanded & {
+    transform: rotate(90deg);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: $space-1;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-4;
+  border-top: 1px solid $line;
+  border-bottom-left-radius: $radius;
+  border-bottom-right-radius: $radius;
+  background: $surface2;
+}
+
+.bodyToprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.bodyStats {
+  display: flex;
+  gap: 16px;
+}
+
+.bodyStat {
+  font-size: $text-small;
+  color: $text-hint;
+
+  span {
+    font-family: $font-mono;
+    color: $text-sub;
+    font-weight: $fw-medium;
+  }
+}
+
+.bodyImages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+}
+
+.imageCard {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: $surface;
+  border-radius: $radius;
+  border: 1px solid $line;
+  border-radius: $radius;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    border-color: $primary-bd;
+  }
+
+  &:hover .imageCardOverlay {
+    opacity: 1;
+  }
+}
+
+.imageCardAnnotated {
+  border: 1px solid $primary;
+}
+
+.imageCardArmed {
+  border-color: $primary;
+
+  .imageCardOverlay {
+    opacity: 1;
+  }
+}
+
+.imageCardPhoto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: $line;
+    stroke-width: 1;
+  }
+}
+
+.imageCardRef {
+  position: absolute;
+  top: $space-1;
+  left: $space-1;
+  border-radius: $radius;
+  padding: 1px $space-1;
+  font-weight: $fw-extrabold;
+  font-size: $text-micro;
+  background: hsl(220, 90%, 70%);
+  color: $text-white;
+}
+
+.imageCardOverlay {
+  position: absolute;
+  top: $space-1;
+  right: $space-1;
+  display: flex;
+  gap: $space-1;
+  opacity: 0;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: $radius;
+    background: hsl(0, 0%, 25%);
+    color: $text-white;
+    border: none;
+    cursor: pointer;
+  }
+}
+
+.imageCardDot {
+  position: absolute;
+  bottom: $space-1;
+  right: $space-1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.imageCardDotDone {
+  background: $primary;
+}
+
+.imageCardDotTodo {
+  background: $line;
+}
+
+.imageCardMore {
+  border-style: dashed;
+  background: $surface2;
+  color: $text-hint;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-2;
+  font: inherit;
+  text-align: center;
+  appearance: none;
+
+  &:hover {
+    background: $card-hover;
+    border-color: $primary;
+    color: $text;
+  }
+}
+
+.imageCardMoreCount {
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+  color: $text;
+}
+
+.imageCardMoreLabel {
+  font-size: $text-small;
+  color: inherit;
+}
+
+.classes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: $space-1;
+}
+
+.classTitle {
+  color: $text-hint;
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: $space-2;
+}
+
+.classList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-1;
+}
+
+.bodyPlaceholder {
+  height: 180px;
+  border-top: 1px solid $line;
+  background: linear-gradient(90deg, $surface2 25%, $card-hover 50%, $surface2 75%);
+  background-size: 220% 100%;
+}
+
+.imageCardMore {
+  border-style: dashed;
+  background: $surface2;
+  color: $text-hint;
+  flex-direction: column;
+  gap: $space-1;
+  font: inherit;
+
+  &:hover {
+    background: $card-hover;
+    border-color: $primary;
+    color: $text;
+  }
+}
+
+.imageCardMoreCount {
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+  color: $text;
+}
+
+.imageCardMoreLabel {
+  font-size: $text-small;
+  color: inherit;
+}
+
+@media (max-width: 767px) {
+  .header {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "reference info chevron"
+      "actions actions actions";
+    align-items: start;
+    gap: $space-2;
+    padding: $space-2 $space-3;
+  }
+
+  .reference {
+    grid-area: reference;
+  }
+
+  .info {
+    grid-area: info;
+  }
+
+  .chevron {
+    grid-area: chevron;
+    align-self: center;
+  }
+
+  .actions {
+    grid-area: actions;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-1;
+    width: 100%;
+
+    & > * {
+      min-width: 0;
+    }
+
+    & button {
+      width: 100%;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+
+  .body {
+    padding: $space-3;
+  }
+
+  .bodyImages {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+
+  .bodyToprow {
+    flex-wrap: wrap;
+    gap: $space-2;
+  }
+
+  .imageCardOverlay {
+    opacity: 0;
+  }
+
+  .imageCardArmed .imageCardOverlay {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,42 @@
+@use "../variables" as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: 2px 7px;
+  border-radius: $radius;
+  font-size: $text-small;
+  font-weight: $fw-medium;
+  border: 1px solid transparent;
+
+  &--success {
+    background: $primary-bg;
+    border-color: $primary-bd;
+    color: $primary-text;
+  }
+
+  &--ml {
+    background: $ml-bg;
+    border-color: $ml-bd;
+    color: $ml-text;
+  }
+
+  &--amber {
+    background: $warning-bg;
+    border-color: $warning-bd;
+    color: $warning-text;
+  }
+
+  &--danger {
+    background: $danger-bg;
+    border-color: $danger-bd;
+    color: $danger-text;
+  }
+
+  &--ghost {
+    background: $surface2;
+    border-color: $line;
+    color: $text-hint;
+  }
+}

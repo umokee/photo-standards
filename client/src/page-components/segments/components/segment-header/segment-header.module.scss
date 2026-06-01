@@ -1,0 +1,67 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  width: 100%;
+  min-width: 0;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+  color: $text;
+  line-height: 1.2;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.metaItem {
+  font-size: $text-small;
+  font-weight: $fw-medium;
+  color: $text-sub;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767px) {
+  .root {
+    align-items: stretch;
+    flex-direction: column;
+    gap: $space-2;
+  }
+
+  .left {
+    flex-wrap: wrap;
+  }
+
+  .title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+}

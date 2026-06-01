@@ -1,0 +1,198 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  min-width: 0;
+}
+
+.summaryPanel {
+  display: grid;
+  gap: $space-4;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-3;
+}
+
+.summaryNote {
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface;
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.55;
+
+  strong {
+    color: $text;
+    font-weight: $fw-semibold;
+  }
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.componentSections {
+  display: grid;
+  gap: $space-4;
+}
+
+.componentSuccessState {
+  display: grid;
+  gap: $space-1;
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface;
+}
+
+.componentSuccessTitle {
+  color: $text;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+}
+
+.componentSuccessText {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.5;
+}
+
+.collapsedSummary {
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface2;
+
+  span {
+    color: $text-hint;
+    font-size: $text-small;
+  }
+}
+
+.imagesGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: $space-4;
+  align-items: stretch;
+}
+
+.sideImages {
+  display: grid;
+  gap: $space-4;
+  min-width: 0;
+}
+
+.imageCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid $line;
+  border-radius: $radius;
+}
+
+.imageCardLarge {
+  min-height: 500px;
+}
+
+.imageHead {
+  padding: $space-2;
+  border-bottom: 1px solid $line-soft;
+
+  strong {
+    font-size: $text-title;
+  }
+}
+
+.imageLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  flex: 1;
+  background: #111;
+}
+
+.imageCardLarge .imageLink {
+  min-height: 450px;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 640px;
+  object-fit: contain;
+}
+
+.imageEmpty {
+  display: grid;
+  place-items: center;
+  gap: $space-2;
+  min-height: 220px;
+  padding: $space-4;
+  color: $text-hint;
+  background: $surface2;
+  font-size: $text-small;
+  text-align: center;
+
+  svg {
+    color: $text-off;
+  }
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-3;
+}
+
+.notesRow {
+  margin-top: $space-3;
+}
+
+@media (max-width: 1300px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .imagesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sideImages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .sideImages {
+    grid-template-columns: 1fr;
+  }
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}

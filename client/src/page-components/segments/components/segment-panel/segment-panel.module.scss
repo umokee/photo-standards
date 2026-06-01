@@ -1,0 +1,243 @@
+@use "@/styles/variables" as *;
+
+.root {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: $surface;
+  border-left: 1px solid $line-soft;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  &.classes {
+    flex: 1 1 0;
+    min-height: 0;
+    border-bottom: 1px solid $line-soft;
+  }
+
+  &.anns {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.sectionHeader {
+  padding: $space-2 $space-3 $space-1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: $space-1;
+}
+
+.sectionTitle {
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-hint;
+}
+
+.sectionMeta {
+  font-size: $text-micro;
+  color: $text-hint;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classes {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: $space-1 $space-2 $space-2;
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.groupBlock {
+  margin-bottom: $space-1;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2 $space-1;
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-hint;
+}
+
+.groupColor {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius;
+  flex-shrink: 0;
+}
+
+.classItem {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-2;
+  border-radius: $radius;
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: $card-hover;
+  }
+
+  &.selected {
+    background: $surface2;
+    border-color: $line;
+  }
+}
+
+.classColor {
+  width: 10px;
+  height: 10px;
+  border-radius: $radius;
+  flex-shrink: 0;
+}
+
+.classLabel {
+  font-size: $text-small;
+  color: $text-sub;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .classItem & {
+    color: $text;
+    font-weight: $fw-medium;
+  }
+}
+
+.classCount {
+  font-size: $text-micro;
+  font-family: $font-mono;
+  color: $text-hint;
+  white-space: nowrap;
+
+  .has {
+    color: $primary-text;
+  }
+}
+
+.anns {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-1 $space-2 $space-2;
+}
+
+.annEmpty {
+  padding: $space-5 $space-3;
+  text-align: center;
+  font-size: $text-micro;
+  color: $text-hint;
+  line-height: 1.5;
+}
+
+.annItem {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-1 $space-2;
+  border-radius: $radius;
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: $space-1;
+
+  &:hover {
+    background: $card-hover;
+  }
+
+  &.selected {
+    background: $surface2;
+    border-color: $line;
+  }
+}
+
+.annPolygon {
+  font-size: $text-small;
+  color: $text-sub;
+  flex: 1;
+}
+
+.annDelete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: $radius;
+  color: $text-hint;
+  cursor: pointer;
+  opacity: 0;
+
+  &:hover {
+    background: $danger-bg;
+    color: $danger-text;
+  }
+
+  .annItem:hover & {
+    opacity: 1;
+  }
+
+  svg {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: $space-2;
+  border-top: 1px solid $line-soft;
+  gap: $space-1;
+}
+
+@media (max-width: 767px) {
+  .root {
+    border-left: 0;
+  }
+
+  .sectionHeader {
+    padding: $space-3 $space-3 $space-2;
+  }
+
+  .classes,
+  .anns {
+    padding: $space-2 $space-3 $space-3;
+  }
+
+  .annDelete {
+    opacity: 1;
+  }
+
+  .actions {
+    padding: $space-3;
+    padding-bottom: calc(#{$space-3} + env(safe-area-inset-bottom));
+    gap: $space-2;
+  }
+}

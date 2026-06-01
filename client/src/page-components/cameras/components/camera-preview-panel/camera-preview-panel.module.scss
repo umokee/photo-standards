@@ -1,0 +1,120 @@
+@use "@/styles/variables" as *;
+
+.panel {
+  display: grid;
+  overflow: hidden;
+  min-width: 0;
+  gap: $space-3;
+}
+
+.previewViewport {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: $radius;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.previewAction {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: $space-5;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: progress;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.previewActionCentered {
+  place-items: center;
+}
+
+.previewActionLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 240px);
+  min-height: 64px;
+  padding: $space-3 $space-5;
+  border-radius: $radius;
+  background: $surface;
+  font-size: $text-title;
+  font-weight: $fw-bold;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.previewVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: $radius;
+  min-height: inherit;
+  object-fit: contain;
+}
+
+.statusPanel {
+  display: grid;
+  gap: $space-2;
+  padding: $space-4;
+  border-top: 1px solid $line;
+  border-radius: $radius;
+  padding-top: $space-2;
+  background: $danger-bg;
+  border-color: $danger-bd;
+}
+
+.statusHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.statusTitle {
+  color: $text;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+}
+
+.statusMessage {
+  color: $text-sub;
+  font-size: $text-small;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .previewViewport {
+    min-height: 280px;
+  }
+
+  .previewAction {
+    min-height: 280px;
+  }
+
+  .previewActionLabel {
+    width: min(100%, 120px);
+    min-height: 52px;
+    font-size: $text-small;
+  }
+
+  .statusHeader {
+    flex-direction: column;
+  }
+}

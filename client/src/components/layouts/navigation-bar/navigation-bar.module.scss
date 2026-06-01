@@ -1,0 +1,136 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: $nav-height;
+  background: $nav-bg;
+  border-bottom: 1px solid $nav-border;
+  flex-shrink: 0;
+  z-index: 100;
+  overflow-x: hidden;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: $space-3;
+  padding: 0 $space-5;
+}
+
+.links {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  gap: $space-1;
+  overflow: hidden;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: $space-1 $space-3;
+  font-size: $text-small;
+  color: $nav-text;
+  border-radius: $radius;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $nav-text-hover;
+  }
+}
+
+.linkActive {
+  color: $nav-active-text;
+  background: $nav-active-bg;
+  font-weight: $fw-medium;
+}
+
+.linkIcon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius;
+  color: $nav-text;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $nav-active-text;
+    background: $nav-active-bg;
+  }
+
+  svg {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .inner {
+    padding-inline: $space-4;
+  }
+
+  .link {
+    flex-direction: column;
+    min-width: 40px;
+    padding: $space-1 $space-2;
+    gap: 2px;
+    font-size: 0;
+  }
+
+  .linkIcon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .linkActive::after {
+    content: "";
+    display: block;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: $primary;
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 767px) {
+  .inner {
+    gap: $space-2;
+    padding-inline: $space-2;
+  }
+
+  .links {
+    justify-content: space-between;
+    gap: 2px;
+  }
+
+  .link {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: $space-1 0;
+  }
+
+  .menuButton {
+    display: flex;
+    width: 32px;
+    width: 32px;
+  }
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=PhotoStandards backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/photo-standards-db/server
+EnvironmentFile=-/opt/photo-standards-db/server/.env
+Environment=DEBUG=false
+Environment=SERVER_HOST=127.0.0.1
+Environment=SERVER_PORT=3001
+Environment=SERVER_RELOAD=false
+ExecStart=/opt/photo-standards-db/server/.venv/bin/python src/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,44 @@
+@use "../variables" as *;
+
+.card {
+  background: $surface;
+  border: 1px solid $line;
+  border-radius: $radius;
+  overflow: hidden;
+  margin-bottom: $space-3;
+  &--fill {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px $space-4;
+    border-bottom: 1px solid $line-soft;
+    gap: $space-3;
+    flex-shrink: 0;
+
+    &-title {
+      font-size: $text-small;
+      font-weight: $fw-semibold;
+      color: $text;
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+    }
+  }
+
+  &__body {
+    padding: $space-3 $space-4;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+}

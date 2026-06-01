@@ -1,0 +1,87 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.preset {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: $radius;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.presetActive {
+  border: 1px solid $primary;
+}
+
+.sliderBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.sliderLabel {
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  color: $text-hint;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  margin: 0;
+  appearance: none;
+  border: 1px solid rgba($line, 0.9);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    hsl(0deg 72% 58%),
+    hsl(40deg 76% 58%),
+    hsl(58deg 76% 57%),
+    hsl(96deg 60% 52%),
+    hsl(140deg 52% 48%),
+    hsl(182deg 56% 48%),
+    hsl(220deg 58% 56%),
+    hsl(264deg 58% 58%),
+    hsl(318deg 64% 58%),
+    hsl(360deg 72% 58%)
+  );
+
+  &::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    appearance: none;
+    border: 2px solid rgba(#fff, 0.96);
+    border-radius: 50%;
+    background: $text;
+  }
+
+  &::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(#fff, 0.96);
+    border-radius: 50%;
+    background: $text;
+  }
+
+  &::-moz-range-track {
+    height: 8px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+  }
+}

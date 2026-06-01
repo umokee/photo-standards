@@ -1,0 +1,18 @@
+@use "../variables" as *;
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: $line transparent;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $line;
+    border-radius: 2px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

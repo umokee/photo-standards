@@ -1,0 +1,158 @@
+@use "@/styles/variables" as *;
+
+.root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding-top: $space-4;
+  gap: $space-4;
+}
+
+.rootHistory {
+  display: block;
+  height: auto;
+  padding-top: 0;
+
+  .list {
+    overflow: visible;
+  }
+}
+
+.list {
+  min-height: 0;
+  display: grid;
+  gap: $space-2;
+  align-content: start;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 0;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  gap: $space-2;
+  width: 100%;
+  padding: $space-4 $space-3;
+  border: 1px solid transparent;
+  border-radius: $radius;
+  color: $text;
+  text-align: left;
+  background: transparent;
+}
+
+.rowHistory {
+  padding: $space-3;
+  border-color: $line-soft;
+  background: $surface;
+
+  &::before {
+    display: none;
+  }
+}
+
+.rowInteractive {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
+.rowInteractive.rowHistory:hover {
+  background: $card-hover;
+}
+
+.rowActive {
+  border-color: $line-soft;
+  background: $surface2;
+}
+
+.rowHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-width: 0;
+}
+
+.rowSide {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.name {
+  min-width: 0;
+  color: $text;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+  line-height: 1.4;
+}
+
+.confidence {
+  color: $text-hint;
+  font-size: $text-small;
+  font-weight: $fw-medium;
+  white-space: nowrap;
+}
+
+.rowText {
+  color: $text-sub;
+  line-height: 1.5;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2 $space-3;
+  color: $text-hint;
+  font-size: $text-small;
+}
+
+.rowHistory {
+  .rowHead {
+    align-items: center;
+  }
+
+  .name {
+    font-size: $text-small;
+    font-weight: $fw-medium;
+  }
+
+  .rowMeta {
+    padding-left: 20px;
+  }
+}
+
+.empty {
+  padding: $space-4 $space-3;
+  color: $text-hint;
+}
+
+@media (max-width: 767px) {
+  .rowHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rowSide {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

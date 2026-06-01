@@ -1,0 +1,118 @@
+@use "@/styles/variables" as *;
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: 6px 12px;
+  font-size: $text-small;
+  font-weight: $fw-medium;
+  line-height: normal;
+  border-radius: $radius;
+  border: none;
+  cursor: pointer;
+  appearance: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  svg {
+    display: block;
+    width: 13px;
+    height: 13px;
+    stroke-width: 1.75;
+    flex-shrink: 0;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.sm {
+  height: 28px;
+  padding: 0 9px;
+  font-size: $text-micro;
+}
+
+.lg {
+  padding: 10px 18px;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.icon {
+  padding: 0;
+  width: 28px;
+  height: 28px;
+}
+
+.full {
+  width: 100%;
+}
+
+.primary {
+  background: $primary;
+  color: $text-white;
+
+  &:hover {
+    background: $primary-hover;
+  }
+  &:active {
+    background: $primary-active;
+  }
+}
+
+.ghost {
+  background: $surface2;
+  color: $text-sub;
+  border: 1px solid $line;
+
+  &:hover {
+    background: $card-hover;
+    color: $text;
+  }
+}
+
+.warning {
+  background: $warning-bg;
+  color: $warning-text;
+  border: 1px solid $warning-bd;
+
+  &:hover {
+    background: $warning;
+    color: $text-white;
+    border-color: $warning;
+  }
+}
+
+.danger {
+  background: $danger-bg;
+  color: $danger-text;
+  border: 1px solid $danger-bd;
+
+  &:hover {
+    background: $danger;
+    color: $text-white;
+    border-color: $danger;
+  }
+}
+
+.ml {
+  background: $ml-bg;
+  color: $ml-text;
+  border: 1px solid $ml-bd;
+
+  &:hover {
+    background: $ml;
+    color: $text-white;
+    border-color: $ml;
+  }
+}

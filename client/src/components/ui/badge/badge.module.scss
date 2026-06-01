@@ -1,0 +1,46 @@
+@use "@/styles/variables" as *;
+
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2;
+  border-radius: $radius;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  flex: 0 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
+
+  &.info {
+    background: $surface;
+    color: $text-sub;
+    border: 1px solid $line-soft;
+  }
+
+  &.success {
+    background: $primary-bg;
+    color: $primary-text;
+    border-color: $primary-bd;
+  }
+
+  &.warning {
+    background: $warning-bg;
+    color: $warning-text;
+    border-color: $warning-bd;
+  }
+
+  &.danger {
+    background: $danger-bg;
+    color: $danger-text;
+    border-color: $danger-bd;
+  }
+}
+
+.colorDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 25%;
+  flex-shrink: 0;
+}

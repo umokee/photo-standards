@@ -1,0 +1,193 @@
+@use "@/styles/variables" as *;
+
+.root {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-4 $space-4 $space-3;
+  border-bottom: 1px solid $line-soft;
+}
+
+.headerText {
+  display: grid;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: $text-hint;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.title {
+  color: $text;
+  font-size: $text-title;
+  font-weight: $fw-semibold;
+  line-height: 1.35;
+}
+
+.headerSide {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+.body {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: $space-3 $space-4 $space-4;
+}
+
+.groups {
+  display: grid;
+  align-content: start;
+  gap: $space-2;
+}
+
+.group {
+  display: grid;
+  gap: $space-2;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.groupMain {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.groupLabel {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+}
+
+.groupName {
+  color: $text;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+}
+
+.groupMeta {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+.groupToggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $text-hint;
+  font-size: $text-small;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.16s ease;
+
+  &:hover {
+    color: $text-sub;
+  }
+}
+
+.groupBranch {
+  display: grid;
+  gap: $space-2;
+  margin-left: 7px;
+  padding-left: 18px;
+  border-left: 1px solid $line;
+}
+
+.groupLeaf {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  min-height: 32px;
+  min-width: 0;
+  color: $text;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 50%;
+    width: 12px;
+    border-top: 1px solid $line;
+    transform: translateY(-50%);
+  }
+}
+
+.itemName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: $primary;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 25%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.colorDotMuted {
+  background: $text-hint;
+}
+
+.interactiveDisabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+@media (max-width: 767px) {
+  .header {
+    padding: $space-3 $space-3 $space-2;
+  }
+
+  .body {
+    padding: $space-2 $space-3 $space-3;
+  }
+
+  .headerSide {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .groupHead {
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,49 @@
+@use "@/styles/variables" as *;
+
+.splitSummary {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: calc($radius + 2px);
+  background: $surface2;
+}
+
+.splitSummaryWarning {
+  border-color: $warning-bd;
+  background: $warning-bg;
+}
+
+.splitSummaryTitle {
+  color: $text-sub;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+}
+
+.splitStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3;
+  color: $text-hint;
+  font-size: $text-small;
+
+  strong {
+    color: $text;
+    font-weight: $fw-semibold;
+  }
+}
+
+.splitHint {
+  color: $text-hint;
+  font-size: $text-micro;
+  line-height: 1.45;
+}
+
+.splitSummaryWarning {
+  .splitSummaryTitle,
+  .splitHint,
+  .splitStats strong {
+    color: $warning-text;
+  }
+}

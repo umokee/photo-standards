@@ -1,0 +1,96 @@
+@use "@/styles/variables" as *;
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: $space-2;
+  width: 100%;
+}
+
+.state--inline {
+  min-height: 120px;
+  padding: $space-5 $space-4;
+}
+
+.state--block {
+  min-height: 220px;
+  padding: $space-7 $space-6;
+}
+
+.state--page {
+  min-height: 100%;
+  padding: $space-8 $space-7;
+}
+
+.icon {
+  width: 42px;
+  height: 42px;
+  border-radius: $radius;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-hint;
+  flex-shrink: 0;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.75;
+  }
+}
+
+.iconLoading {
+  color: $primary;
+}
+
+.iconError {
+  color: $danger-text;
+}
+
+.title {
+  font-size: $text-body;
+  font-weight: $fw-medium;
+  color: $text-sub;
+  line-height: 1.4;
+  max-width: 28rem;
+}
+
+.titleError {
+  color: $danger-text;
+}
+
+.sub {
+  font-size: $text-small;
+  color: $text-hint;
+  max-width: 32rem;
+  line-height: 1.55;
+}
+
+.action {
+  margin-top: $space-2;
+  display: flex;
+  justify-content: center;
+}
+
+.ring {
+  width: 24px;
+  height: 24px;
+  display: block;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-top-color: currentColor;
+  animation: spin 0.8s linear infinite !important;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

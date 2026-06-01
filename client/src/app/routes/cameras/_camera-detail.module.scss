@@ -1,0 +1,29 @@
+@use "@/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  min-width: 0;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-4;
+  min-width: 0;
+}
+
+.detailsWide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsWide {
+    grid-column: auto;
+  }
+}

@@ -1,0 +1,150 @@
+2026-05-31T09:04:01.867070Z [info] Started server process [309499]              
+color_message="Started server process [\u001b[36m%d\u001b[0m]"                  
+2026-05-31T09:04:01.868754Z [info] Waiting for application startup.             
+2026-05-31T09:04:01.869294Z [info] app.startup.started                          
+2026-05-31T09:04:01.883581Z [info] live.event_bus.start                         
+channel=photoetalon_events                                                      
+2026-05-31T09:04:01.886304Z [info] live.event_bus.connected                     
+channel=photoetalon_events                                                      
+2026-05-31T09:04:01.890742Z [info] task.runner.started pid=309499               
+mode=per_task_subprocess gpu_concurrency=2 cpu_concurrency=2                    
+inspection_concurrency=2                                                        
+2026-05-31T09:04:01.891513Z [info] app.startup.finished                         
+2026-05-31T09:04:01.892266Z [info] Application startup complete.                
+2026-05-31T09:04:01.892811Z [info] Uvicorn running on http://127.0.0.1:3011     
+(Press CTRL+C to quit) color_message="Uvicorn running on                        
+\u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"                            
+2026-05-31T09:04:44.634854Z [info] 127.0.0.1:0 - "GET /api/meta/constants       
+HTTP/1.1" 200 request_id=ef66d981-31db-474c-8efc-c4f652d0a76a                   
+2026-05-31T09:04:44.683909Z [info] 127.0.0.1:0 - "GET /api/groups HTTP/1.1" 200 
+request_id=e1b05dc2-5ec2-4ddd-b1ce-ad4ae68ca987                                 
+2026-05-31T09:04:47.531070Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=b1c29f8a-44b4-4eeb-844a-bd9924907c4d                                 
+2026-05-31T09:04:47.535087Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=826c5299-845b-4e4b-bab3-e0fb52ed3a6f                                 
+2026-05-31T09:04:47.553280Z [info] 127.0.0.1:0 - "GET                           
+/api/groups/54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200                  
+request_id=67f099b8-39e1-446a-a075-26fb95bb3cf2                                 
+2026-05-31T09:04:48.514255Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo/cb7bffee-ab76-4ce3-ad08-137b9fd663c1 HTTP/1.1" 200                    
+request_id=78eff0fc-2978-4367-989a-7f2eef5c9312                                 
+2026-05-31T09:04:53.531262Z [info] 127.0.0.1:0 - "POST /api/yolo/training/run   
+HTTP/1.1" 202 request_id=98169993-be47-4107-a555-442ca858553d                   
+2026-05-31T09:04:53.570903Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=78208e5f-ee0a-420b-92dd-fa87f4dda915                                 
+2026-05-31T09:04:53.574652Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=58f39f5b-ddb2-4e7f-ba88-b40f6b9d2fd6                                 
+2026-05-31T09:04:53.582270Z [info] 127.0.0.1:0 - "GET                           
+/api/groups/54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200                  
+request_id=4ee498e9-53f5-4b55-8e0d-9d3e1322fe3d                                 
+2026-05-31T09:04:53.600603Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo/e069e04f-72e6-4e1a-827d-08ed37ac46f2 HTTP/1.1" 200                    
+request_id=b8d9805e-d416-4c05-a55b-d3984e3b43f4                                 
+2026-05-31T09:04:53.604714Z [info] 127.0.0.1:0 - "WebSocket                     
+/ws/tasks/99edc7d1-8071-4d8a-941f-8c7cff5de28d" [accepted]                      
+request_id=2b3d7221-bc46-43da-a883-74fead32b224                                 
+websocket="<uvicorn.protocols.websockets.websockets_impl.WebSocketProtocol      
+object at 0x7f7561f39be0>"                                                      
+2026-05-31T09:04:53.605829Z [info] connection open                              
+websocket="<uvicorn.protocols.websockets.websockets_impl.WebSocketProtocol      
+object at 0x7f7561f39be0>"                                                      
+2026-05-31T09:04:54.037216Z [info] task.runner.process.started                  
+task_id=99edc7d1-8071-4d8a-941f-8c7cff5de28d task_type=model_training queue=gpu 
+pid=310255                                                                      
+stdout_path=/home/user/.jkljlk/photo-standards-db/storage/logs/2026-05-31/proces
+ses/model_training/2026-05-31_09-04-54_model_training_99edc7d1.out.log          
+stderr_path=/home/user/.jkljlk/photo-standards-db/storage/logs/2026-05-31/proces
+ses/model_training/2026-05-31_09-04-54_model_training_99edc7d1.err.log          
+2026-05-31T09:04:54.158961Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=48dfcfe1-a74a-4051-a113-b293c1dc048a                                 
+2026-05-31T09:04:56.394388Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=e4d95489-4171-4afb-92c8-dd9ce1da29e6                                 
+2026-05-31T09:04:56.530055Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=79242a1f-0032-4f1d-811b-00e3f9b33bcd                                 
+2026-05-31T09:05:14.607755Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=b8dcd7a1-4318-4dd2-b19e-8581adb2fea5                                 
+2026-05-31T09:05:15.132796Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=769aa3e9-07b6-4ff6-ad5b-29b7e33a064a                                 
+2026-05-31T09:05:15.573903Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=c50bf69c-4000-4604-bac5-6b601ad76348                                 
+2026-05-31T09:05:16.672854Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=49783219-dcdc-4444-b402-50f43b1b6877                                 
+2026-05-31T09:05:17.281207Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=d77dadcc-c379-439a-a70d-e3c1407bb7d5                                 
+2026-05-31T09:05:17.777788Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=48ad2589-ffd7-4403-bb5f-984d4f230343                                 
+2026-05-31T09:05:17.899117Z [info] 127.0.0.1:0 - "POST                          
+/api/tasks/99edc7d1-8071-4d8a-941f-8c7cff5de28d/cancel HTTP/1.1" 200            
+request_id=519fbff8-5844-4ac3-bf9b-23064221dd52                                 
+2026-05-31T09:05:17.930933Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=9e047b6b-13a1-45bf-9154-f76ccc681a08                                 
+2026-05-31T09:05:17.936757Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=5eb5f6bb-4519-46a1-b7df-5cf438960cbc                                 
+2026-05-31T09:05:17.965969Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=5d1883da-933b-4201-9ac4-532f417c2c0c                                 
+2026-05-31T09:05:17.970797Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=759a8149-85f1-4f76-b63d-fc55a5637f6e                                 
+2026-05-31T09:05:17.980452Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=c19c8323-069c-4bb3-870a-9c5094546491                                 
+2026-05-31T09:05:18.006941Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=ed257d02-d8f0-421e-a4ca-b4c0891d533b                                 
+2026-05-31T09:05:18.031508Z [info] 127.0.0.1:0 - "GET                           
+/api/groups/54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200                  
+request_id=f94a4ffd-1984-47ef-83ac-644d49e22eea                                 
+2026-05-31T09:05:18.043773Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=2505436d-f7a7-4a27-a5bf-3508986e312d                                 
+2026-05-31T09:05:18.190632Z [info] 127.0.0.1:0 - "GET                           
+/api/groups/54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200                  
+request_id=e2f66aa2-dd89-4185-9880-f4f451d38eee                                 
+2026-05-31T09:05:18.250477Z [info] connection closed                            
+websocket="<uvicorn.protocols.websockets.websockets_impl.WebSocketProtocol      
+object at 0x7f7561f39be0>"                                                      
+2026-05-31T09:05:18.255671Z [warning] task.runner.process.stop_required         
+task_id=99edc7d1-8071-4d8a-941f-8c7cff5de28d duration_ms=24218.5                
+task_type=model_training queue=gpu pid=310255 reason="Задача отменена           
+пользователем, subprocess остановлен" kind=cancelled                            
+2026-05-31T09:05:18.458415Z [warning] task.runner.process.stopped               
+task_id=99edc7d1-8071-4d8a-941f-8c7cff5de28d duration_ms=24421.3                
+task_type=model_training queue=gpu pid=310255 return_code=0 reason="Задача      
+отменена пользователем, subprocess остановлен"                                  
+2026-05-31T09:05:21.219124Z [info] 127.0.0.1:0 - "DELETE                        
+/api/yolo/e069e04f-72e6-4e1a-827d-08ed37ac46f2 HTTP/1.1" 204                    
+request_id=8527fd6d-332e-44c1-a3a3-464534d564e3                                 
+2026-05-31T09:05:21.229690Z [info] 127.0.0.1:0 - "GET                           
+/api/yolo?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200           
+request_id=dba13d9a-802a-4c2f-9142-ecf38438fdbb                                 
+2026-05-31T09:05:21.254403Z [info] 127.0.0.1:0 - "GET                           
+/api/tasks?group_id=54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200          
+request_id=b158dcf8-4005-4a8b-95b6-e9613410f0f7                                 
+2026-05-31T09:05:21.270770Z [info] 127.0.0.1:0 - "GET                           
+/api/groups/54af311d-9d84-437f-aad8-80aee95e73a8 HTTP/1.1" 200                  
+request_id=07a3d245-3331-4639-80b9-f543cd8e5d48                                 
+2026-05-31T09:05:27.837837Z [info] Shutting down                                
+2026-05-31T09:05:27.939075Z [info] Waiting for application shutdown.            
+2026-05-31T09:05:27.939621Z [info] app.shutdown.started                         
+2026-05-31T09:05:27.940025Z [info] task.runner.stopped                          
+2026-05-31T09:05:27.941554Z [info] live.event_bus.stop                          
+2026-05-31T09:05:27.948200Z [info] app.shutdown.finished                        
+2026-05-31T09:05:27.949082Z [info] Application shutdown complete.               
+2026-05-31T09:05:27.949807Z [info] Finished server process [309499]             
+color_message="Finished server process [\u001b[36m%d\u001b[0m]"                 

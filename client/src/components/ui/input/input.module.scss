@@ -1,0 +1,28 @@
+@use "@/styles/variables" as *;
+
+.root {
+  width: 100%;
+  padding: $space-2 $space-3;
+  font-size: $text-small;
+  color: $text;
+  background: $surface2;
+  border: 1px solid $line;
+  border-radius: $radius;
+  outline: none;
+
+  &::placeholder {
+    color: $text-off;
+  }
+
+  &:focus {
+    border-color: $primary-bd;
+  }
+}
+
+.fieldError {
+  border-color: $danger-bd;
+
+  &:focus {
+    border-color: $danger;
+  }
+}

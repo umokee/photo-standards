@@ -1,0 +1,8 @@
+@use "@/styles/variables" as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  min-width: 0;
+}

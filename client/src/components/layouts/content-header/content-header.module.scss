@@ -1,0 +1,118 @@
+@use "@/styles/variables" as *;
+
+.root {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: $space-3 0 $space-3;
+  border-bottom: 1px solid $line-soft;
+  background: $page;
+  flex-shrink: 0;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+  min-width: 0;
+  margin-bottom: $space-2;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: $text-page;
+  font-weight: $fw-semibold;
+  line-height: 1.25;
+  color: $text;
+  margin-bottom: $space-1;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  font-size: $text-small;
+  color: $text-hint;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-5;
+  min-width: 0;
+  font-size: $text-small;
+  color: $text-sub;
+  margin-top: $space-1;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  line-height: 1.25;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: $space-2;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .root {
+    position: static;
+    padding: $space-2 0;
+  }
+
+  .top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $space-1;
+    margin-bottom: $space-1;
+  }
+
+  .title {
+    font-size: 16px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+
+  .sub {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-1 $space-2;
+    margin-top: $space-1;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: $space-1;
+    width: 100%;
+
+    & > * {
+      min-width: 0;
+    }
+
+    & button {
+      width: 100%;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+}
