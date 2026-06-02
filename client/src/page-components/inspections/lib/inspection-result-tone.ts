@@ -23,6 +23,13 @@ export const getInspectionResultTone = (status: InspectionSegmentStatus) => {
         fill: "rgba(200, 122, 0, 0.12)",
         label: "Лишнее",
       };
+    case "unmatched":
+      return {
+        badge: "warning" as const,
+        stroke: "#d19a30",
+        fill: "rgba(209, 154, 48, 0.12)",
+        label: "Не сопоставлено",
+      };
     default:
       return {
         badge: "info" as const,

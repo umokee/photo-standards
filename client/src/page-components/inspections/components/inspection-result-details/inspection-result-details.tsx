@@ -8,7 +8,7 @@ import s from "./inspection-result-details.module.scss";
 
 type InspectionResultDetailItem = Pick<
   InspectionTaskSegmentDetail,
-  "confidence" | "hue" | "iou" | "name" | "status"
+  "confidence" | "debug" | "hue" | "iou" | "name" | "status"
 >;
 
 type Props = {
@@ -104,6 +104,7 @@ const DetailRowContent = ({
   const showConfidence = detail.confidence !== null;
   const showIou = detail.iou !== null;
   const showHistoryMeta = variant === "history" && (showConfidence || showIou);
+  const debugItems = getDebugItems(detail.debug);
 
   return (
     <>
@@ -134,6 +135,16 @@ const DetailRowContent = ({
         </div>
       ) : null}
 
+      {variant === "panel" && debugItems.length > 0 ? (
+        <div className={s.rowMeta}>
+          {debugItems.map((item) => (
+            <span key={item.label}>
+              {item.label}: {item.value}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {showHistoryMeta ? (
         <div className={s.rowMeta}>
           {showConfidence ? <span>Точность {Math.round(detail.confidence! * 100)}%</span> : null}
@@ -142,4 +153,58 @@ const DetailRowContent = ({
       ) : null}
     </>
   );
+};
+
+
+const DEBUG_LABELS: Record<string, string> = {
+  reason: "Причина",
+  reject_reason: "Отказ",
+  score: "score",
+  threshold: "порог",
+  bbox_iou: "bbox IoU",
+  polygon_iou: "polygon IoU",
+  iou: "IoU",
+  center_distance: "центр",
+  center_limit: "лимит центра",
+  area_ratio: "размер",
+  expected_name: "ожидалось",
+};
+
+const DEBUG_ORDER = [
+  "reason",
+  "reject_reason",
+  "score",
+  "threshold",
+  "bbox_iou",
+  "polygon_iou",
+  "iou",
+  "center_distance",
+  "center_limit",
+  "area_ratio",
+  "expected_name",
+];
+
+const getDebugItems = (debug: Record<string, unknown> | null | undefined) => {
+  if (!debug) {
+    return [];
+  }
+
+  return DEBUG_ORDER.filter((key) => debug[key] !== undefined && debug[key] !== null).map(
+    (key) => ({
+      label: DEBUG_LABELS[key] ?? key,
+      value: formatDebugValue(debug[key]),
+    })
+  );
+};
+
+const formatDebugValue = (value: unknown) => {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(3);
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "да" : "нет";
+  }
+
+  return String(value);
 };

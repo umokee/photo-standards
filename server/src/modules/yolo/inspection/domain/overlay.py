@@ -12,6 +12,7 @@ from .types import SegmentMatch
 COLOR_OK = (93, 155, 58)
 COLOR_MISSING = (70, 70, 184)
 COLOR_EXTRA = (0, 122, 200)
+COLOR_UNMATCHED = (48, 154, 209)
 
 MIN_LABEL_FONT_SIZE = 16
 MAX_LABEL_FONT_SIZE = 34
@@ -89,9 +90,42 @@ def _render_polygon_overlay(
     label_font_size = _label_font_size(frame_shape)
     label_padding = _label_padding(label_font_size)
 
-    draw_items: list[tuple[list[list[float]], tuple[int, int, int], SegmentMatch]] = []
+    draw_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
 
     for match in matches:
+        if match.status == "unmatched":
+            if match.expected_polygon is not None:
+                expected_polygon = _prepare_polygon_for_render(
+                    match.expected_polygon,
+                    polygon_transform=polygon_transform,
+                    frame_shape=frame_shape,
+                )
+                if expected_polygon is not None:
+                    draw_items.append(
+                        (
+                            expected_polygon,
+                            COLOR_MISSING,
+                            _expected_label_for_match(match),
+                        )
+                    )
+
+            if match.detected_polygon is not None:
+                detected_polygon = _prepare_polygon_for_render(
+                    match.detected_polygon,
+                    polygon_transform=polygon_transform,
+                    frame_shape=frame_shape,
+                )
+                if detected_polygon is not None:
+                    draw_items.append(
+                        (
+                            detected_polygon,
+                            COLOR_UNMATCHED,
+                            _label_for_match(match),
+                        )
+                    )
+
+            continue
+
         polygon = _polygon_for_render(
             match,
             polygon_transform=polygon_transform,
@@ -100,7 +134,7 @@ def _render_polygon_overlay(
         if polygon is None:
             continue
 
-        draw_items.append((polygon, _color_for_status(match.status), match))
+        draw_items.append((polygon, _color_for_status(match.status), _label_for_match(match)))
 
     if not draw_items:
         return
@@ -108,7 +142,7 @@ def _render_polygon_overlay(
     fill_overlay = output.copy()
     glow_overlay = output.copy()
 
-    for polygon, color, _match in draw_items:
+    for polygon, color, _label in draw_items:
         pts = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
 
         cv2.fillPoly(fill_overlay, [pts], color)
@@ -125,7 +159,7 @@ def _render_polygon_overlay(
     cv2.addWeighted(fill_overlay, ALPHA_FILL, output, 1 - ALPHA_FILL, 0, output)
     cv2.addWeighted(glow_overlay, 0.35, output, 0.65, 0, output)
 
-    for polygon, color, _match in draw_items:
+    for polygon, color, _label in draw_items:
         pts = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
         cv2.polylines(
             output,
@@ -136,10 +170,10 @@ def _render_polygon_overlay(
             lineType=cv2.LINE_AA,
         )
 
-    for polygon, color, match in draw_items:
+    for polygon, color, label in draw_items:
         _draw_label(
             output,
-            _label_for_match(match),
+            label,
             _label_anchor(polygon),
             color,
             font_size=label_font_size,
@@ -162,6 +196,19 @@ def _polygon_for_render(
     else:
         return None
 
+    return _prepare_polygon_for_render(
+        polygon,
+        polygon_transform=polygon_transform,
+        frame_shape=frame_shape,
+    )
+
+
+def _prepare_polygon_for_render(
+    polygon: list[list[float]] | None,
+    *,
+    polygon_transform: np.ndarray | None,
+    frame_shape: tuple[int, int],
+) -> list[list[float]] | None:
     if polygon is None or len(polygon) < 3:
         return None
 
@@ -223,6 +270,8 @@ def _color_for_status(status: str) -> tuple[int, int, int]:
         return COLOR_MISSING
     if status == "extra":
         return COLOR_EXTRA
+    if status == "unmatched":
+        return COLOR_UNMATCHED
 
     return (128, 128, 128)
 
@@ -235,10 +284,23 @@ def _label_for_match(match: SegmentMatch) -> str:
     if match.status == "missing":
         return f"{name} · нет"
 
+    if match.status == "unmatched":
+        if match.confidence is not None:
+            return f"{name} · не сопост. {int(match.confidence * 100)}%"
+        return f"{name} · не сопост."
+
     if match.confidence is not None:
         return f"{name} {int(match.confidence * 100)}%"
 
     return name
+
+
+def _expected_label_for_match(match: SegmentMatch) -> str:
+    name = match.name
+    if len(name) > 18:
+        name = name[:17] + "…"
+
+    return f"ожид. {name}"
 
 
 def _label_anchor(polygon: list[list[float]]) -> tuple[int, int]:

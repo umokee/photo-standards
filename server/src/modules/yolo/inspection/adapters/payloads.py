@@ -255,6 +255,7 @@ def build_result_item(match: SegmentMatch) -> dict:
         "expected_polygon": match.expected_polygon,
         "detected_polygon": match.detected_polygon,
         "detected_bbox": match.detected_bbox,
+        "debug": match.debug,
     }
 
 

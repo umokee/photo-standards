@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +27,7 @@ class InspectionSegmentDetailResponse(BaseModel):
     expected_polygon: list[list[float]] | None = None
     detected_polygon: list[list[float]] | None = None
     detected_bbox: dict[str, float] | None = None
+    debug: dict[str, Any] | None = None
 
 
 class InspectionTaskResultResponse(BaseModel):
@@ -78,6 +79,7 @@ class InspectionSegmentResultResponse(BaseModel):
     expected_polygon: list[list[float]] | None
     detected_polygon: list[list[float]] | None
     detected_bbox: dict[str, float] | None
+    debug: dict[str, Any] | None = None
 
 
 class InspectionHistoryItemResponse(BaseModel):

@@ -15,7 +15,7 @@ export interface InspectionDetectionBBox {
   h: number;
 }
 
-export type InspectionSegmentStatus = "ok" | "missing" | "extra";
+export type InspectionSegmentStatus = "ok" | "missing" | "extra" | "unmatched";
 
 export type InspectionAlignmentStatus =
   | "success"
@@ -37,6 +37,7 @@ export interface InspectionTaskSegmentDetail {
   expected_polygon: number[][] | null;
   detected_polygon: number[][] | null;
   detected_bbox: InspectionDetectionBBox | null;
+  debug?: Record<string, unknown> | null;
 }
 
 export interface InspectionTaskResult {
@@ -120,6 +121,7 @@ export interface InspectionSegmentResultItem {
   expected_polygon: number[][] | null;
   detected_polygon: number[][] | null;
   detected_bbox: InspectionDetectionBBox | null;
+  debug?: Record<string, unknown> | null;
 }
 
 export interface InspectionResult {

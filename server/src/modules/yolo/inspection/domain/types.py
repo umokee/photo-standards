@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 
@@ -36,3 +37,4 @@ class SegmentMatch:
     detected_polygon: list[list[float]] | None
     detected_bbox: dict[str, float] | None
     detected_class_in_zone: str | None = None
+    debug: dict[str, Any] | None = None

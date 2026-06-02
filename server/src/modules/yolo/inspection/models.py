@@ -135,7 +135,7 @@ class InspectionSegmentResult(Base):
 
     status: Mapped[str] = mapped_column(
         sqlalchemy.Enum(
-            *["ok", "missing", "extra"],
+            *["ok", "missing", "extra", "unmatched"],
             name="segment_result_status_enum",
         ),
     )

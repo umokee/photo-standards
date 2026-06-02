@@ -110,6 +110,7 @@ def build_missing_matches(
                 expected_polygon=expected_polygon,
                 detected_polygon=None,
                 detected_bbox=None,
+                debug={"reason": "no_matching_detection"},
             )
         )
 
@@ -179,6 +180,7 @@ def match_segments(
         )
 
     candidate_pairs: list[tuple[float, float, int, int]] = []
+    candidate_debug: dict[tuple[int, int], dict[str, Any]] = {}
     projected_by_index = {item.index: item for item in projected_expected}
     detection_by_index = {item.index: item for item in detection_candidates}
 
@@ -187,16 +189,22 @@ def match_segments(
             if expected_item.item.class_key != detection_item.detection.class_key:
                 continue
 
-            score, iou = _match_score(
+            score_debug = _match_score_details(
                 expected_item.polygon,
                 detection_item.polygon,
                 expected_item.bbox,
                 detection_item.bbox,
             )
+            score = float(score_debug["score"])
+            iou = float(score_debug["iou"])
 
-            if score < _match_threshold(expected_item.bbox):
+            if not score_debug["passed"]:
                 continue
 
+            candidate_debug[(expected_item.index, detection_item.index)] = {
+                **score_debug,
+                "reason": "matched",
+            }
             candidate_pairs.append(
                 (score, iou, expected_item.index, detection_item.index)
             )
@@ -225,6 +233,7 @@ def match_segments(
                 expected_polygon=expected_item.polygon,
                 detected_polygon=detection_item.polygon,
                 detected_bbox=detection.bbox,
+                debug=candidate_debug.get((expected_index, detection_index)),
             )
         )
 
@@ -245,6 +254,7 @@ def match_segments(
                 expected_polygon=expected_item.polygon,
                 detected_polygon=None,
                 detected_bbox=None,
+                debug={"reason": "no_matching_detection"},
             )
         )
 
@@ -262,6 +272,7 @@ def match_segments(
                 expected_polygon=None,
                 detected_polygon=None,
                 detected_bbox=None,
+                debug={"reason": "projection_failed"},
             )
         )
 
@@ -282,11 +293,13 @@ def match_segments(
         if detection_item.index in matched_detection_indices:
             continue
 
-        action, expected_index = _classify_unmatched_detection(
+        action, expected_index, debug = _classify_unmatched_detection(
             detection_item,
             projected_expected,
             matched_expected_indices,
         )
+
+        detection = detection_item.detection
 
         if action == "discard":
             if expected_index is not None:
@@ -295,12 +308,53 @@ def match_segments(
                     target_match is not None
                     and target_match.detected_class_in_zone is None
                 ):
-                    target_match.detected_class_in_zone = (
-                        detection_item.detection.class_key
-                    )
+                    target_match.detected_class_in_zone = detection.class_key
             continue
 
-        detection = detection_item.detection
+        if action == "unmatched":
+            target_match = (
+                expected_index_to_match.get(expected_index)
+                if expected_index is not None
+                else None
+            )
+            expected_item = (
+                projected_by_index.get(expected_index)
+                if expected_index is not None
+                else None
+            )
+
+            if target_match is not None:
+                target_match.status = "unmatched"
+                target_match.iou = _debug_float(debug, "iou")
+                target_match.confidence = detection.confidence
+                target_match.detected_polygon = detection_item.polygon
+                target_match.detected_bbox = detection.bbox
+                target_match.detected_class_in_zone = detection.class_key
+                target_match.debug = debug
+                continue
+
+            matches.append(
+                SegmentMatch(
+                    annotation_id=(
+                        expected_item.item.annotation_id if expected_item else None
+                    ),
+                    segment_class_id=(
+                        expected_item.item.segment_class_id if expected_item else None
+                    ),
+                    class_key=detection.class_key,
+                    name=expected_item.item.name if expected_item else "Не сопоставлено",
+                    hue=expected_item.item.hue if expected_item else None,
+                    status="unmatched",
+                    iou=_debug_float(debug, "iou"),
+                    confidence=detection.confidence,
+                    expected_polygon=expected_item.polygon if expected_item else None,
+                    detected_polygon=detection_item.polygon,
+                    detected_bbox=detection.bbox,
+                    debug=debug,
+                )
+            )
+            continue
+
         matches.append(
             SegmentMatch(
                 annotation_id=None,
@@ -314,6 +368,7 @@ def match_segments(
                 expected_polygon=None,
                 detected_polygon=detection_item.polygon,
                 detected_bbox=detection.bbox,
+                debug=debug,
             )
         )
 
@@ -402,17 +457,19 @@ def match_segments_by_count(
 
 
 def summarize(matches: list[SegmentMatch]) -> tuple[int, int, list[str]]:
-    expected_matches = [match for match in matches if match.status in ("ok", "missing")]
+    expected_matches = [
+        match for match in matches if match.status in ("ok", "missing", "unmatched")
+    ]
     total = len(expected_matches)
     matched = sum(1 for match in expected_matches if match.status == "ok")
-    missing_names = [
-        match.name for match in expected_matches if match.status == "missing"
-    ]
+    missing_names = [match.name for match in expected_matches if match.status != "ok"]
     return total, matched, missing_names
 
 
 def all_ok(matches: list[SegmentMatch], *, expected_total: int | None = None) -> bool:
-    expected_matches = [match for match in matches if match.status in ("ok", "missing")]
+    expected_matches = [
+        match for match in matches if match.status in ("ok", "missing", "unmatched")
+    ]
     total = expected_total if expected_total is not None else len(expected_matches)
     if total <= 0:
         return False
@@ -569,6 +626,21 @@ def _match_score(
     expected_bbox: BBox,
     detection_bbox: BBox,
 ) -> tuple[float, float]:
+    debug = _match_score_details(
+        expected_polygon,
+        detection_polygon,
+        expected_bbox,
+        detection_bbox,
+    )
+    return float(debug["score"]), float(debug["iou"])
+
+
+def _match_score_details(
+    expected_polygon: list[list[float]],
+    detection_polygon: list[list[float]] | None,
+    expected_bbox: BBox,
+    detection_bbox: BBox,
+) -> dict[str, Any]:
     bbox_iou = _bbox_iou(expected_bbox, detection_bbox)
 
     if detection_polygon is None or len(detection_polygon) < 3:
@@ -577,17 +649,31 @@ def _match_score(
         polygon_iou = _polygon_iou(expected_polygon, detection_polygon)
 
     iou = max(bbox_iou, polygon_iou)
+    threshold = _match_threshold(expected_bbox)
+    debug: dict[str, Any] = {
+        "bbox_iou": _round_debug(bbox_iou),
+        "polygon_iou": _round_debug(polygon_iou),
+        "iou": _round_debug(iou),
+        "score": 0.0,
+        "threshold": _round_debug(threshold),
+        "passed": False,
+    }
+
     if iou < IOU_MATCH_THRESHOLD:
-        return 0.0, iou
+        debug["reject_reason"] = "iou_below_min"
+        return debug
 
     expected_area = _bbox_area(expected_bbox)
     detection_area = _bbox_area(detection_bbox)
     if expected_area <= 0 or detection_area <= 0:
-        return 0.0, iou
+        debug["reject_reason"] = "empty_bbox"
+        return debug
 
     area_ratio = detection_area / expected_area
+    debug["area_ratio"] = _round_debug(area_ratio)
     if area_ratio < _MIN_AREA_RATIO or area_ratio > _MAX_AREA_RATIO:
-        return 0.0, iou
+        debug["reject_reason"] = "area_ratio_out_of_range"
+        return debug
 
     expected_center = _bbox_center(expected_bbox)
     detection_center = _bbox_center(detection_bbox)
@@ -598,9 +684,14 @@ def _match_score(
         )
     )
     expected_diag = max(1.0, _bbox_diag(expected_bbox))
+    center_limit = expected_diag * _MAX_CENTER_DISTANCE_FACTOR
     center_score = max(0.0, 1.0 - center_distance / expected_diag)
-    if center_distance > expected_diag * _MAX_CENTER_DISTANCE_FACTOR:
-        return 0.0, iou
+    debug["center_distance"] = _round_debug(center_distance)
+    debug["center_limit"] = _round_debug(center_limit)
+
+    if center_distance > center_limit:
+        debug["reject_reason"] = "center_too_far"
+        return debug
 
     area_score = min(area_ratio, 1.0 / area_ratio)
     score = (
@@ -609,8 +700,30 @@ def _match_score(
         + center_score * 0.20
         + area_score * 0.05
     )
+    debug["score"] = _round_debug(score)
 
-    return float(score), iou
+    if score < threshold:
+        debug["reject_reason"] = "score_below_threshold"
+        return debug
+
+    debug["passed"] = True
+    debug["reject_reason"] = None
+    return debug
+
+
+def _round_debug(value: float) -> float:
+    return round(float(value), 4)
+
+
+def _debug_float(debug: dict[str, Any] | None, key: str) -> float | None:
+    if debug is None:
+        return None
+
+    value = debug.get(key)
+    if isinstance(value, int | float):
+        return float(value)
+
+    return None
 
 
 def _match_threshold(expected_bbox: BBox) -> float:
@@ -746,11 +859,55 @@ def _classify_unmatched_detection(
     matched_expected_indices: set[int],
     *,
     iou_threshold: float = 0.10,
-) -> tuple[str, int | None]:
-    del matched_expected_indices
-
+) -> tuple[str, int | None, dict[str, Any] | None]:
     if detection.detection.confidence < settings.YOLO_EXTRA_CONF_THRESHOLD:
-        return ("discard", None)
+        return (
+            "discard",
+            None,
+            {
+                "reason": "confidence_below_extra_threshold",
+                "confidence": _round_debug(detection.detection.confidence),
+                "threshold": _round_debug(settings.YOLO_EXTRA_CONF_THRESHOLD),
+            },
+        )
+
+    best_same_class: tuple[float, float, _ProjectedExpected, dict[str, Any]] | None = (
+        None
+    )
+
+    for expected_item in projected_expected:
+        if expected_item.index in matched_expected_indices:
+            continue
+        if expected_item.item.class_key != detection.detection.class_key:
+            continue
+
+        debug = _match_score_details(
+            expected_item.polygon,
+            detection.polygon,
+            expected_item.bbox,
+            detection.bbox,
+        )
+        score = float(debug["score"])
+        iou = float(debug["iou"])
+        candidate = (score, iou, expected_item, debug)
+
+        if best_same_class is None or (score, iou) > (
+            best_same_class[0],
+            best_same_class[1],
+        ):
+            best_same_class = candidate
+
+    if best_same_class is not None:
+        _score, _iou, expected_item, debug = best_same_class
+        return (
+            "unmatched",
+            expected_item.index,
+            {
+                **debug,
+                "reason": "same_class_detection_not_matched",
+                "expected_name": expected_item.item.name,
+            },
+        )
 
     for expected_item in projected_expected:
         iou = _bbox_iou(expected_item.bbox, detection.bbox)
@@ -758,6 +915,21 @@ def _classify_unmatched_detection(
         if iou < iou_threshold:
             continue
 
-        return ("discard", expected_item.index)
+        return (
+            "discard",
+            expected_item.index,
+            {
+                "reason": "inside_expected_zone",
+                "bbox_iou": _round_debug(iou),
+                "expected_name": expected_item.item.name,
+            },
+        )
 
-    return ("extra", None)
+    return (
+        "extra",
+        None,
+        {
+            "reason": "no_unmatched_expected_of_same_class",
+            "confidence": _round_debug(detection.detection.confidence),
+        },
+    )

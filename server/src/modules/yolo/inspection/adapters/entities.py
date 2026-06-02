@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from app.exception import ValidationError
+from modules.core.segments.constants import segments
 from modules.yolo.inspection.domain.types import SegmentMatch
 from modules.yolo.inspection.models import InspectionResult, InspectionSegmentResult
 
@@ -56,7 +57,9 @@ def build_segment_results(
             ),
             class_key=detail["class_key"],
             name=detail["name"],
-            hue=detail.get("hue"),
+            hue=detail.get("hue")
+            if detail.get("hue") is not None
+            else segments.hue.default,
             status=detail["status"],
             iou=detail.get("iou"),
             confidence=detail.get("confidence"),
@@ -81,13 +84,16 @@ def build_matches_from_details(details: list[dict[str, Any]]) -> list[SegmentMat
                 segment_class_id=_uuid_or_none(detail.get("segment_class_id")),
                 class_key=str(detail.get("class_key") or ""),
                 name=str(detail.get("name") or "Объект"),
-                hue=detail.get("hue"),
+                hue=detail.get("hue")
+                if detail.get("hue") is not None
+                else segments.hue.default,
                 status=str(detail.get("status") or "missing"),
                 iou=detail.get("iou"),
                 confidence=detail.get("confidence"),
                 expected_polygon=detail.get("expected_polygon"),
                 detected_polygon=detail.get("detected_polygon"),
                 detected_bbox=detail.get("detected_bbox"),
+                debug=detail.get("debug") if isinstance(detail.get("debug"), dict) else None,
             )
         )
 
