@@ -5,9 +5,14 @@ from uuid import UUID
 
 import numpy as np
 from infra.storage.file_storage import resolve_storage_path
+from modules.core.standards.reference_constants import (
+    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    SUPERPOINT_OFFLINE_MAX_SIDE,
+)
 from modules.core.standards.reference_features import ImageFeatures
 
 _DESCRIPTOR_DIM = 256
+_FEATURES_PROFILE_VERSION = 2
 
 
 def features_rel_path(standard_id: UUID, image_id: UUID) -> str:
@@ -25,6 +30,9 @@ def save_features(features: ImageFeatures, rel_path: str) -> None:
         descriptors=features.descriptors,
         image_width=np.int32(features.image_width),
         image_height=np.int32(features.image_height),
+        profile_version=np.int32(_FEATURES_PROFILE_VERSION),
+        max_side=np.int32(SUPERPOINT_OFFLINE_MAX_SIDE or 0),
+        max_keypoints=np.int32(SUPERPOINT_OFFLINE_MAX_KEYPOINTS),
     )
 
 
@@ -41,6 +49,8 @@ def features_file_is_compatible(rel_path: str) -> bool:
     try:
         with np.load(absolute) as data:
             _build_image_features(data, rel_path)
+            if not _metadata_is_current(data):
+                return False
     except Exception:
         return False
     return True
@@ -90,4 +100,19 @@ def _build_image_features(data: np.lib.npyio.NpzFile, rel_path: str) -> ImageFea
         descriptors=descriptors,
         image_width=image_width,
         image_height=image_height,
+    )
+
+
+def _metadata_is_current(data: np.lib.npyio.NpzFile) -> bool:
+    try:
+        profile_version = int(data["profile_version"])
+        max_side = int(data["max_side"])
+        max_keypoints = int(data["max_keypoints"])
+    except Exception:
+        return False
+
+    return (
+        profile_version == _FEATURES_PROFILE_VERSION
+        and max_side == int(SUPERPOINT_OFFLINE_MAX_SIDE or 0)
+        and max_keypoints == SUPERPOINT_OFFLINE_MAX_KEYPOINTS
     )

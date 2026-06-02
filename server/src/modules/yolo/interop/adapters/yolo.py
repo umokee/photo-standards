@@ -5,7 +5,6 @@ from typing import Any
 
 from app.exception import ValidationError
 from modules.yolo.interop.domain.types import ImportedNativeClassRef
-from ultralytics import YOLO
 
 
 def read_native_classes(weights_path: Path) -> list[ImportedNativeClassRef]:
@@ -36,16 +35,18 @@ def read_native_classes(weights_path: Path) -> list[ImportedNativeClassRef]:
     return result
 
 
-def _load_yolo_model(weights_path: Path) -> YOLO:
+def _load_yolo_model(weights_path: Path) -> Any:
     if not weights_path.is_file():
         raise ValidationError(f"Файл модели не найден: {weights_path}")
     try:
+        from ultralytics import YOLO
+
         return YOLO(str(weights_path))
     except Exception as exc:  # noqa: BLE001
         raise ValidationError("Не удалось открыть модель YOLO") from exc
 
 
-def _ensure_segmentation_model(model: YOLO) -> None:
+def _ensure_segmentation_model(model: Any) -> None:
     task = getattr(model, "task", None) or getattr(
         getattr(model, "model", None), "task", None
     )

@@ -7,7 +7,10 @@ from app.exception import ValidationError
 from modules.core.segments.models import SegmentClass
 from modules.core.standards.models import Standard, StandardImage
 from modules.core.standards.reference_features import ImageFeatures
-from modules.core.standards.reference_service import features_are_ready
+from modules.core.standards.reference_service import (
+    compute_and_save_features,
+    features_are_ready,
+)
 from modules.core.standards.reference_storage import load_features
 from modules.yolo.training.adapters import repository as training_repository
 from modules.yolo.training.adapters import storage as training_storage
@@ -50,10 +53,7 @@ async def load_inspection_context(
     if not reference_image.annotations:
         raise ValidationError("Reference-фото не содержит аннотаций")
     if not features_are_ready(reference_image):
-        raise ValidationError(
-            "Для reference-фото не вычислены опорные точки. "
-            "Назначьте reference-фото повторно и дождитесь обработки."
-        )
+        await compute_and_save_features(db, image_id=reference_image.id)
 
     reference_features = load_features(reference_image.features_path)
 

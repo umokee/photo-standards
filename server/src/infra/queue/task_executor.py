@@ -283,6 +283,8 @@ def _ensure_storage_dirs() -> None:
     settings.inspections_storage_path.mkdir(parents=True, exist_ok=True)
     settings.models_storage_path.mkdir(parents=True, exist_ok=True)
     settings.logs_storage_path.mkdir(parents=True, exist_ok=True)
+    (settings.STORAGE_ROOT / "matplotlib").mkdir(parents=True, exist_ok=True)
+    (settings.STORAGE_ROOT / "Ultralytics").mkdir(parents=True, exist_ok=True)
 
 
 def _start_parent_watchdog() -> Callable[[], None]:

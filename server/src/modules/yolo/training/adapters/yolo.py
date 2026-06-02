@@ -8,7 +8,6 @@ from typing import Any
 
 import structlog
 from app.observability import log_event
-from ultralytics import YOLO
 
 logger = structlog.get_logger(__name__)
 
@@ -72,6 +71,8 @@ def run_training_sync(
 
     if config.on_status:
         config.on_status("training")
+
+    from ultralytics import YOLO
 
     yolo = YOLO(str(source_weights))
 

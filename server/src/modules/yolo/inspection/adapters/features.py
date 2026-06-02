@@ -42,6 +42,7 @@ def align_frame(
     frame: np.ndarray,
     config: AlignmentValidationConfig | None = None,
     max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
+    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
 ) -> FrameAlignment:
     config = config or AlignmentValidationConfig.industrial()
 
@@ -55,13 +56,14 @@ def align_frame(
             frame_features = compute_features(
                 frame,
                 max_side=max_side,
-                max_keypoints=SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+                max_keypoints=max_keypoints,
             )
             torch_alignment = align_with_features(
                 context=context,
                 frame_features=frame_features,
                 frame_shape=frame.shape[:2],
                 config=config,
+                max_keypoints=max_keypoints,
             )
 
             if torch_alignment.is_success:
@@ -124,6 +126,7 @@ def align_with_features(
     frame_features: ImageFeatures,
     frame_shape: tuple[int, int],
     config: AlignmentValidationConfig,
+    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
 ) -> FrameAlignment:
     frame_height, frame_width = frame_shape
 
@@ -148,7 +151,11 @@ def align_with_features(
             frame_shape=frame_shape,
         )
 
-    matched = match_features(context.reference_features, frame_features)
+    matched = match_features(
+        context.reference_features,
+        frame_features,
+        max_keypoints=max_keypoints,
+    )
     if matched is None:
         reason = "match_features returned None"
         _log_alignment_failure(
@@ -316,11 +323,9 @@ def _build_alignment_from_points(
             frame_matches=frame_points,
         )
 
-    homography, mask = cv2.findHomography(
-        reference_points.reshape(-1, 1, 2),
-        frame_points.reshape(-1, 1, 2),
-        method=cv2.RANSAC,
-        ransacReprojThreshold=RANSAC_REPROJECTION_THRESHOLD,
+    homography, mask, ransac_threshold = _find_best_homography(
+        reference_points=reference_points,
+        frame_points=frame_points,
     )
 
     if homography is None or mask is None:
@@ -387,6 +392,7 @@ def _build_alignment_from_points(
             status=AlignmentStatus.INSUFFICIENT_INLIERS,
             raw_match_count=raw_match_count,
             inlier_count=inlier_count,
+            selected_ransac_reprojection_threshold=ransac_threshold,
             reason=reason,
         )
         return _failed(
@@ -676,6 +682,7 @@ def _log_alignment_failure(
     raw_match_count: int | None = None,
     inlier_count: int | None = None,
     median_error: float | None = None,
+    selected_ransac_reprojection_threshold: float | None = None,
     reason: str | None = None,
 ) -> None:
     frame_height, frame_width = frame_shape
@@ -703,6 +710,7 @@ def _log_alignment_failure(
         inlier_threshold=MIN_INLIERS_FOR_ALIGNMENT,
         median_error=median_error,
         ransac_reprojection_threshold=RANSAC_REPROJECTION_THRESHOLD,
+        selected_ransac_reprojection_threshold=selected_ransac_reprojection_threshold,
         grid_cols=config.grid_cols,
         grid_rows=config.grid_rows,
         min_grid_cells=config.min_grid_cells,
@@ -752,9 +760,71 @@ class AlignmentValidationConfig:
         )
 
 
+def _find_best_homography(
+    *,
+    reference_points: np.ndarray,
+    frame_points: np.ndarray,
+) -> tuple[np.ndarray | None, np.ndarray | None, float]:
+    source = reference_points.reshape(-1, 1, 2)
+    destination = frame_points.reshape(-1, 1, 2)
+    method_candidates = [cv2.RANSAC]
+
+    usac_magsac = getattr(cv2, "USAC_MAGSAC", None)
+    if usac_magsac is not None:
+        method_candidates.insert(0, usac_magsac)
+
+    threshold_candidates = (
+        RANSAC_REPROJECTION_THRESHOLD,
+        RANSAC_REPROJECTION_THRESHOLD * 1.5,
+        RANSAC_REPROJECTION_THRESHOLD * 2.0,
+        RANSAC_REPROJECTION_THRESHOLD * 3.0,
+    )
+
+    best: tuple[int, float, np.ndarray, np.ndarray, float] | None = None
+
+    for method in method_candidates:
+        for threshold in threshold_candidates:
+            try:
+                homography, mask = cv2.findHomography(
+                    source,
+                    destination,
+                    method=method,
+                    ransacReprojThreshold=float(threshold),
+                )
+            except cv2.error:
+                continue
+
+            if homography is None or mask is None:
+                continue
+            if homography.shape != (3, 3) or not np.isfinite(homography).all():
+                continue
+
+            inlier_mask = mask.reshape(-1).astype(bool)
+            inlier_count = int(inlier_mask.sum())
+            if inlier_count < 4:
+                continue
+
+            median_error = _median_reprojection_error(
+                reference_points[inlier_mask],
+                frame_points[inlier_mask],
+                homography,
+            )
+            candidate = (inlier_count, -median_error, homography, mask, float(threshold))
+
+            if best is None or candidate[:2] > best[:2]:
+                best = candidate
+
+    if best is None:
+        return None, None, RANSAC_REPROJECTION_THRESHOLD
+
+    return best[2], best[3], best[4]
+
+
 def match_features(
     reference: ImageFeatures,
     frame: ImageFeatures,
+    *,
+    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     if reference.count < 10 or frame.count < 10:
         return None
@@ -767,7 +837,7 @@ def match_features(
             frame_keypoints=frame.keypoints.astype(np.float32, copy=False),
             frame_descriptors=frame.descriptors.astype(np.float32, copy=False),
             frame_size=(frame.image_width, frame.image_height),
-            max_keypoints=SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+            max_keypoints=max_keypoints,
         )
     except Exception as exc:
         throttled_log(
@@ -818,12 +888,11 @@ def validate_reprojection_error(
     *,
     config: AlignmentValidationConfig,
 ) -> tuple[bool, float, str]:
-    projected = cv2.perspectiveTransform(
-        reference_inliers.reshape(-1, 1, 2),
+    median_error = _median_reprojection_error(
+        reference_inliers,
+        frame_inliers,
         homography,
-    ).reshape(-1, 2)
-    errors = np.linalg.norm(projected - frame_inliers, axis=1)
-    median_error = float(np.median(errors))
+    )
 
     if median_error > config.max_median_error:
         return (
@@ -832,6 +901,19 @@ def validate_reprojection_error(
             (f"median reproj error {median_error:.1f}px > {config.max_median_error}"),
         )
     return True, median_error, ""
+
+
+def _median_reprojection_error(
+    reference_points: np.ndarray,
+    frame_points: np.ndarray,
+    homography: np.ndarray,
+) -> float:
+    projected = cv2.perspectiveTransform(
+        reference_points.reshape(-1, 1, 2),
+        homography,
+    ).reshape(-1, 2)
+    errors = np.linalg.norm(projected - frame_points, axis=1)
+    return float(np.median(errors))
 
 
 def validate_projected_quad(

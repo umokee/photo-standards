@@ -7,6 +7,7 @@ from collections import OrderedDict
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import structlog
@@ -109,6 +110,14 @@ def _load_torch_model(weights_path: Path) -> _TorchYoloModel:
             _torch_cache.move_to_end(key)
             return cached[1]
 
+    load_started_at = time.perf_counter()
+    log_event(
+        logger,
+        "info",
+        "inspection.yolo.model.load_started",
+        weights_path=key,
+    )
+
     yolo = YOLO(str(weights_path))
     class_names = _extract_class_names(yolo)
     model = _TorchYoloModel(
@@ -142,6 +151,7 @@ def _load_torch_model(weights_path: Path) -> _TorchYoloModel:
         num_classes=len(class_names),
         task=getattr(yolo, "task", None),
         device=_model_device(yolo),
+        duration_ms=round((time.perf_counter() - load_started_at) * 1000, 1),
     )
 
     return model
@@ -229,7 +239,7 @@ def _extract_polygons(result) -> list[list[list[float]] | None]:
     return polygons
 
 
-def _extract_class_names(model: YOLO) -> dict[int, str]:
+def _extract_class_names(model: Any) -> dict[int, str]:
     names = getattr(model, "names", None) or getattr(
         getattr(model, "model", None), "names", None
     )
@@ -240,7 +250,7 @@ def _extract_class_names(model: YOLO) -> dict[int, str]:
     return {}
 
 
-def _extract_default_imgsz(model: YOLO) -> int | None:
+def _extract_default_imgsz(model: Any) -> int | None:
     candidates = (
         getattr(model, "overrides", {}).get("imgsz"),
         getattr(getattr(model, "model", None), "args", {}).get("imgsz"),
@@ -255,7 +265,7 @@ def _extract_default_imgsz(model: YOLO) -> int | None:
     return None
 
 
-def _model_device(model: YOLO) -> str | None:
+def _model_device(model: Any) -> str | None:
     torch_model = getattr(model, "model", None)
     if torch_model is None:
         return None

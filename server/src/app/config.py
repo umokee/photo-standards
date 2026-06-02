@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -10,6 +11,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SERVER_ROOT = PROJECT_ROOT / "server"
 DEFAULT_SAM2_ROOT = PROJECT_ROOT / "storage" / "weights"
+
+os.environ.setdefault("MPLCONFIGDIR", str(PROJECT_ROOT / "storage" / "matplotlib"))
+os.environ.setdefault("YOLO_CONFIG_DIR", str(PROJECT_ROOT / "storage"))
+os.environ.setdefault("YOLO_VERBOSE", "false")
 
 
 class Settings(BaseSettings):
@@ -59,6 +64,10 @@ class Settings(BaseSettings):
     # YOLO training and inference.
     YOLO_DEVICE: Literal["auto", "cuda", "cpu"] = "auto"
     YOLO_DEFAULT_IMGSZ: int = Field(default=640, ge=32)
+    YOLO_CONF_THRESHOLD: float = Field(default=0.05, ge=0.0, le=1.0)
+    YOLO_REALTIME_CONF_THRESHOLD: float = Field(default=0.20, ge=0.0, le=1.0)
+    YOLO_NMS_IOU: float = Field(default=0.55, ge=0.0, le=1.0)
+    YOLO_EXTRA_CONF_THRESHOLD: float = Field(default=0.25, ge=0.0, le=1.0)
     YOLO_HALF: bool = False
 
     # Built-in background task runner.

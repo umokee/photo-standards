@@ -7,6 +7,11 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import numpy as np
+from app.config import settings
+from modules.core.standards.reference_constants import (
+    SUPERPOINT_REALTIME_MAX_KEYPOINTS,
+    SUPERPOINT_REALTIME_MAX_SIDE,
+)
 from modules.yolo.inspection.adapters.context import InspectionContext
 from modules.yolo.inspection.adapters.entities import build_matches_from_details
 from modules.yolo.inspection.adapters.payloads import build_result_item
@@ -193,6 +198,9 @@ class RealtimeFrameProcessor:
                 expected_segments=self._expected_segments,
                 profile_enabled=profile_enabled,
                 executor=self._executor,
+                alignment_max_side=SUPERPOINT_REALTIME_MAX_SIDE,
+                alignment_max_keypoints=SUPERPOINT_REALTIME_MAX_KEYPOINTS,
+                yolo_conf=settings.YOLO_REALTIME_CONF_THRESHOLD,
             )
 
         for stage_name, stage_ms in frame_result.profile.items():

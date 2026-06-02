@@ -11,6 +11,10 @@ from app.observability import elapsed_ms, log_event
 from infra.storage.file_storage import resolve_storage_path
 from modules.core.standards.models import StandardImage
 from modules.core.standards.reference_features import compute_features, load_image
+from modules.core.standards.reference_constants import (
+    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    SUPERPOINT_OFFLINE_MAX_SIDE,
+)
 from modules.core.standards.reference_storage import (
     features_file_is_compatible,
     features_rel_path,
@@ -33,7 +37,11 @@ async def compute_and_save_features(
 
     image_absolute = resolve_storage_path(image.image_path)
     image_array = load_image(image_absolute)
-    features = compute_features(image_array)
+    features = compute_features(
+        image_array,
+        max_side=SUPERPOINT_OFFLINE_MAX_SIDE,
+        max_keypoints=SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    )
 
     rel_path = features_rel_path(
         standard_id=image.standard_id,

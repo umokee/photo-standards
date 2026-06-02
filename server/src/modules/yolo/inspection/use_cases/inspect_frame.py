@@ -9,6 +9,10 @@ from pathlib import Path
 import numpy as np
 from app.config import settings
 from infra.storage.file_storage import resolve_storage_path
+from modules.core.standards.reference_constants import (
+    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    SUPERPOINT_OFFLINE_MAX_SIDE,
+)
 from modules.yolo.inspection.adapters.context import InspectionContext
 from modules.yolo.inspection.adapters.features import align_frame, load_image
 from modules.yolo.inspection.adapters.yolo import run_inference
@@ -78,6 +82,8 @@ def inspect_image_path(
         image_path=image_path,
         render=render,
         profile_enabled=profile_enabled,
+        alignment_max_side=SUPERPOINT_OFFLINE_MAX_SIDE,
+        yolo_conf=settings.YOLO_CONF_THRESHOLD,
     )
 
 
@@ -93,6 +99,9 @@ def inspect_frame(
     skip_detection_when_alignment_failed: bool = False,
     expected_segments: list[ExpectedSegment] | None = None,
     profile_enabled: bool = False,
+    alignment_max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
+    alignment_max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    yolo_conf: float | None = None,
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
     verification_mode = _verification_mode()
@@ -110,10 +119,18 @@ def inspect_frame(
         if profile_enabled:
             profile["inspect_alignment_ms"] = 0.0
             started_at = time.perf_counter()
-            detection_result = _detect_segments(context=context, image=frame)
+            detection_result = _detect_segments(
+                context=context,
+                image=frame,
+                conf=yolo_conf,
+            )
             profile["inspect_detection_ms"] = _elapsed_ms(started_at)
         else:
-            detection_result = _detect_segments(context=context, image=frame)
+            detection_result = _detect_segments(
+                context=context,
+                image=frame,
+                conf=yolo_conf,
+            )
 
         return _compose_frame_result(
             context=context,
@@ -133,10 +150,20 @@ def inspect_frame(
     if alignment is None:
         if profile_enabled:
             started_at = time.perf_counter()
-            alignment = align_frame(context=context, frame=frame)
+            alignment = align_frame(
+                context=context,
+                frame=frame,
+                max_side=alignment_max_side,
+                max_keypoints=alignment_max_keypoints,
+            )
             profile["inspect_alignment_ms"] = _elapsed_ms(started_at)
         else:
-            alignment = align_frame(context=context, frame=frame)
+            alignment = align_frame(
+                context=context,
+                frame=frame,
+                max_side=alignment_max_side,
+                max_keypoints=alignment_max_keypoints,
+            )
 
     message = alignment_display_message or alignment_message(alignment)
 
@@ -146,10 +173,18 @@ def inspect_frame(
             profile["inspect_detection_ms"] = 0.0
     elif profile_enabled:
         started_at = time.perf_counter()
-        detection_result = _detect_segments(context=context, image=frame)
+        detection_result = _detect_segments(
+            context=context,
+            image=frame,
+            conf=yolo_conf,
+        )
         profile["inspect_detection_ms"] = _elapsed_ms(started_at)
     else:
-        detection_result = _detect_segments(context=context, image=frame)
+        detection_result = _detect_segments(
+            context=context,
+            image=frame,
+            conf=yolo_conf,
+        )
 
     return _compose_frame_result(
         context=context,
@@ -180,6 +215,9 @@ def inspect_frame_parallel(
     expected_segments: list[ExpectedSegment] | None = None,
     profile_enabled: bool = False,
     executor: Executor | None = None,
+    alignment_max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
+    alignment_max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    yolo_conf: float | None = None,
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
     verification_mode = _verification_mode()
@@ -197,11 +235,19 @@ def inspect_frame_parallel(
         if profile_enabled:
             profile["inspect_alignment_ms"] = 0.0
             started_at = time.perf_counter()
-            detection_result = _detect_segments(context=context, image=frame)
+            detection_result = _detect_segments(
+                context=context,
+                image=frame,
+                conf=yolo_conf,
+            )
             profile["inspect_detection_ms"] = _elapsed_ms(started_at)
             profile["inspect_parallel_wait_ms"] = profile["inspect_detection_ms"]
         else:
-            detection_result = _detect_segments(context=context, image=frame)
+            detection_result = _detect_segments(
+                context=context,
+                image=frame,
+                conf=yolo_conf,
+            )
 
         return _compose_frame_result(
             context=context,
@@ -238,11 +284,14 @@ def inspect_frame_parallel(
                 _timed_align_frame,
                 context,
                 frame.copy(),
+                alignment_max_side,
+                alignment_max_keypoints,
             )
             detection_future = active_executor.submit(
                 _timed_detect_segments,
                 context,
                 frame.copy(),
+                yolo_conf,
             )
 
             alignment, alignment_ms = alignment_future.result()
@@ -262,10 +311,18 @@ def inspect_frame_parallel(
                     profile["inspect_detection_ms"] = 0.0
             elif profile_enabled:
                 started_at = time.perf_counter()
-                detection_result = _detect_segments(context=context, image=frame)
+                detection_result = _detect_segments(
+                    context=context,
+                    image=frame,
+                    conf=yolo_conf,
+                )
                 profile["inspect_detection_ms"] = _elapsed_ms(started_at)
             else:
-                detection_result = _detect_segments(context=context, image=frame)
+                detection_result = _detect_segments(
+                    context=context,
+                    image=frame,
+                    conf=yolo_conf,
+                )
 
             return _compose_frame_result(
                 context=context,
@@ -472,18 +529,26 @@ def _resolve_expected_segments(
 def _timed_align_frame(
     context: InspectionContext,
     frame: np.ndarray,
+    max_side: int | None,
+    max_keypoints: int,
 ) -> tuple[FrameAlignment, float]:
     started_at = time.perf_counter()
-    alignment = align_frame(context=context, frame=frame)
+    alignment = align_frame(
+        context=context,
+        frame=frame,
+        max_side=max_side,
+        max_keypoints=max_keypoints,
+    )
     return alignment, _elapsed_ms(started_at)
 
 
 def _timed_detect_segments(
     context: InspectionContext,
     frame: np.ndarray,
+    conf: float | None,
 ) -> tuple[DetectionResult, float]:
     started_at = time.perf_counter()
-    detection_result = _detect_segments(context=context, image=frame)
+    detection_result = _detect_segments(context=context, image=frame, conf=conf)
     return detection_result, _elapsed_ms(started_at)
 
 
@@ -565,6 +630,7 @@ def _detect_segments(
     *,
     context: InspectionContext,
     image: np.ndarray | None = None,
+    conf: float | None = None,
 ) -> DetectionResult:
     selected_class_keys = {str(item.id) for item in context.selected_classes}
     native_to_internal = context.native_to_internal
@@ -572,6 +638,8 @@ def _detect_segments(
     raw_detections = run_inference(
         weights_path=resolve_storage_path(context.model.weights_path),
         image=image,
+        conf=settings.YOLO_CONF_THRESHOLD if conf is None else conf,
+        iou=settings.YOLO_NMS_IOU,
         imgsz=context.model.imgsz or None,
     )
 

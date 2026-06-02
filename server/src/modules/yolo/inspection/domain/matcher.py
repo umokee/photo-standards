@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+from app.config import settings
 from modules.core.standards.reference_constants import IOU_MATCH_THRESHOLD
 from modules.yolo.inspection.domain.alignment import (
     LocalProjectionData,
@@ -20,6 +21,13 @@ from shapely.geometry import Polygon
 from shapely.validation import make_valid
 
 BBox = tuple[float, float, float, float]
+
+_MIN_MATCH_SCORE = 0.42
+_MAX_CENTER_DISTANCE_FACTOR = 0.85
+_MIN_AREA_RATIO = 0.20
+_MAX_AREA_RATIO = 5.00
+_MAX_OPTIMAL_ASSIGNMENT_CANDIDATES = 72
+_MAX_OPTIMAL_ASSIGNMENT_ITEMS = 18
 
 
 @dataclass(slots=True)
@@ -179,35 +187,23 @@ def match_segments(
             if expected_item.item.class_key != detection_item.detection.class_key:
                 continue
 
-            iou = _match_iou(
+            score, iou = _match_score(
                 expected_item.polygon,
                 detection_item.polygon,
                 expected_item.bbox,
                 detection_item.bbox,
             )
 
-            if iou < IOU_MATCH_THRESHOLD:
+            if score < _match_threshold(expected_item.bbox):
                 continue
 
             candidate_pairs.append(
-                (iou, iou, expected_item.index, detection_item.index)
+                (score, iou, expected_item.index, detection_item.index)
             )
 
-    candidate_pairs.sort(key=lambda item: item[0], reverse=True)
-
-    matched_expected_indices: set[int] = set()
-    matched_detection_indices: set[int] = set()
-    chosen_pairs: list[tuple[int, int, float]] = []
-
-    for _score, iou, expected_index, detection_index in candidate_pairs:
-        if expected_index in matched_expected_indices:
-            continue
-        if detection_index in matched_detection_indices:
-            continue
-
-        matched_expected_indices.add(expected_index)
-        matched_detection_indices.add(detection_index)
-        chosen_pairs.append((expected_index, detection_index, iou))
+    chosen_pairs = _choose_candidate_pairs(candidate_pairs)
+    matched_expected_indices = {expected_index for expected_index, _, _ in chosen_pairs}
+    matched_detection_indices = {detection_index for _, detection_index, _ in chosen_pairs}
 
     matches: list[SegmentMatch] = []
 
@@ -456,6 +452,9 @@ def _safe_project(
 def _detection_polygon(detection: YoloDetection) -> list[list[float]] | None:
     if detection.polygon is not None and len(detection.polygon) >= 3:
         return [[float(x), float(y)] for x, y in detection.polygon]
+    bbox = _bbox_from_detection(detection, None)
+    if bbox is not None:
+        return _polygon_from_bbox(bbox)
     return None
 
 
@@ -520,6 +519,26 @@ def _bbox_iou(a: BBox, b: BBox) -> float:
     return float(inter_area / union)
 
 
+def _bbox_area(bbox: BBox) -> float:
+    x1, y1, x2, y2 = bbox
+    return max(0.0, x2 - x1) * max(0.0, y2 - y1)
+
+
+def _bbox_center(bbox: BBox) -> tuple[float, float]:
+    x1, y1, x2, y2 = bbox
+    return ((x1 + x2) * 0.5, (y1 + y2) * 0.5)
+
+
+def _bbox_diag(bbox: BBox) -> float:
+    x1, y1, x2, y2 = bbox
+    return float(np.hypot(x2 - x1, y2 - y1))
+
+
+def _polygon_from_bbox(bbox: BBox) -> list[list[float]]:
+    x1, y1, x2, y2 = bbox
+    return [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+
+
 def _polygon_iou(
     polygon_a: list[list[float]],
     polygon_b: list[list[float]],
@@ -544,20 +563,156 @@ def _polygon_iou(
     return float(intersection / union)
 
 
-def _match_iou(
+def _match_score(
     expected_polygon: list[list[float]],
     detection_polygon: list[list[float]] | None,
     expected_bbox: BBox,
     detection_bbox: BBox,
-) -> float:
+) -> tuple[float, float]:
     bbox_iou = _bbox_iou(expected_bbox, detection_bbox)
 
     if detection_polygon is None or len(detection_polygon) < 3:
-        return bbox_iou
+        polygon_iou = 0.0
+    else:
+        polygon_iou = _polygon_iou(expected_polygon, detection_polygon)
 
-    polygon_iou = _polygon_iou(expected_polygon, detection_polygon)
+    iou = max(bbox_iou, polygon_iou)
+    if iou < IOU_MATCH_THRESHOLD:
+        return 0.0, iou
 
-    return max(bbox_iou, polygon_iou)
+    expected_area = _bbox_area(expected_bbox)
+    detection_area = _bbox_area(detection_bbox)
+    if expected_area <= 0 or detection_area <= 0:
+        return 0.0, iou
+
+    area_ratio = detection_area / expected_area
+    if area_ratio < _MIN_AREA_RATIO or area_ratio > _MAX_AREA_RATIO:
+        return 0.0, iou
+
+    expected_center = _bbox_center(expected_bbox)
+    detection_center = _bbox_center(detection_bbox)
+    center_distance = float(
+        np.hypot(
+            expected_center[0] - detection_center[0],
+            expected_center[1] - detection_center[1],
+        )
+    )
+    expected_diag = max(1.0, _bbox_diag(expected_bbox))
+    center_score = max(0.0, 1.0 - center_distance / expected_diag)
+    if center_distance > expected_diag * _MAX_CENTER_DISTANCE_FACTOR:
+        return 0.0, iou
+
+    area_score = min(area_ratio, 1.0 / area_ratio)
+    score = (
+        polygon_iou * 0.50
+        + bbox_iou * 0.25
+        + center_score * 0.20
+        + area_score * 0.05
+    )
+
+    return float(score), iou
+
+
+def _match_threshold(expected_bbox: BBox) -> float:
+    area = _bbox_area(expected_bbox)
+    if area <= 32 * 32:
+        return min(_MIN_MATCH_SCORE, 0.34)
+    if area >= 180 * 180:
+        return max(_MIN_MATCH_SCORE, 0.46)
+    return _MIN_MATCH_SCORE
+
+
+def _choose_candidate_pairs(
+    candidate_pairs: list[tuple[float, float, int, int]],
+) -> list[tuple[int, int, float]]:
+    if not candidate_pairs:
+        return []
+
+    expected_indices = sorted({item[2] for item in candidate_pairs})
+    detection_indices = sorted({item[3] for item in candidate_pairs})
+
+    if (
+        len(candidate_pairs) > _MAX_OPTIMAL_ASSIGNMENT_CANDIDATES
+        or len(expected_indices) > _MAX_OPTIMAL_ASSIGNMENT_ITEMS
+        or len(detection_indices) > _MAX_OPTIMAL_ASSIGNMENT_ITEMS
+    ):
+        return _choose_candidate_pairs_greedy(candidate_pairs)
+
+    expected_pos = {value: index for index, value in enumerate(expected_indices)}
+    detection_pos = {value: index for index, value in enumerate(detection_indices)}
+
+    by_expected: list[list[tuple[int, float, float, int]]] = [
+        [] for _ in expected_indices
+    ]
+    for score, iou, expected_index, detection_index in candidate_pairs:
+        by_expected[expected_pos[expected_index]].append(
+            (detection_pos[detection_index], score, iou, detection_index)
+        )
+
+    states: dict[int, tuple[float, list[tuple[int, int, float]]]] = {0: (0.0, [])}
+    for expected_index, options in zip(expected_indices, by_expected, strict=True):
+        next_states = dict(states)
+
+        for used_mask, (total_score, chosen) in states.items():
+            for detection_bit, score, iou, detection_index in options:
+                bit = 1 << detection_bit
+                if used_mask & bit:
+                    continue
+
+                next_mask = used_mask | bit
+                candidate_score = total_score + score
+                candidate_chosen = [*chosen, (expected_index, detection_index, iou)]
+                previous = next_states.get(next_mask)
+
+                if previous is None or _assignment_better(
+                    candidate_score,
+                    candidate_chosen,
+                    previous[0],
+                    previous[1],
+                ):
+                    next_states[next_mask] = (candidate_score, candidate_chosen)
+
+        states = next_states
+
+    return max(
+        (value[1] for value in states.values()),
+        key=lambda chosen: (
+            len(chosen),
+            sum(iou for _, _, iou in chosen),
+        ),
+    )
+
+
+def _assignment_better(
+    candidate_score: float,
+    candidate_chosen: list[tuple[int, int, float]],
+    previous_score: float,
+    previous_chosen: list[tuple[int, int, float]],
+) -> bool:
+    if len(candidate_chosen) != len(previous_chosen):
+        return len(candidate_chosen) > len(previous_chosen)
+    return candidate_score > previous_score
+
+
+def _choose_candidate_pairs_greedy(
+    candidate_pairs: list[tuple[float, float, int, int]],
+) -> list[tuple[int, int, float]]:
+    candidate_pairs = sorted(candidate_pairs, key=lambda item: item[0], reverse=True)
+    matched_expected_indices: set[int] = set()
+    matched_detection_indices: set[int] = set()
+    chosen_pairs: list[tuple[int, int, float]] = []
+
+    for _score, iou, expected_index, detection_index in candidate_pairs:
+        if expected_index in matched_expected_indices:
+            continue
+        if detection_index in matched_detection_indices:
+            continue
+
+        matched_expected_indices.add(expected_index)
+        matched_detection_indices.add(detection_index)
+        chosen_pairs.append((expected_index, detection_index, iou))
+
+    return chosen_pairs
 
 
 def _is_visible_in_frame(
@@ -593,6 +748,9 @@ def _classify_unmatched_detection(
     iou_threshold: float = 0.10,
 ) -> tuple[str, int | None]:
     del matched_expected_indices
+
+    if detection.detection.confidence < settings.YOLO_EXTRA_CONF_THRESHOLD:
+        return ("discard", None)
 
     for expected_item in projected_expected:
         iou = _bbox_iou(expected_item.bbox, detection.bbox)

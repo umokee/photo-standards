@@ -15,6 +15,7 @@ from app.config import settings
 from app.observability import log_event
 from modules.core.standards.reference_constants import (
     LIGHTGLUE_TORCH_WEIGHTS_PATH,
+    MAX_LIGHTGLUE_MATCH_PAIRS,
     SUPERPOINT_REALTIME_MAX_KEYPOINTS,
     SUPERPOINT_TORCH_WEIGHTS_PATH,
 )
@@ -146,7 +147,7 @@ def match_feature_arrays(
         order = np.argsort(-scores)
         pairs = pairs[order]
 
-    max_pairs = 512
+    max_pairs = MAX_LIGHTGLUE_MATCH_PAIRS
     if pairs.shape[0] > max_pairs:
         pairs = pairs[:max_pairs]
 
