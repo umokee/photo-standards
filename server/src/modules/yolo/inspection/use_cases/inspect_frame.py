@@ -4,6 +4,7 @@ import time
 from collections import defaultdict
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +24,7 @@ from modules.yolo.inspection.domain.alignment import (
     alignment_message,
     failed_alignment,
 )
+from modules.yolo.inspection.domain.local_refiner import ObjectLocalRefiner
 from modules.yolo.inspection.domain.matcher import (
     all_ok,
     build_expected_segments,
@@ -419,6 +421,10 @@ def _compose_frame_result(
         alignment=alignment,
         frame=frame,
     )
+    object_refiner = _build_object_refiner(
+        context=context,
+        frame=frame,
+    )
 
     if _can_project_segments(alignment=alignment, projection_data=projection_data):
         if profile_enabled:
@@ -429,6 +435,7 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
+                object_refiner=object_refiner,
             )
             profile["inspect_matching_ms"] = _elapsed_ms(started_at)
         else:
@@ -438,6 +445,7 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
+                object_refiner=object_refiner,
             )
 
         _, matched, missing = summarize(matches)
@@ -582,6 +590,33 @@ def _build_projection_data(
         frame_points=frame_points,
         frame_size=(frame.shape[1], frame.shape[0]),
     )
+
+
+
+def _build_object_refiner(
+    *,
+    context: InspectionContext,
+    frame: np.ndarray,
+) -> ObjectLocalRefiner | None:
+    if not settings.INSPECTION_OBJECT_LOCAL_REFINER:
+        return None
+
+    try:
+        reference_frame = _load_reference_frame(context.reference_image.image_path)
+    except Exception:
+        return None
+
+    return ObjectLocalRefiner(
+        reference_frame=reference_frame,
+        frame=frame,
+        max_side=settings.INSPECTION_OBJECT_LOCAL_MAX_SIDE,
+        max_keypoints=settings.INSPECTION_OBJECT_LOCAL_MAX_KEYPOINTS,
+    )
+
+
+@lru_cache(maxsize=16)
+def _load_reference_frame(image_path: str) -> np.ndarray:
+    return load_image(resolve_storage_path(image_path))
 
 
 def _can_project_segments(

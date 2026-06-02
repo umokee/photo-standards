@@ -10,7 +10,9 @@ from modules.yolo.inspection.domain.alignment import (
     LocalProjectionData,
     project_polygon,
     project_polygon_adaptive,
+    project_polygon_guided_by_detection,
 )
+from modules.yolo.inspection.domain.local_refiner import ObjectLocalRefiner
 from modules.yolo.inspection.domain.types import (
     ExpectedSegment,
     SegmentMatch,
@@ -124,6 +126,7 @@ def match_segments(
     *,
     frame_size: tuple[int, int] | None = None,
     projection_data: LocalProjectionData | None = None,
+    object_refiner: ObjectLocalRefiner | None = None,
 ) -> list[SegmentMatch]:
     projected_expected: list[_ProjectedExpected] = []
     unprojected_expected: list[ExpectedSegment] = []
@@ -181,6 +184,7 @@ def match_segments(
 
     candidate_pairs: list[tuple[float, float, int, int]] = []
     candidate_debug: dict[tuple[int, int], dict[str, Any]] = {}
+    candidate_projected_polygons: dict[tuple[int, int], list[list[float]]] = {}
     projected_by_index = {item.index: item for item in projected_expected}
     detection_by_index = {item.index: item for item in detection_candidates}
 
@@ -198,15 +202,66 @@ def match_segments(
             score = float(score_debug["score"])
             iou = float(score_debug["iou"])
 
-            if not score_debug["passed"]:
+            if score_debug["passed"]:
+                candidate_debug[(expected_item.index, detection_item.index)] = {
+                    **score_debug,
+                    "reason": "matched",
+                    "projection": "adaptive",
+                }
+                candidate_pairs.append(
+                    (score, iou, expected_item.index, detection_item.index)
+                )
                 continue
 
-            candidate_debug[(expected_item.index, detection_item.index)] = {
-                **score_debug,
-                "reason": "matched",
-            }
+            object_local_candidate = _try_object_local_candidate(
+                expected_item,
+                detection_item,
+                object_refiner=object_refiner,
+                global_debug=score_debug,
+            )
+            if object_local_candidate is not None:
+                object_local_polygon, object_local_debug = object_local_candidate
+                object_local_score = float(object_local_debug["score"])
+                object_local_iou = float(object_local_debug["iou"])
+                candidate_projected_polygons[
+                    (expected_item.index, detection_item.index)
+                ] = object_local_polygon
+                candidate_debug[
+                    (expected_item.index, detection_item.index)
+                ] = object_local_debug
+                candidate_pairs.append(
+                    (
+                        object_local_score,
+                        object_local_iou,
+                        expected_item.index,
+                        detection_item.index,
+                    )
+                )
+                continue
+
+            guided_candidate = _try_detection_guided_candidate(
+                expected_item,
+                detection_item,
+                projection_data=projection_data,
+                global_debug=score_debug,
+            )
+            if guided_candidate is None:
+                continue
+
+            guided_polygon, guided_debug = guided_candidate
+            guided_score = float(guided_debug["score"])
+            guided_iou = float(guided_debug["iou"])
+            candidate_projected_polygons[
+                (expected_item.index, detection_item.index)
+            ] = guided_polygon
+            candidate_debug[(expected_item.index, detection_item.index)] = guided_debug
             candidate_pairs.append(
-                (score, iou, expected_item.index, detection_item.index)
+                (
+                    guided_score,
+                    guided_iou,
+                    expected_item.index,
+                    detection_item.index,
+                )
             )
 
     chosen_pairs = _choose_candidate_pairs(candidate_pairs)
@@ -220,6 +275,11 @@ def match_segments(
         detection_item = detection_by_index[detection_index]
         detection = detection_item.detection
 
+        expected_polygon = candidate_projected_polygons.get(
+            (expected_index, detection_index),
+            expected_item.polygon,
+        )
+
         matches.append(
             SegmentMatch(
                 annotation_id=expected_item.item.annotation_id,
@@ -230,7 +290,7 @@ def match_segments(
                 status="ok",
                 iou=round(float(iou), 4),
                 confidence=detection.confidence,
-                expected_polygon=expected_item.polygon,
+                expected_polygon=expected_polygon,
                 detected_polygon=detection_item.polygon,
                 detected_bbox=detection.bbox,
                 debug=candidate_debug.get((expected_index, detection_index)),
@@ -633,6 +693,120 @@ def _match_score(
         detection_bbox,
     )
     return float(debug["score"]), float(debug["iou"])
+
+
+
+def _try_object_local_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    object_refiner: ObjectLocalRefiner | None,
+    global_debug: dict[str, Any],
+) -> tuple[list[list[float]], dict[str, Any]] | None:
+    if object_refiner is None:
+        return None
+
+    refinement = object_refiner.refine(
+        reference_polygon=expected_item.item.reference_polygon,
+        detection_polygon=detection_item.polygon,
+        detection_bbox=detection_item.bbox,
+    )
+    if not refinement.success or refinement.projected_polygon is None:
+        return None
+
+    refined_bbox = _bbox_from_polygon(refinement.projected_polygon)
+    if refined_bbox is None:
+        return None
+
+    score_debug = _match_score_details(
+        refinement.projected_polygon,
+        detection_item.polygon,
+        refined_bbox,
+        detection_item.bbox,
+    )
+    if not score_debug["passed"]:
+        return None
+
+    return (
+        refinement.projected_polygon,
+        {
+            **score_debug,
+            "reason": "matched",
+            "projection": "object_local_crop",
+            "global_reject_reason": global_debug.get("reject_reason"),
+            "global_score": global_debug.get("score"),
+            "global_iou": global_debug.get("iou"),
+            **refinement.debug,
+        },
+    )
+
+
+def _try_detection_guided_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    projection_data: LocalProjectionData | None,
+    global_debug: dict[str, Any],
+) -> tuple[list[list[float]], dict[str, Any]] | None:
+    if projection_data is None:
+        return None
+
+    guided_polygon = _safe_project_guided_by_detection(
+        expected_item.item.reference_polygon,
+        detection_item.bbox,
+        projection_data=projection_data,
+    )
+    if len(guided_polygon) < 3:
+        return None
+
+    guided_bbox = _bbox_from_polygon(guided_polygon)
+    if guided_bbox is None:
+        return None
+
+    guided_debug = _match_score_details(
+        guided_polygon,
+        detection_item.polygon,
+        guided_bbox,
+        detection_item.bbox,
+    )
+    if not guided_debug["passed"]:
+        return None
+
+    return (
+        guided_polygon,
+        {
+            **guided_debug,
+            "reason": "matched",
+            "projection": "detection_guided_local",
+            "global_reject_reason": global_debug.get("reject_reason"),
+            "global_iou": global_debug.get("iou"),
+            "global_score": global_debug.get("score"),
+        },
+    )
+
+
+def _safe_project_guided_by_detection(
+    polygon: list[list[float]],
+    detection_bbox: BBox,
+    *,
+    projection_data: LocalProjectionData | None,
+) -> list[list[float]]:
+    try:
+        projected = project_polygon_guided_by_detection(
+            polygon,
+            detection_bbox=detection_bbox,
+            data=projection_data,
+        )
+    except Exception:
+        return []
+
+    if not projected or len(projected) < 3:
+        return []
+
+    if not all(len(point) >= 2 for point in projected):
+        return []
+
+    return [[float(point[0]), float(point[1])] for point in projected]
 
 
 def _match_score_details(

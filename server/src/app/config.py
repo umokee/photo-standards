@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Inspection behavior.
     INSPECTION_POLYGON_PROJECTION_MODE: Literal["global", "adaptive"] = "adaptive"
     INSPECTION_VERIFICATION_MODE: Literal["alignment", "yolo_count"] = "alignment"
+    INSPECTION_OBJECT_LOCAL_REFINER: bool = True
+    INSPECTION_OBJECT_LOCAL_MAX_SIDE: int = Field(default=768, ge=128, le=2048)
+    INSPECTION_OBJECT_LOCAL_MAX_KEYPOINTS: int = Field(default=1536, ge=128, le=4096)
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)
 
     # Database connection.

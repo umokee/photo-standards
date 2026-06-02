@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 PolygonPoints = list[list[float]]
+BBox = tuple[float, float, float, float]
 
 _MIN_LOCAL_INLIERS = 5
 _MAX_LOCAL_POINTS = 80
@@ -143,6 +144,31 @@ def project_polygon_adaptive(
     return _project_polygon_global(polygon, data.global_homography)
 
 
+def project_polygon_guided_by_detection(
+    polygon: PolygonPoints,
+    *,
+    detection_bbox: BBox,
+    data: LocalProjectionData | None,
+) -> PolygonPoints:
+    """Project one reference polygon using local feature matches constrained by YOLO bbox.
+
+    This is a second-chance projection for object-level inspection.  The normal
+    adaptive projection selects local matches only around the reference polygon.
+    Here we additionally require the matched frame points to be near the YOLO
+    detection, so a successful transform is anchored to the object that YOLO
+    actually found.
+    """
+
+    if data is None:
+        return []
+
+    return _project_polygon_detection_guided(
+        polygon,
+        detection_bbox=detection_bbox,
+        data=data,
+    )
+
+
 def alignment_message(alignment: FrameAlignment) -> str:
     if alignment.is_success:
         median_error = alignment.median_error or 0.0
@@ -195,6 +221,68 @@ def failed_alignment(
         stage="external_failed_alignment",
         reason=status.value,
     )
+
+
+def _project_polygon_detection_guided(
+    polygon: PolygonPoints,
+    *,
+    detection_bbox: BBox,
+    data: LocalProjectionData,
+) -> PolygonPoints:
+    reference_points = _as_points(data.reference_points)
+    frame_points = _as_points(data.frame_points)
+    polygon_array = _as_polygon_array(polygon)
+
+    if reference_points is None or frame_points is None or polygon_array is None:
+        return []
+
+    if len(reference_points) != len(frame_points):
+        return []
+
+    bbox = _bbox_from_array(polygon_array)
+    if bbox is None:
+        return []
+
+    local_reference, local_frame = _select_detection_guided_matches(
+        reference_points=reference_points,
+        frame_points=frame_points,
+        reference_bbox=bbox,
+        detection_bbox=detection_bbox,
+    )
+
+    if len(local_reference) >= 4:
+        projected = _try_local_homography(
+            polygon_array=polygon_array,
+            local_reference=local_reference,
+            local_frame=local_frame,
+            data=data,
+            require_global_consistency=False,
+        )
+        if projected:
+            projected_array = _as_polygon_array(projected)
+            if projected_array is not None and _guided_projection_near_detection(
+                projected_array,
+                detection_bbox,
+            ):
+                return projected
+
+    if len(local_reference) >= _MIN_LOCAL_INLIERS:
+        projected = _try_local_affine(
+            polygon_array=polygon_array,
+            local_reference=local_reference,
+            local_frame=local_frame,
+            data=data,
+            require_global_consistency=False,
+        )
+        if projected:
+            projected_array = _as_polygon_array(projected)
+            if projected_array is not None and _guided_projection_near_detection(
+                projected_array,
+                detection_bbox,
+            ):
+                return projected
+
+    return []
 
 
 def _project_polygon_local(
@@ -254,6 +342,7 @@ def _try_local_homography(
     local_reference: np.ndarray,
     local_frame: np.ndarray,
     data: LocalProjectionData,
+    require_global_consistency: bool = True,
 ) -> PolygonPoints:
     homography, inliers = cv2.findHomography(
         local_reference.reshape(-1, 1, 2),
@@ -281,6 +370,7 @@ def _try_local_homography(
         source_polygon=polygon_array,
         projected=projected,
         data=data,
+        require_global_consistency=require_global_consistency,
     ):
         return []
 
@@ -301,6 +391,7 @@ def _try_local_affine(
     local_reference: np.ndarray,
     local_frame: np.ndarray,
     data: LocalProjectionData,
+    require_global_consistency: bool = True,
 ) -> PolygonPoints:
     affine, inliers = cv2.estimateAffinePartial2D(
         local_reference,
@@ -334,6 +425,7 @@ def _try_local_affine(
         source_polygon=polygon_array,
         projected=projected,
         data=data,
+        require_global_consistency=require_global_consistency,
     ):
         return []
 
@@ -348,6 +440,114 @@ def _try_local_affine(
     return _to_points(projected)
 
 
+def _select_detection_guided_matches(
+    *,
+    reference_points: np.ndarray,
+    frame_points: np.ndarray,
+    reference_bbox: BBox,
+    detection_bbox: BBox,
+) -> tuple[np.ndarray, np.ndarray]:
+    ref_x1, ref_y1, ref_x2, ref_y2 = reference_bbox
+    det_x1, det_y1, det_x2, det_y2 = detection_bbox
+
+    ref_padding = _padding_for_bbox(reference_bbox)
+    det_padding = _padding_for_bbox(detection_bbox)
+
+    mask = (
+        (reference_points[:, 0] >= ref_x1 - ref_padding)
+        & (reference_points[:, 0] <= ref_x2 + ref_padding)
+        & (reference_points[:, 1] >= ref_y1 - ref_padding)
+        & (reference_points[:, 1] <= ref_y2 + ref_padding)
+        & (frame_points[:, 0] >= det_x1 - det_padding)
+        & (frame_points[:, 0] <= det_x2 + det_padding)
+        & (frame_points[:, 1] >= det_y1 - det_padding)
+        & (frame_points[:, 1] <= det_y2 + det_padding)
+    )
+
+    local_reference = reference_points[mask]
+    local_frame = frame_points[mask]
+
+    if len(local_reference) <= _MAX_LOCAL_POINTS:
+        return local_reference, local_frame
+
+    ref_center = np.array(
+        [(ref_x1 + ref_x2) * 0.5, (ref_y1 + ref_y2) * 0.5],
+        dtype=np.float32,
+    )
+    det_center = np.array(
+        [(det_x1 + det_x2) * 0.5, (det_y1 + det_y2) * 0.5],
+        dtype=np.float32,
+    )
+
+    ref_distances = np.linalg.norm(local_reference - ref_center, axis=1)
+    det_distances = np.linalg.norm(local_frame - det_center, axis=1)
+    combined = ref_distances + det_distances
+    indices = np.argsort(combined)[:_MAX_LOCAL_POINTS]
+
+    return local_reference[indices], local_frame[indices]
+
+
+def _padding_for_bbox(bbox: BBox) -> float:
+    x1, y1, x2, y2 = bbox
+    width = max(1.0, x2 - x1)
+    height = max(1.0, y2 - y1)
+
+    return max(
+        _PADDING_MIN_PX,
+        min(_PADDING_MAX_PX, max(width, height) * _PADDING_SCALE),
+    )
+
+
+def _guided_projection_near_detection(
+    projected: np.ndarray,
+    detection_bbox: BBox,
+) -> bool:
+    projected_bbox = _bbox_from_array(projected)
+    if projected_bbox is None:
+        return False
+
+    iou = _bbox_iou(projected_bbox, detection_bbox)
+    if iou >= 0.02:
+        return True
+
+    projected_center = _polygon_center(projected)
+    det_x1, det_y1, det_x2, det_y2 = detection_bbox
+    detection_center = np.array(
+        [(det_x1 + det_x2) * 0.5, (det_y1 + det_y2) * 0.5],
+        dtype=np.float32,
+    )
+
+    distance = float(np.linalg.norm(projected_center - detection_center))
+    projected_diag = _bbox_diag(projected_bbox)
+    detection_diag = _bbox_diag(detection_bbox)
+
+    return distance <= max(35.0, min(projected_diag, detection_diag) * 0.80)
+
+
+def _bbox_iou(a: BBox, b: BBox) -> float:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+
+    inter_x1 = max(ax1, bx1)
+    inter_y1 = max(ay1, by1)
+    inter_x2 = min(ax2, bx2)
+    inter_y2 = min(ay2, by2)
+
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    if inter_area <= 0:
+        return 0.0
+
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter_area
+    if union <= 0:
+        return 0.0
+
+    return float(inter_area / union)
+
+
 def _select_local_matches(
     *,
     reference_points: np.ndarray,
@@ -358,10 +558,7 @@ def _select_local_matches(
     width = max(1.0, x2 - x1)
     height = max(1.0, y2 - y1)
 
-    padding = max(
-        _PADDING_MIN_PX,
-        min(_PADDING_MAX_PX, max(width, height) * _PADDING_SCALE),
-    )
+    padding = _padding_for_bbox(bbox)
 
     mask = (
         (reference_points[:, 0] >= x1 - padding)
@@ -430,6 +627,7 @@ def _projected_polygon_ok(
     source_polygon: np.ndarray,
     projected: np.ndarray,
     data: LocalProjectionData,
+    require_global_consistency: bool = True,
 ) -> bool:
     if not np.isfinite(projected).all():
         return False
@@ -440,7 +638,7 @@ def _projected_polygon_ok(
     if not _polygon_area_ok(source_polygon, projected):
         return False
 
-    if data.global_homography is not None:
+    if require_global_consistency and data.global_homography is not None:
         return _local_projection_consistent_with_global(
             source_polygon=source_polygon,
             local_projected=projected,
