@@ -85,13 +85,39 @@ class _MissingPolygonRefinement:
     feature_total: int
     candidate_count: int
     inlier_count: int
+    inlier_ratio: float
     median_error: float
+    reference_spread: float
+    frame_spread: float
+    quadrant_count: int
+    center_drift_factor: float
     containment: float
     area_score: float
     edge_snapped: bool = False
     edge_moved_points: int = 0
     edge_mean_shift: float = 0.0
     edge_max_shift: float = 0.0
+
+
+@dataclass(slots=True)
+class _MissingFallbackProjection:
+    polygon: list[list[float]] | None
+    bbox: BBox | None
+    hidden: bool
+    debug: dict[str, Any]
+
+
+@dataclass(slots=True)
+class _MissingTranslationRescue:
+    polygon: list[list[float]]
+    bbox: BBox
+    candidate_count: int
+    inlier_count: int
+    inlier_ratio: float
+    median_error: float
+    shift_x: float
+    shift_y: float
+    shift_factor: float
 
 
 @dataclass(slots=True)
@@ -139,20 +165,55 @@ def build_missing_matches(
     expected: list[ExpectedSegment],
     homography: np.ndarray | None = None,
     *,
+    frame_size: tuple[int, int] | None = None,
     projection_data: LocalProjectionData | None = None,
+    hide_unconfirmed_projection: bool = False,
 ) -> list[SegmentMatch]:
     matches: list[SegmentMatch] = []
 
     for item in expected:
         expected_polygon = None
 
-        if homography is not None:
+        debug: dict[str, Any] = {"reason": "no_matching_detection"}
+
+        if hide_unconfirmed_projection:
+            debug = {
+                "reason": "projection_hidden_as_unsafe",
+                "reason_code": "missing_projection_low_confidence",
+                "missing_polygon_projection": "unsafe_hidden",
+                "missing_polygon_projection_safety": "unsafe_hidden",
+            }
+        elif homography is not None:
             projected = _safe_project(
                 item.reference_polygon,
                 homography,
                 projection_data=projection_data,
             )
-            expected_polygon = projected if len(projected) >= 3 else None
+            if len(projected) >= 3:
+                bbox = _bbox_from_polygon(projected)
+                effective_frame_size = frame_size
+                if effective_frame_size is None and projection_data is not None:
+                    effective_frame_size = projection_data.frame_size
+                visible = (
+                    bbox is not None
+                    and (
+                        effective_frame_size is None
+                        or _is_visible_in_frame(
+                            bbox,
+                            effective_frame_size,
+                            min_visible_fraction=0.05,
+                        )
+                    )
+                )
+                if visible:
+                    expected_polygon = projected
+                else:
+                    debug = {
+                        "reason": "projection_hidden_as_unsafe",
+                        "reason_code": "missing_projection_low_confidence",
+                        "missing_polygon_projection": "unsafe_hidden",
+                        "missing_polygon_projection_safety": "unsafe_hidden",
+                    }
 
         matches.append(
             SegmentMatch(
@@ -167,7 +228,7 @@ def build_missing_matches(
                 expected_polygon=expected_polygon,
                 detected_polygon=None,
                 detected_bbox=None,
-                debug={"reason": "no_matching_detection"},
+                debug=debug,
             )
         )
 
@@ -217,7 +278,9 @@ def match_segments(
         return build_missing_matches(
             expected,
             homography,
+            frame_size=frame_size,
             projection_data=projection_data,
+            hide_unconfirmed_projection=True,
         )
 
     detection_candidates: list[_DetectionCandidate] = []
@@ -314,13 +377,50 @@ def match_segments(
             expected_item,
             slot=slot,
             projection_data=projection_data,
+            all_expected=projected_expected,
         )
         if missing_refinement is not None:
-            missing_polygon = missing_refinement.polygon
-            missing_debug = _merge_missing_refinement_debug(
-                missing_debug,
-                missing_refinement,
+            translation_override = _try_missing_refinement_translation_override(
+                expected_item,
+                refinement=missing_refinement,
+                slot=slot,
+                projection_data=projection_data,
+                all_expected=projected_expected,
             )
+            if translation_override is not None:
+                rescue, projection_name = translation_override
+                missing_polygon = rescue.polygon
+                missing_debug = _merge_missing_translation_rescue_debug(
+                    missing_debug,
+                    rescue,
+                    source_projection=projection_name,
+                    replaced_projection=(
+                        "context_feature_affine_edge_guarded"
+                        if missing_refinement.edge_snapped
+                        else "context_feature_affine"
+                    ),
+                    replaced_median_error=missing_refinement.median_error,
+                    replaced_inlier_ratio=missing_refinement.inlier_ratio,
+                    replaced_area_score=missing_refinement.area_score,
+                )
+            else:
+                missing_polygon = missing_refinement.polygon
+                missing_debug = _merge_missing_refinement_debug(
+                    missing_debug,
+                    missing_refinement,
+                )
+        else:
+            fallback = _resolve_missing_fallback_projection(
+                expected_item,
+                slot=slot,
+                projection_data=projection_data,
+                all_expected=projected_expected,
+            )
+            missing_polygon = fallback.polygon
+            if fallback.debug:
+                missing_debug = {**missing_debug, **fallback.debug}
+            if fallback.hidden:
+                missing_debug = _merge_unsafe_missing_projection_debug(missing_debug)
 
         matches.append(
             SegmentMatch(
@@ -712,6 +812,7 @@ def _build_expected_slots(
             expected_item,
             search_bbox=search_bbox,
             projection_data=projection_data,
+            all_expected=projected_expected,
         )
 
         slots[expected_item.index] = _ExpectedSlot(
@@ -888,6 +989,7 @@ def _try_missing_polygon_refinement(
     *,
     slot: _ExpectedSlot | None,
     projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None = None,
 ) -> _MissingPolygonRefinement | None:
     if not settings.INSPECTION_MISSING_POLYGON_REFINEMENT:
         return None
@@ -898,10 +1000,17 @@ def _try_missing_polygon_refinement(
     if slot.feature_support < min_support:
         return None
 
+    reference_bbox = slot.reference_bbox
+    if reference_bbox is None:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return None
+
     local_reference, local_frame = _missing_polygon_refinement_points(
         expected_item,
         slot=slot,
         projection_data=projection_data,
+        all_expected=all_expected,
     )
     if len(local_reference) < min_support:
         return None
@@ -936,10 +1045,33 @@ def _try_missing_polygon_refinement(
     if inlier_count < min_support:
         return None
 
+    candidate_count = int(len(local_reference))
+    inlier_ratio = inlier_count / max(1, candidate_count)
+    if inlier_ratio < settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_INLIER_RATIO:
+        return None
+    is_multi_object_context = all_expected is not None and len(all_expected) > 1
+    if is_multi_object_context and inlier_ratio < 0.50:
+        return None
+
+    inlier_reference = local_reference[inlier_mask]
+    inlier_frame = local_frame[inlier_mask]
+    reference_spread = _missing_context_spread_score(inlier_reference, reference_bbox)
+    frame_spread = _missing_context_spread_score(inlier_frame, slot.projected_bbox)
+    min_spread = settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_SPREAD
+    if min(reference_spread, frame_spread) < min_spread:
+        return None
+
+    quadrant_count = _missing_context_quadrant_count(inlier_reference, reference_bbox)
+    min_quadrants = settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_QUADRANTS
+    if is_multi_object_context:
+        min_quadrants = max(min_quadrants, 3)
+    if quadrant_count < min_quadrants:
+        return None
+
     median_error = _affine_reprojection_median_error(
         affine,
-        source=local_reference[inlier_mask],
-        target=local_frame[inlier_mask],
+        source=inlier_reference,
+        target=inlier_frame,
     )
     if median_error is None:
         return None
@@ -972,8 +1104,32 @@ def _try_missing_polygon_refinement(
         return None
 
     area_score = _bbox_area_similarity(bbox, expected_item.bbox)
-    if area_score < _MISSING_POLYGON_MIN_AREA_SCORE:
+    min_area_score = max(
+        _MISSING_POLYGON_MIN_AREA_SCORE,
+        settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_AREA_SCORE,
+    )
+    if area_score < min_area_score:
         return None
+
+    center_drift_factor = _bbox_center_distance_factor(bbox, expected_item.bbox)
+    if (
+        center_drift_factor
+        > settings.INSPECTION_MISSING_POLYGON_CONTEXT_MAX_CENTER_DRIFT_FACTOR
+    ):
+        return None
+
+    if is_multi_object_context:
+        global_projection = _missing_global_projection(
+            expected_item,
+            projection_data=projection_data,
+        )
+        if global_projection is None:
+            return None
+        _, global_bbox = global_projection
+        global_area_score = _bbox_area_similarity(bbox, global_bbox)
+        global_center_factor = _bbox_center_distance_factor(bbox, global_bbox)
+        if global_area_score < 0.42 or global_center_factor > 0.58:
+            return None
 
     edge_snapped = False
     edge_moved_points = 0
@@ -1005,9 +1161,14 @@ def _try_missing_polygon_refinement(
         bbox=bbox,
         feature_support=slot.feature_support,
         feature_total=slot.feature_total,
-        candidate_count=int(len(local_reference)),
+        candidate_count=candidate_count,
         inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
         median_error=float(median_error),
+        reference_spread=float(reference_spread),
+        frame_spread=float(frame_spread),
+        quadrant_count=int(quadrant_count),
+        center_drift_factor=float(center_drift_factor),
         containment=float(containment),
         area_score=float(area_score),
         edge_snapped=edge_snapped,
@@ -1034,7 +1195,14 @@ def _merge_missing_refinement_debug(
         "missing_polygon_feature_total": refinement.feature_total,
         "missing_polygon_candidate_count": refinement.candidate_count,
         "missing_polygon_inliers": refinement.inlier_count,
+        "missing_polygon_inlier_ratio": _round_debug(refinement.inlier_ratio),
         "missing_polygon_median_error": _round_debug(refinement.median_error),
+        "missing_polygon_reference_spread": _round_debug(refinement.reference_spread),
+        "missing_polygon_frame_spread": _round_debug(refinement.frame_spread),
+        "missing_polygon_context_quadrants": refinement.quadrant_count,
+        "missing_polygon_center_drift_factor": _round_debug(
+            refinement.center_drift_factor
+        ),
         "missing_polygon_containment": _round_debug(refinement.containment),
         "missing_polygon_area_score": _round_debug(refinement.area_score),
         "missing_polygon_edge_snapped": refinement.edge_snapped,
@@ -1048,11 +1216,1072 @@ def _merge_missing_refinement_debug(
     }
 
 
+
+def _try_missing_refinement_translation_override(
+    expected_item: _ProjectedExpected,
+    *,
+    refinement: _MissingPolygonRefinement,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> tuple[_MissingTranslationRescue, str] | None:
+    if slot is None or projection_data is None:
+        return None
+    if not _missing_refinement_should_try_translation_override(refinement):
+        return None
+
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    if global_projection is None:
+        return None
+
+    global_polygon, global_bbox = global_projection
+    rescue = _try_missing_translation_rescue(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        global_polygon=global_polygon,
+        global_bbox=global_bbox,
+        all_expected=all_expected,
+    )
+    projection_name = "context_feature_affine_translation_rescue"
+
+    if rescue is None:
+        rescue = _try_missing_scene_translation_rescue(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            global_polygon=global_polygon,
+            global_bbox=global_bbox,
+            all_expected=all_expected,
+        )
+        projection_name = "context_feature_affine_scene_translation_rescue"
+
+    if rescue is None:
+        return None
+    if not _missing_translation_override_is_safer(
+        refinement,
+        rescue,
+        expected_item=expected_item,
+        all_expected=all_expected,
+    ):
+        return None
+
+    return rescue, projection_name
+
+
+def _missing_refinement_should_try_translation_override(
+    refinement: _MissingPolygonRefinement,
+) -> bool:
+    # A local affine is allowed to rotate/scale/shear the expected polygon.  It is
+    # useful when the surrounding geometry is strong, but on thin or hook-like
+    # details a noisy affine often gives a safe-looking polygon with poor IoU.
+    # In these weak cases we try a translation-only rescue that preserves the
+    # global shape and only corrects the scene shift.
+    if refinement.edge_snapped:
+        return False
+    if refinement.candidate_count <= 0:
+        return False
+
+    weak_ratio = refinement.inlier_ratio < 0.58
+    noisy_error = refinement.median_error > 5.75
+    weak_area = refinement.area_score < 0.78
+    wide_drift = refinement.center_drift_factor > 0.30
+    weak_spread = min(refinement.reference_spread, refinement.frame_spread) < 0.24
+    weak_quadrants = refinement.quadrant_count < 3
+
+    return any(
+        (
+            weak_ratio,
+            noisy_error,
+            weak_area,
+            wide_drift,
+            weak_spread,
+            weak_quadrants,
+        )
+    )
+
+
+def _missing_translation_override_is_safer(
+    refinement: _MissingPolygonRefinement,
+    rescue: _MissingTranslationRescue,
+    *,
+    expected_item: _ProjectedExpected,
+    all_expected: list[_ProjectedExpected] | None,
+) -> bool:
+    rescue_area_score = _bbox_area_similarity(rescue.bbox, expected_item.bbox)
+    if rescue_area_score < 0.32:
+        return False
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=rescue.bbox,
+        all_expected=all_expected,
+    ):
+        return False
+
+    # Do not replace a clearly stable affine.  Otherwise prefer translation when
+    # it is at least as coherent by residuals or when the affine has clear signs
+    # of deformation.  This keeps Dangerous=0 behaviour while reducing visually
+    # poor affine warps.
+    affine_is_deformed = (
+        refinement.area_score < 0.72
+        or refinement.center_drift_factor > 0.42
+        or refinement.inlier_ratio < 0.48
+    )
+    rescue_error_better = rescue.median_error <= max(
+        3.25,
+        refinement.median_error * 0.82,
+    )
+    rescue_ratio_better = rescue.inlier_ratio >= refinement.inlier_ratio + 0.08
+
+    return affine_is_deformed or rescue_error_better or rescue_ratio_better
+
+
+def _merge_missing_translation_rescue_debug(
+    missing_debug: dict[str, Any],
+    rescue: _MissingTranslationRescue,
+    *,
+    source_projection: str,
+    replaced_projection: str,
+    replaced_median_error: float,
+    replaced_inlier_ratio: float,
+    replaced_area_score: float,
+) -> dict[str, Any]:
+    return {
+        **missing_debug,
+        "missing_polygon_refined": True,
+        "missing_polygon_projection": source_projection,
+        "missing_polygon_projection_safety": "translation_override",
+        "missing_polygon_bbox": _bbox_debug(rescue.bbox),
+        "missing_polygon_candidate_count": rescue.candidate_count,
+        "missing_polygon_inliers": rescue.inlier_count,
+        "missing_polygon_inlier_ratio": _round_debug(rescue.inlier_ratio),
+        "missing_polygon_median_error": _round_debug(rescue.median_error),
+        "missing_polygon_translation_shift_x": _round_debug(rescue.shift_x),
+        "missing_polygon_translation_shift_y": _round_debug(rescue.shift_y),
+        "missing_polygon_translation_shift_factor": _round_debug(
+            rescue.shift_factor
+        ),
+        "missing_polygon_replaced_projection": replaced_projection,
+        "missing_polygon_replaced_median_error": _round_debug(
+            replaced_median_error
+        ),
+        "missing_polygon_replaced_inlier_ratio": _round_debug(
+            replaced_inlier_ratio
+        ),
+        "missing_polygon_replaced_area_score": _round_debug(
+            replaced_area_score
+        ),
+        "note": (
+            "Local affine was safe but geometrically weak, so the expected "
+            "missing zone was rendered with a conservative translation-only "
+            "rescue. YOLO still did not confirm an object of the required class."
+        ),
+    }
+
+def _merge_unsafe_missing_projection_debug(
+    missing_debug: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        **missing_debug,
+        "missing_polygon_refined": False,
+        "missing_polygon_projection": "unsafe_hidden",
+        "missing_polygon_projection_safety": "unsafe_hidden",
+        "reason_code": "missing_projection_low_confidence",
+        "note": (
+            "Expected missing zone was not rendered because surrounding context "
+            "did not produce a safe local transform. YOLO still did not confirm "
+            "an object of the required class."
+        ),
+    }
+
+
+def _resolve_missing_fallback_projection(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingFallbackProjection:
+    fallback_polygon: list[list[float]] | None = expected_item.polygon
+    fallback_bbox: BBox | None = expected_item.bbox
+    debug: dict[str, Any] = {}
+    context_rescue_used = False
+    fallback_source = "expected_slot"
+
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    if global_projection is not None:
+        global_polygon, global_bbox = global_projection
+        rescue = _try_missing_translation_rescue(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            global_polygon=global_polygon,
+            global_bbox=global_bbox,
+            all_expected=all_expected,
+        )
+        if rescue is not None:
+            fallback_polygon = rescue.polygon
+            fallback_bbox = rescue.bbox
+            context_rescue_used = True
+            fallback_source = "context_translation_rescue"
+            debug.update(
+                {
+                    "projection": "expected_slot_context_translation_rescue",
+                    "missing_polygon_projection": "expected_slot_context_translation_rescue",
+                    "missing_polygon_projection_safety": "context_translation_rescue",
+                    "missing_polygon_candidate_count": rescue.candidate_count,
+                    "missing_polygon_inliers": rescue.inlier_count,
+                    "missing_polygon_inlier_ratio": _round_debug(rescue.inlier_ratio),
+                    "missing_polygon_median_error": _round_debug(rescue.median_error),
+                    "missing_polygon_translation_shift_x": _round_debug(rescue.shift_x),
+                    "missing_polygon_translation_shift_y": _round_debug(rescue.shift_y),
+                    "missing_polygon_translation_shift_factor": _round_debug(
+                        rescue.shift_factor
+                    ),
+                    "note": (
+                        "Context affine was not safe, but surrounding context "
+                        "still produced a conservative translation correction "
+                        "from global alignment."
+                    ),
+                }
+            )
+        else:
+            scene_rescue = _try_missing_scene_translation_rescue(
+                expected_item,
+                slot=slot,
+                projection_data=projection_data,
+                global_polygon=global_polygon,
+                global_bbox=global_bbox,
+                all_expected=all_expected,
+            )
+            if scene_rescue is not None:
+                fallback_polygon = scene_rescue.polygon
+                fallback_bbox = scene_rescue.bbox
+                context_rescue_used = True
+                fallback_source = "scene_translation_rescue"
+                debug.update(
+                    {
+                        "projection": "expected_slot_scene_translation_rescue",
+                        "missing_polygon_projection": "expected_slot_scene_translation_rescue",
+                        "missing_polygon_projection_safety": "scene_translation_rescue",
+                        "missing_polygon_candidate_count": scene_rescue.candidate_count,
+                        "missing_polygon_inliers": scene_rescue.inlier_count,
+                        "missing_polygon_inlier_ratio": _round_debug(
+                            scene_rescue.inlier_ratio
+                        ),
+                        "missing_polygon_median_error": _round_debug(
+                            scene_rescue.median_error
+                        ),
+                        "missing_polygon_translation_shift_x": _round_debug(
+                            scene_rescue.shift_x
+                        ),
+                        "missing_polygon_translation_shift_y": _round_debug(
+                            scene_rescue.shift_y
+                        ),
+                        "missing_polygon_translation_shift_factor": _round_debug(
+                            scene_rescue.shift_factor
+                        ),
+                        "note": (
+                            "Local context was too weak for this missing slot, "
+                            "but nearby stable scene context produced a safe "
+                            "translation correction from global alignment."
+                        ),
+                    }
+                )
+            else:
+                consensus_rescue = _try_missing_multi_consensus_rescue(
+                    expected_item,
+                    projection_data=projection_data,
+                    global_polygon=global_polygon,
+                    global_bbox=global_bbox,
+                    fallback_bbox=fallback_bbox,
+                    all_expected=all_expected,
+                )
+                if consensus_rescue is not None:
+                    fallback_polygon = consensus_rescue.polygon
+                    fallback_bbox = consensus_rescue.bbox
+                    context_rescue_used = True
+                    fallback_source = "multi_consensus_rescue"
+                    debug.update(
+                        {
+                            "projection": "expected_slot_multi_consensus_rescue",
+                            "missing_polygon_projection": "expected_slot_multi_consensus_rescue",
+                            "missing_polygon_projection_safety": "multi_slot_consensus",
+                            "missing_polygon_candidate_count": consensus_rescue.candidate_count,
+                            "missing_polygon_inliers": consensus_rescue.inlier_count,
+                            "missing_polygon_inlier_ratio": _round_debug(
+                                consensus_rescue.inlier_ratio
+                            ),
+                            "missing_polygon_median_error": _round_debug(
+                                consensus_rescue.median_error
+                            ),
+                            "missing_polygon_translation_shift_x": _round_debug(
+                                consensus_rescue.shift_x
+                            ),
+                            "missing_polygon_translation_shift_y": _round_debug(
+                                consensus_rescue.shift_y
+                            ),
+                            "missing_polygon_translation_shift_factor": _round_debug(
+                                consensus_rescue.shift_factor
+                            ),
+                            "note": (
+                                "Local context was not safe for this missing slot, "
+                                "but neighboring expected slots agreed on a common "
+                                "scene translation. The missing zone was rendered "
+                                "from that conservative multi-slot consensus."
+                            ),
+                        }
+                    )
+                else:
+                    local_global_area_score = _bbox_area_similarity(
+                        expected_item.bbox,
+                        global_bbox,
+                    )
+                    local_global_center_factor = _bbox_center_distance_factor(
+                        expected_item.bbox,
+                        global_bbox,
+                    )
+                    local_projection_disagrees = (
+                        local_global_area_score
+                        < settings.INSPECTION_MISSING_FALLBACK_MIN_LOCAL_GLOBAL_AREA_SCORE
+                        or local_global_center_factor
+                        > settings.INSPECTION_MISSING_FALLBACK_MAX_LOCAL_GLOBAL_CENTER_FACTOR
+                    )
+
+                    if local_projection_disagrees:
+                        fallback_polygon = global_polygon
+                        fallback_bbox = global_bbox
+                        fallback_source = "global_fallback"
+                        debug.update(
+                            {
+                                "projection": "expected_slot_global_fallback",
+                                "missing_polygon_projection": "expected_slot_global_fallback",
+                                "missing_polygon_projection_safety": "global_fallback",
+                                "missing_polygon_local_global_area_score": _round_debug(
+                                    local_global_area_score
+                                ),
+                                "missing_polygon_local_global_center_factor": _round_debug(
+                                    local_global_center_factor
+                                ),
+                                "note": (
+                                    "Adaptive local projection disagreed with the global "
+                                    "alignment, so missing expected zone was rendered from "
+                                    "global alignment instead of local object-near matches."
+                                ),
+                            }
+                        )
+
+    hidden_reason = _missing_fallback_projection_unsafe_reason(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        fallback_bbox=fallback_bbox,
+        context_rescue_used=context_rescue_used,
+        fallback_source=fallback_source,
+        all_expected=all_expected,
+    )
+    if hidden_reason is not None:
+        return _MissingFallbackProjection(
+            polygon=None,
+            bbox=None,
+            hidden=True,
+            debug={
+                **debug,
+                "missing_polygon_hidden_reason": hidden_reason,
+            },
+        )
+
+    return _MissingFallbackProjection(
+        polygon=fallback_polygon,
+        bbox=fallback_bbox,
+        hidden=False,
+        debug=debug,
+    )
+
+
+def _try_missing_translation_rescue(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    global_polygon: list[list[float]],
+    global_bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingTranslationRescue | None:
+    if not settings.INSPECTION_MISSING_RESCUE_TRANSLATION_ENABLED:
+        return None
+    if slot is None or projection_data is None:
+        return None
+    if projection_data.global_homography is None:
+        return None
+
+    min_support = max(
+        settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT,
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT,
+        3,
+    )
+
+    local_reference, local_frame = _missing_polygon_refinement_points(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        all_expected=all_expected,
+    )
+    if len(local_reference) < min_support or len(local_reference) != len(local_frame):
+        return None
+
+    projected_reference = _project_points_with_homography(
+        local_reference,
+        projection_data.global_homography,
+    )
+    if projected_reference is None or len(projected_reference) != len(local_frame):
+        return None
+
+    residuals = local_frame.astype(np.float32) - projected_reference.astype(np.float32)
+    if residuals.ndim != 2 or residuals.shape[1] < 2 or not np.isfinite(residuals).all():
+        return None
+
+    median_residual = np.median(residuals[:, :2], axis=0).astype(np.float32)
+    if not np.isfinite(median_residual).all():
+        return None
+
+    residual_errors = np.linalg.norm(residuals[:, :2] - median_residual[None, :], axis=1)
+    if len(residual_errors) == 0 or not np.isfinite(residual_errors).all():
+        return None
+
+    threshold = float(settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_RESIDUAL_ERROR)
+    inlier_mask = residual_errors <= threshold
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    candidate_count = int(len(residual_errors))
+    if inlier_count < min_support:
+        return None
+
+    inlier_ratio = inlier_count / max(1, candidate_count)
+    if inlier_ratio < settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO:
+        return None
+
+    inlier_reference = local_reference[inlier_mask]
+    reference_bbox = slot.reference_bbox or _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is not None:
+        spread = _missing_context_spread_score(inlier_reference, reference_bbox)
+        # Translation-only rescue may work with weaker geometry than affine, but
+        # points collapsed into a line/corner are still too risky.
+        if spread < max(0.07, settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_SPREAD * 0.55):
+            return None
+
+    median_error = float(np.median(residual_errors[inlier_mask]))
+    if median_error > threshold:
+        return None
+
+    shift_x = float(median_residual[0])
+    shift_y = float(median_residual[1])
+    shift_length = float(np.hypot(shift_x, shift_y))
+    shift_factor = shift_length / max(1.0, _bbox_diag(global_bbox))
+    if shift_factor > settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR:
+        return None
+
+    polygon = _translate_polygon(global_polygon, dx=shift_x, dy=shift_y)
+    if len(polygon) < 3:
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+    if projection_data.frame_size is not None and not _is_visible_in_frame(
+        bbox,
+        projection_data.frame_size,
+        min_visible_fraction=0.05,
+    ):
+        return None
+
+    # Translation rescue must remain close to the conservative global expected
+    # zone and must not change object scale/shape.
+    if _bbox_area_similarity(bbox, global_bbox) < 0.92:
+        return None
+    if _bbox_center_distance_factor(bbox, global_bbox) > max(
+        0.05,
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR,
+    ):
+        return None
+
+    search_containment = _bbox_containment(bbox, slot.search_bbox)
+    if search_containment < 0.05:
+        return None
+
+    return _MissingTranslationRescue(
+        polygon=polygon,
+        bbox=bbox,
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        median_error=float(median_error),
+        shift_x=shift_x,
+        shift_y=shift_y,
+        shift_factor=float(shift_factor),
+    )
+
+
+def _try_missing_scene_translation_rescue(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    global_polygon: list[list[float]],
+    global_bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingTranslationRescue | None:
+    if not settings.INSPECTION_MISSING_SCENE_RESCUE_TRANSLATION_ENABLED:
+        return None
+    if projection_data is None or projection_data.global_homography is None:
+        return None
+
+    reference_points = _as_match_points(projection_data.reference_points)
+    frame_points = _as_match_points(projection_data.frame_points)
+    if reference_points is None or frame_points is None:
+        return None
+    if len(reference_points) != len(frame_points):
+        return None
+
+    reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return None
+
+    min_support = max(
+        settings.INSPECTION_MISSING_SCENE_RESCUE_MIN_SUPPORT,
+        settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT,
+        4,
+    )
+
+    reference_window = _expand_bbox(
+        reference_bbox,
+        factor=settings.INSPECTION_MISSING_SCENE_RESCUE_CONTEXT_EXPANSION,
+    )
+    frame_window = _expand_bbox(
+        global_bbox,
+        factor=settings.INSPECTION_MISSING_SCENE_RESCUE_CONTEXT_EXPANSION,
+        frame_size=projection_data.frame_size,
+    )
+    reference_exclusion_zones, frame_exclusion_zones = _all_expected_context_exclusion_zones(
+        expected_item,
+        all_expected=all_expected,
+        projection_data=projection_data,
+    )
+
+    selected_reference: list[np.ndarray] = []
+    selected_frame: list[np.ndarray] = []
+    projected_reference = _project_points_with_homography(
+        reference_points,
+        projection_data.global_homography,
+    )
+    if projected_reference is None or len(projected_reference) != len(frame_points):
+        return None
+
+    residual_prefilter = max(
+        settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_RESIDUAL_ERROR * 5.0,
+        _bbox_diag(global_bbox) * 0.85,
+        32.0,
+    )
+
+    for reference_point, frame_point, projected_point in zip(
+        reference_points,
+        frame_points,
+        projected_reference,
+        strict=True,
+    ):
+        if not _point_in_bbox(reference_point, reference_window):
+            continue
+        if _point_in_any_bbox(reference_point, reference_exclusion_zones):
+            continue
+        if not _point_in_bbox(frame_point, frame_window):
+            continue
+        if _point_in_any_bbox(frame_point, frame_exclusion_zones):
+            continue
+        if float(np.linalg.norm(frame_point[:2] - projected_point[:2])) > residual_prefilter:
+            continue
+
+        selected_reference.append(reference_point)
+        selected_frame.append(frame_point)
+
+    if len(selected_reference) < min_support:
+        return None
+
+    local_reference = np.asarray(selected_reference, dtype=np.float32)
+    local_frame = np.asarray(selected_frame, dtype=np.float32)
+
+    max_points = max(_MISSING_POLYGON_MAX_LOCAL_POINTS, 160)
+    if len(local_reference) > max_points:
+        reference_center = np.asarray(_bbox_center(reference_bbox), dtype=np.float32)
+        projected_center = np.asarray(_bbox_center(global_bbox), dtype=np.float32)
+        reference_distance = np.linalg.norm(local_reference - reference_center, axis=1)
+        frame_distance = np.linalg.norm(local_frame - projected_center, axis=1)
+        indices = np.argsort(reference_distance + frame_distance)[:max_points]
+        local_reference = local_reference[indices]
+        local_frame = local_frame[indices]
+
+    projected_local = _project_points_with_homography(
+        local_reference,
+        projection_data.global_homography,
+    )
+    if projected_local is None or len(projected_local) != len(local_frame):
+        return None
+
+    residuals = local_frame.astype(np.float32) - projected_local.astype(np.float32)
+    if residuals.ndim != 2 or residuals.shape[1] < 2 or not np.isfinite(residuals).all():
+        return None
+
+    median_residual = np.median(residuals[:, :2], axis=0).astype(np.float32)
+    if not np.isfinite(median_residual).all():
+        return None
+
+    residual_errors = np.linalg.norm(residuals[:, :2] - median_residual[None, :], axis=1)
+    if len(residual_errors) == 0 or not np.isfinite(residual_errors).all():
+        return None
+
+    threshold = float(settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_RESIDUAL_ERROR)
+    inlier_mask = residual_errors <= threshold
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    candidate_count = int(len(residual_errors))
+    if inlier_count < min_support:
+        return None
+
+    inlier_ratio = inlier_count / max(1, candidate_count)
+    if inlier_ratio < settings.INSPECTION_MISSING_SCENE_RESCUE_MIN_INLIER_RATIO:
+        return None
+
+    inlier_reference = local_reference[inlier_mask]
+    spread = _missing_context_spread_score(inlier_reference, reference_bbox)
+    if spread < settings.INSPECTION_MISSING_SCENE_RESCUE_MIN_SPREAD:
+        return None
+
+    inlier_residuals = residuals[inlier_mask, :2]
+    median_residual = np.median(inlier_residuals, axis=0).astype(np.float32)
+    residual_errors = np.linalg.norm(inlier_residuals - median_residual[None, :], axis=1)
+    if len(residual_errors) == 0 or not np.isfinite(residual_errors).all():
+        return None
+
+    median_error = float(np.median(residual_errors))
+    if median_error > threshold:
+        return None
+
+    shift_x = float(median_residual[0])
+    shift_y = float(median_residual[1])
+    shift_length = float(np.hypot(shift_x, shift_y))
+    shift_factor = shift_length / max(1.0, _bbox_diag(global_bbox))
+    if shift_factor > settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_SHIFT_FACTOR:
+        return None
+
+    polygon = _translate_polygon(global_polygon, dx=shift_x, dy=shift_y)
+    if len(polygon) < 3:
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+    if projection_data.frame_size is not None and not _is_visible_in_frame(
+        bbox,
+        projection_data.frame_size,
+        min_visible_fraction=0.05,
+    ):
+        return None
+
+    if _bbox_area_similarity(bbox, global_bbox) < 0.92:
+        return None
+    if _bbox_center_distance_factor(bbox, global_bbox) > max(
+        0.05,
+        settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_SHIFT_FACTOR,
+    ):
+        return None
+    if slot is not None and _bbox_containment(bbox, slot.search_bbox) < 0.03:
+        return None
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=bbox,
+        all_expected=all_expected,
+    ):
+        return None
+
+    return _MissingTranslationRescue(
+        polygon=polygon,
+        bbox=bbox,
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        median_error=float(median_error),
+        shift_x=shift_x,
+        shift_y=shift_y,
+        shift_factor=float(shift_factor),
+    )
+
+
+def _try_missing_multi_consensus_rescue(
+    expected_item: _ProjectedExpected,
+    *,
+    projection_data: LocalProjectionData | None,
+    global_polygon: list[list[float]],
+    global_bbox: BBox,
+    fallback_bbox: BBox | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingTranslationRescue | None:
+    """Use neighboring expected slots to recover a hidden multi-object slot.
+
+    This is deliberately translation-only: if several other projected expected
+    zones share the same local-vs-global offset, we can apply that offset to the
+    current global polygon without letting one object's local features deform the
+    missing shape or snap it to a distractor.
+    """
+
+    if not settings.INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED:
+        return None
+    if projection_data is None or projection_data.global_homography is None:
+        return None
+    if not all_expected or len(all_expected) <= 1:
+        return None
+
+    min_neighbors = max(
+        1,
+        int(settings.INSPECTION_MISSING_MULTI_CONSENSUS_MIN_NEIGHBORS),
+    )
+    min_candidates = max(min_neighbors, 2)
+
+    current_center = np.asarray(_bbox_center(global_bbox), dtype=np.float32)
+    residuals: list[np.ndarray] = []
+    weights: list[float] = []
+
+    for other in all_expected:
+        if other.index == expected_item.index:
+            continue
+
+        other_global = _missing_global_projection(
+            other,
+            projection_data=projection_data,
+        )
+        if other_global is None:
+            continue
+        _, other_global_bbox = other_global
+
+        area_score = _bbox_area_similarity(other.bbox, other_global_bbox)
+        if area_score < settings.INSPECTION_MISSING_MULTI_CONSENSUS_MIN_AREA_SCORE:
+            continue
+
+        center_factor = _bbox_center_distance_factor(other.bbox, other_global_bbox)
+        if center_factor > settings.INSPECTION_MISSING_MULTI_CONSENSUS_MAX_CENTER_FACTOR:
+            continue
+
+        # A neighbor that already occupies the current target area is more likely
+        # to be a distractor/duplicate than a reliable scene-motion witness.
+        overlap_with_current = max(
+            _bbox_iou(other.bbox, global_bbox),
+            _bbox_containment(other.bbox, global_bbox),
+            _bbox_containment(global_bbox, other.bbox),
+        )
+        if overlap_with_current > settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_OTHER_OVERLAP:
+            continue
+
+        gx, gy = _bbox_center(other_global_bbox)
+        lx, ly = _bbox_center(other.bbox)
+        residual = np.asarray([lx - gx, ly - gy], dtype=np.float32)
+        if not np.isfinite(residual).all():
+            continue
+
+        shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+        if shift_factor > settings.INSPECTION_MISSING_MULTI_CONSENSUS_MAX_SHIFT_FACTOR:
+            continue
+
+        other_center = np.asarray((gx, gy), dtype=np.float32)
+        distance = float(np.linalg.norm(other_center - current_center))
+        weight = 1.0 / max(1.0, distance)
+        weight *= max(0.05, area_score)
+        residuals.append(residual)
+        weights.append(weight)
+
+    if len(residuals) < min_candidates:
+        return None
+
+    residual_array = np.asarray(residuals, dtype=np.float32)
+    if residual_array.ndim != 2 or residual_array.shape[1] != 2:
+        return None
+    if not np.isfinite(residual_array).all():
+        return None
+
+    # Start with a weighted average for the broad scene shift, then keep only
+    # neighbors that agree with it tightly enough.
+    weights_array = np.asarray(weights, dtype=np.float32)
+    if not np.isfinite(weights_array).all() or float(np.sum(weights_array)) <= 0.0:
+        return None
+
+    initial_shift = np.average(residual_array, axis=0, weights=weights_array).astype(np.float32)
+    residual_errors = np.linalg.norm(residual_array - initial_shift[None, :], axis=1)
+    if len(residual_errors) == 0 or not np.isfinite(residual_errors).all():
+        return None
+
+    threshold = float(settings.INSPECTION_MISSING_MULTI_CONSENSUS_MAX_RESIDUAL_ERROR)
+    inlier_mask = residual_errors <= threshold
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    candidate_count = int(len(residual_errors))
+    if inlier_count < min_neighbors:
+        return None
+
+    inlier_ratio = inlier_count / max(1, candidate_count)
+    if inlier_ratio < settings.INSPECTION_MISSING_MULTI_CONSENSUS_MIN_INLIER_RATIO:
+        return None
+
+    inlier_residuals = residual_array[inlier_mask]
+    median_shift = np.median(inlier_residuals, axis=0).astype(np.float32)
+    if not np.isfinite(median_shift).all():
+        return None
+
+    inlier_errors = np.linalg.norm(inlier_residuals - median_shift[None, :], axis=1)
+    if len(inlier_errors) == 0 or not np.isfinite(inlier_errors).all():
+        return None
+
+    median_error = float(np.median(inlier_errors))
+    if median_error > threshold:
+        return None
+
+    shift_x = float(median_shift[0])
+    shift_y = float(median_shift[1])
+    shift_length = float(np.hypot(shift_x, shift_y))
+    shift_factor = shift_length / max(1.0, _bbox_diag(global_bbox))
+    if shift_factor > settings.INSPECTION_MISSING_MULTI_CONSENSUS_MAX_SHIFT_FACTOR:
+        return None
+
+    polygon = _translate_polygon(global_polygon, dx=shift_x, dy=shift_y)
+    if len(polygon) < 3:
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+    if projection_data.frame_size is not None and not _is_visible_in_frame(
+        bbox,
+        projection_data.frame_size,
+        min_visible_fraction=0.05,
+    ):
+        return None
+
+    # Consensus rescue must preserve the global-projected object geometry.
+    if _bbox_area_similarity(bbox, global_bbox) < 0.92:
+        return None
+
+    # If the local expected slot is available, the consensus result must still
+    # remain compatible with it. Otherwise we risk inventing a new position that
+    # neither the local slot nor the global slot supported.
+    if fallback_bbox is not None:
+        fallback_area_score = _bbox_area_similarity(bbox, fallback_bbox)
+        fallback_center_factor = _bbox_center_distance_factor(bbox, fallback_bbox)
+        if fallback_area_score < settings.INSPECTION_MISSING_MULTI_CONSENSUS_MIN_AREA_SCORE:
+            return None
+        if (
+            fallback_center_factor
+            > settings.INSPECTION_MISSING_MULTI_CONSENSUS_MAX_FALLBACK_CENTER_FACTOR
+        ):
+            return None
+
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=bbox,
+        all_expected=all_expected,
+    ):
+        return None
+
+    return _MissingTranslationRescue(
+        polygon=polygon,
+        bbox=bbox,
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        median_error=float(median_error),
+        shift_x=shift_x,
+        shift_y=shift_y,
+        shift_factor=float(shift_factor),
+    )
+
+
+def _missing_global_projection(
+    expected_item: _ProjectedExpected,
+    *,
+    projection_data: LocalProjectionData | None,
+) -> tuple[list[list[float]], BBox] | None:
+    if projection_data is None or projection_data.global_homography is None:
+        return None
+
+    try:
+        polygon = project_polygon(
+            expected_item.item.reference_polygon,
+            projection_data.global_homography,
+        )
+    except Exception:
+        return None
+
+    if len(polygon) < 3:
+        return None
+
+    polygon = [[float(point[0]), float(point[1])] for point in polygon]
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+
+    if projection_data.frame_size is not None and not _is_visible_in_frame(
+        bbox,
+        projection_data.frame_size,
+        min_visible_fraction=0.05,
+    ):
+        return None
+
+    reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is not None:
+        global_area_score = _bbox_area_similarity(bbox, reference_bbox)
+        if (
+            global_area_score
+            < settings.INSPECTION_MISSING_FALLBACK_MIN_GLOBAL_AREA_SCORE
+        ):
+            return None
+
+    return polygon, bbox
+
+
+def _missing_expected_slot_has_global_consensus(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot,
+    projection_data: LocalProjectionData,
+    fallback_bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None,
+    strong_support: int,
+) -> bool:
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    if global_projection is None:
+        return False
+
+    _, global_bbox = global_projection
+    area_score = _bbox_area_similarity(fallback_bbox, global_bbox)
+    center_factor = _bbox_center_distance_factor(fallback_bbox, global_bbox)
+
+    min_area_score = settings.INSPECTION_MISSING_MULTI_EXPECTED_SLOT_MIN_GLOBAL_AREA_SCORE
+    max_center_factor = settings.INSPECTION_MISSING_MULTI_EXPECTED_SLOT_MAX_GLOBAL_CENTER_FACTOR
+
+    # If there were many nearby features but neither local affine nor
+    # translation rescue survived, require a much stricter agreement with the
+    # global projection before showing the polygon in a multi-object scene.
+    if slot.feature_support >= strong_support:
+        min_area_score = max(min_area_score, 0.78)
+        max_center_factor = min(max_center_factor, 0.18)
+
+    if area_score < min_area_score or center_factor > max_center_factor:
+        return False
+
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=fallback_bbox,
+        all_expected=all_expected,
+    ):
+        return False
+
+    return True
+
+def _missing_fallback_projection_unsafe_reason(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    fallback_bbox: BBox | None,
+    context_rescue_used: bool = False,
+    fallback_source: str = "expected_slot",
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> str | None:
+    if fallback_bbox is None:
+        return "no_visible_fallback_polygon"
+    if slot is None or projection_data is None:
+        return None
+
+    is_multi_object_context = all_expected is not None and len(all_expected) > 1
+    min_support = max(3, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
+    strong_support = max(min_support * 3, 12)
+
+    if is_multi_object_context and fallback_source == "expected_slot":
+        if not _missing_expected_slot_has_global_consensus(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            fallback_bbox=fallback_bbox,
+            all_expected=all_expected,
+            strong_support=strong_support,
+        ):
+            return "multi_expected_slot_without_global_consensus"
+
+    reference_bbox = slot.reference_bbox
+    if reference_bbox is None:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+
+    if reference_bbox is not None:
+        # A fallback polygon that became much larger/smaller than the annotated
+        # object is usually a broken global projection. Do not present it as an
+        # exact expected place for a missing detail.
+        reference_area_score = _bbox_area_similarity(fallback_bbox, reference_bbox)
+        if reference_area_score < 0.12:
+            return "fallback_area_not_reference_like"
+
+    if slot.feature_support < strong_support:
+        return None
+
+    if context_rescue_used:
+        return None
+
+    local_reference, _ = _missing_polygon_refinement_points(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        all_expected=all_expected,
+    )
+
+    # If a lot of surrounding points exist but no safe context affine survived the
+    # guards, the conservative result is to hide the exact polygon instead of
+    # showing a confident-looking wrong zone.
+    if len(local_reference) >= strong_support:
+        return "rich_context_but_no_safe_transform"
+
+    return None
+
+
+def _missing_fallback_projection_is_unsafe(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    fallback_bbox: BBox | None,
+    context_rescue_used: bool = False,
+    fallback_source: str = "expected_slot",
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> bool:
+    return (
+        _missing_fallback_projection_unsafe_reason(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            fallback_bbox=fallback_bbox,
+            context_rescue_used=context_rescue_used,
+            fallback_source=fallback_source,
+            all_expected=all_expected,
+        )
+        is not None
+    )
+
+
 def _missing_polygon_refinement_points(
     expected_item: _ProjectedExpected,
     *,
     slot: _ExpectedSlot,
     projection_data: LocalProjectionData,
+    all_expected: list[_ProjectedExpected] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     reference_points = _as_match_points(projection_data.reference_points)
     frame_points = _as_match_points(projection_data.frame_points)
@@ -1083,6 +2312,11 @@ def _missing_polygon_refinement_points(
     reference_margin = _missing_context_exclusion_margin(reference_bbox)
     frame_margin = _missing_context_exclusion_margin(expected_item.bbox)
     exclude_frame_object = settings.INSPECTION_MISSING_POLYGON_CONTEXT_FRAME_EXCLUSION
+    reference_exclusion_zones, frame_exclusion_zones = _multi_object_context_exclusion_zones(
+        expected_item,
+        all_expected=all_expected,
+        projection_data=projection_data,
+    )
 
     selected_reference: list[np.ndarray] = []
     selected_frame: list[np.ndarray] = []
@@ -1096,6 +2330,8 @@ def _missing_polygon_refinement_points(
             margin=reference_margin,
         ):
             continue
+        if _point_in_any_bbox(reference_point, reference_exclusion_zones):
+            continue
         if not _point_in_bbox(frame_point, frame_window):
             continue
         if exclude_frame_object and not _point_outside_np_polygon_margin(
@@ -1103,6 +2339,8 @@ def _missing_polygon_refinement_points(
             projected_polygon,
             margin=frame_margin,
         ):
+            continue
+        if _point_in_any_bbox(frame_point, frame_exclusion_zones):
             continue
 
         selected_reference.append(reference_point)
@@ -1680,6 +2918,47 @@ def _project_polygon_by_affine(
     return [[float(x), float(y)] for x, y in projected.tolist()]
 
 
+def _project_points_with_homography(
+    points: np.ndarray,
+    homography: np.ndarray,
+) -> np.ndarray | None:
+    array = np.asarray(points, dtype=np.float32)
+    if array.ndim != 2 or array.shape[1] < 2 or len(array) == 0:
+        return None
+    if not np.isfinite(array[:, :2]).all():
+        return None
+    try:
+        projected = cv2.perspectiveTransform(
+            array[:, :2].reshape(-1, 1, 2),
+            homography.astype(np.float32),
+        ).reshape(-1, 2)
+    except cv2.error:
+        return None
+    if not np.isfinite(projected).all():
+        return None
+    return projected.astype(np.float32)
+
+
+def _translate_polygon(
+    polygon: list[list[float]],
+    *,
+    dx: float,
+    dy: float,
+) -> list[list[float]]:
+    if len(polygon) < 3:
+        return []
+    translated: list[list[float]] = []
+    for point in polygon:
+        if len(point) < 2:
+            return []
+        x = float(point[0]) + float(dx)
+        y = float(point[1]) + float(dy)
+        if not np.isfinite([x, y]).all():
+            return []
+        translated.append([x, y])
+    return translated
+
+
 def _affine_reprojection_median_error(
     affine: np.ndarray,
     *,
@@ -1731,6 +3010,47 @@ def _bbox_area_similarity(a: BBox, b: BBox) -> float:
     return float(max(0.0, min(1.0, min(ratio, 1.0 / ratio))))
 
 
+def _bbox_center_distance_factor(a: BBox, b: BBox) -> float:
+    ax, ay = _bbox_center(a)
+    bx, by = _bbox_center(b)
+    distance = float(np.hypot(ax - bx, ay - by))
+    return distance / max(1.0, _bbox_diag(b))
+
+
+def _missing_context_spread_score(points: np.ndarray, bbox: BBox) -> float:
+    if len(points) < 3:
+        return 0.0
+    array = np.asarray(points, dtype=np.float32)
+    if array.ndim != 2 or array.shape[1] < 2 or not np.isfinite(array).all():
+        return 0.0
+
+    x1, y1, x2, y2 = bbox
+    bbox_w = max(1.0, float(x2 - x1))
+    bbox_h = max(1.0, float(y2 - y1))
+    point_w = float(np.max(array[:, 0]) - np.min(array[:, 0]))
+    point_h = float(np.max(array[:, 1]) - np.min(array[:, 1]))
+    x_spread = max(0.0, min(1.0, point_w / bbox_w))
+    y_spread = max(0.0, min(1.0, point_h / bbox_h))
+
+    # Use the geometric mean so a thin but legitimate context can still pass,
+    # while points collapsed into a single corner or line are rejected.
+    return float(np.sqrt(x_spread * y_spread))
+
+
+def _missing_context_quadrant_count(points: np.ndarray, bbox: BBox) -> int:
+    if len(points) == 0:
+        return 0
+    array = np.asarray(points, dtype=np.float32)
+    if array.ndim != 2 or array.shape[1] < 2 or not np.isfinite(array).all():
+        return 0
+
+    cx, cy = _bbox_center(bbox)
+    quadrants: set[tuple[int, int]] = set()
+    for x, y in array[:, :2]:
+        quadrants.add((1 if float(x) >= cx else 0, 1 if float(y) >= cy else 0))
+    return len(quadrants)
+
+
 def _empty_match_points() -> np.ndarray:
     return np.empty((0, 2), dtype=np.float32)
 
@@ -1740,6 +3060,7 @@ def _slot_feature_support(
     *,
     search_bbox: BBox,
     projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None = None,
 ) -> tuple[int, int]:
     if projection_data is None:
         return 0, 0
@@ -1764,6 +3085,11 @@ def _slot_feature_support(
         dtype=np.float32,
     )
     reference_margin = _missing_context_exclusion_margin(reference_bbox)
+    reference_exclusion_zones, frame_exclusion_zones = _multi_object_context_exclusion_zones(
+        expected_item,
+        all_expected=all_expected,
+        projection_data=projection_data,
+    )
 
     total = 0
     support = 0
@@ -1775,6 +3101,10 @@ def _slot_feature_support(
             reference_polygon,
             margin=reference_margin,
         ):
+            continue
+        if _point_in_any_bbox(reference_point, reference_exclusion_zones):
+            continue
+        if _point_in_any_bbox(frame_point, frame_exclusion_zones):
             continue
         total += 1
         if _point_in_bbox(frame_point, search_bbox):
@@ -1876,6 +3206,98 @@ def _point_in_bbox(point: np.ndarray, bbox: BBox) -> bool:
     x, y = float(point[0]), float(point[1])
     x1, y1, x2, y2 = bbox
     return x1 <= x <= x2 and y1 <= y <= y2
+
+
+def _point_in_any_bbox(point: np.ndarray, bboxes: list[BBox]) -> bool:
+    return any(_point_in_bbox(point, bbox) for bbox in bboxes)
+
+
+def _all_expected_context_exclusion_zones(
+    expected_item: _ProjectedExpected,
+    *,
+    all_expected: list[_ProjectedExpected] | None,
+    projection_data: LocalProjectionData | None,
+) -> tuple[list[BBox], list[BBox]]:
+    expected_items = all_expected if all_expected else [expected_item]
+    expansion = float(
+        settings.INSPECTION_MISSING_POLYGON_MULTI_CONTEXT_EXCLUSION_EXPANSION
+    )
+    reference_zones: list[BBox] = []
+    frame_zones: list[BBox] = []
+    frame_size = projection_data.frame_size if projection_data is not None else None
+
+    for item in expected_items:
+        reference_bbox = _bbox_from_polygon(item.item.reference_polygon)
+        if reference_bbox is not None:
+            reference_zones.append(_expand_bbox(reference_bbox, factor=expansion))
+
+        frame_zones.append(
+            _expand_bbox(
+                item.bbox,
+                factor=expansion,
+                frame_size=frame_size,
+            )
+        )
+
+    return reference_zones, frame_zones
+
+
+def _missing_rescue_overlaps_other_expected(
+    expected_item: _ProjectedExpected,
+    *,
+    bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None,
+) -> bool:
+    if not all_expected or len(all_expected) <= 1:
+        return False
+
+    max_overlap = settings.INSPECTION_MISSING_SCENE_RESCUE_MAX_OTHER_OVERLAP
+    for other in all_expected:
+        if other.index == expected_item.index:
+            continue
+        overlap = max(
+            _bbox_iou(bbox, other.bbox),
+            _bbox_containment(bbox, other.bbox),
+            _bbox_containment(other.bbox, bbox),
+        )
+        if overlap > max_overlap:
+            return True
+    return False
+
+
+def _multi_object_context_exclusion_zones(
+    expected_item: _ProjectedExpected,
+    *,
+    all_expected: list[_ProjectedExpected] | None,
+    projection_data: LocalProjectionData | None,
+) -> tuple[list[BBox], list[BBox]]:
+    if not all_expected or len(all_expected) <= 1:
+        return [], []
+
+    expansion = float(
+        settings.INSPECTION_MISSING_POLYGON_MULTI_CONTEXT_EXCLUSION_EXPANSION
+    )
+    reference_zones: list[BBox] = []
+    frame_zones: list[BBox] = []
+    frame_size = projection_data.frame_size if projection_data is not None else None
+
+    for other in all_expected:
+        if other.index == expected_item.index:
+            continue
+
+        reference_bbox = _bbox_from_polygon(other.item.reference_polygon)
+        if reference_bbox is not None:
+            reference_zones.append(_expand_bbox(reference_bbox, factor=expansion))
+
+        frame_zones.append(
+            _expand_bbox(
+                other.bbox,
+                factor=expansion,
+                frame_size=frame_size,
+            )
+        )
+
+    return reference_zones, frame_zones
 
 
 def _point_in_np_polygon(point: np.ndarray, polygon: np.ndarray) -> bool:

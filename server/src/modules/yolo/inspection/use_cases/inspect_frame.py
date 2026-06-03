@@ -452,6 +452,7 @@ def _compose_frame_result(
         matches = build_missing_matches(
             expected,
             alignment.homography,
+            frame_size=(frame.shape[1], frame.shape[0]),
             projection_data=projection_data,
         )
         missing = [item.name for item in expected]

@@ -61,6 +61,154 @@ class Settings(BaseSettings):
         le=80.0,
     )
     INSPECTION_MISSING_POLYGON_CONTEXT_FRAME_EXCLUSION: bool = False
+    INSPECTION_MISSING_POLYGON_MULTI_CONTEXT_EXCLUSION_EXPANSION: float = Field(
+        default=1.35,
+        ge=1.0,
+        le=4.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_MIN_INLIER_RATIO: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_MIN_SPREAD: float = Field(
+        default=0.16,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_MIN_QUADRANTS: int = Field(
+        default=2,
+        ge=1,
+        le=4,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_MAX_CENTER_DRIFT_FACTOR: float = Field(
+        default=0.85,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_MIN_AREA_SCORE: float = Field(
+        default=0.38,
+        ge=0.01,
+        le=1.0,
+    )
+    INSPECTION_MISSING_FALLBACK_MIN_GLOBAL_AREA_SCORE: float = Field(
+        default=0.08,
+        ge=0.01,
+        le=1.0,
+    )
+    INSPECTION_MISSING_FALLBACK_MIN_LOCAL_GLOBAL_AREA_SCORE: float = Field(
+        default=0.32,
+        ge=0.01,
+        le=1.0,
+    )
+    INSPECTION_MISSING_FALLBACK_MAX_LOCAL_GLOBAL_CENTER_FACTOR: float = Field(
+        default=0.75,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_RESCUE_TRANSLATION_ENABLED: bool = True
+    INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT: int = Field(
+        default=6,
+        ge=3,
+        le=128,
+    )
+    INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO: float = Field(
+        default=0.46,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_RESIDUAL_ERROR: float = Field(
+        default=9.0,
+        ge=0.5,
+        le=40.0,
+    )
+    INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR: float = Field(
+        default=0.48,
+        ge=0.05,
+        le=2.0,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_TRANSLATION_ENABLED: bool = True
+    INSPECTION_MISSING_SCENE_RESCUE_CONTEXT_EXPANSION: float = Field(
+        default=6.0,
+        ge=2.0,
+        le=14.0,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MIN_SUPPORT: int = Field(
+        default=10,
+        ge=4,
+        le=256,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MIN_INLIER_RATIO: float = Field(
+        default=0.58,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MAX_RESIDUAL_ERROR: float = Field(
+        default=8.0,
+        ge=0.5,
+        le=48.0,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MAX_SHIFT_FACTOR: float = Field(
+        default=0.42,
+        ge=0.02,
+        le=1.5,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MIN_SPREAD: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SCENE_RESCUE_MAX_OTHER_OVERLAP: float = Field(
+        default=0.32,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_MIN_GLOBAL_AREA_SCORE: float = Field(
+        default=0.68,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_MAX_GLOBAL_CENTER_FACTOR: float = Field(
+        default=0.28,
+        ge=0.01,
+        le=2.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED: bool = True
+    INSPECTION_MISSING_MULTI_CONSENSUS_MIN_NEIGHBORS: int = Field(
+        default=2,
+        ge=1,
+        le=32,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MIN_INLIER_RATIO: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MAX_RESIDUAL_ERROR: float = Field(
+        default=14.0,
+        ge=1.0,
+        le=80.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MAX_SHIFT_FACTOR: float = Field(
+        default=0.55,
+        ge=0.02,
+        le=2.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MIN_AREA_SCORE: float = Field(
+        default=0.42,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MAX_CENTER_FACTOR: float = Field(
+        default=0.95,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_MAX_FALLBACK_CENTER_FACTOR: float = Field(
+        default=0.95,
+        ge=0.05,
+        le=4.0,
+    )
     INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT: bool = False
     INSPECTION_MISSING_POLYGON_EDGE_SNAP_RADIUS: int = Field(default=14, ge=0, le=64)
     INSPECTION_MISSING_POLYGON_EDGE_BLEND: float = Field(default=0.65, ge=0.0, le=1.0)
