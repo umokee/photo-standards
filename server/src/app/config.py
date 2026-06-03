@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     INSPECTION_SLOT_MIN_YOLO_CONFIDENCE: float = Field(default=0.08, ge=0.0, le=1.0)
     INSPECTION_SLOT_MIN_FEATURE_SUPPORT: int = Field(default=4, ge=0, le=64)
     INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION: float = Field(default=2.75, ge=1.0, le=10.0)
+
+    INSPECTION_MISSING_POLYGON_REFINEMENT: bool = True
+    INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT: int = Field(default=4, ge=0, le=64)
+    INSPECTION_MISSING_POLYGON_MAX_REPROJECTION_ERROR: float = Field(
+        default=14.0,
+        ge=0.0,
+        le=80.0,
+    )
+
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)
 
     # Database connection.

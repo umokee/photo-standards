@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import cv2
 import numpy as np
 from app.config import settings
 from modules.core.standards.reference_constants import IOU_MATCH_THRESHOLD
@@ -31,6 +32,12 @@ _MAX_OPTIMAL_ASSIGNMENT_ITEMS = 18
 _DUPLICATE_MATCHED_BBOX_IOU = 0.55
 _DUPLICATE_MATCHED_CONTAINMENT = 0.80
 
+_MISSING_POLYGON_MAX_LOCAL_POINTS = 96
+_MISSING_POLYGON_MIN_CONTAINMENT = 0.18
+_MISSING_POLYGON_MIN_AREA_SCORE = 0.16
+_MISSING_POLYGON_MIN_AFFINE_SCALE = 0.45
+_MISSING_POLYGON_MAX_AFFINE_SCALE = 2.80
+
 
 @dataclass(slots=True)
 class _ProjectedExpected:
@@ -55,6 +62,19 @@ class _ExpectedSlot:
     reference_bbox: BBox | None
     feature_support: int
     feature_total: int
+
+
+@dataclass(slots=True)
+class _MissingPolygonRefinement:
+    polygon: list[list[float]]
+    bbox: BBox
+    feature_support: int
+    feature_total: int
+    candidate_count: int
+    inlier_count: int
+    median_error: float
+    containment: float
+    area_score: float
 
 
 def build_expected_segments(
@@ -262,6 +282,19 @@ def match_segments(
 
         slot = slot_by_index.get(expected_item.index)
         missing_debug = _missing_slot_debug(expected_item, slot)
+        missing_polygon = expected_item.polygon
+
+        missing_refinement = _try_missing_polygon_refinement(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+        )
+        if missing_refinement is not None:
+            missing_polygon = missing_refinement.polygon
+            missing_debug = _merge_missing_refinement_debug(
+                missing_debug,
+                missing_refinement,
+            )
 
         matches.append(
             SegmentMatch(
@@ -273,7 +306,7 @@ def match_segments(
                 status="missing",
                 iou=None,
                 confidence=None,
-                expected_polygon=expected_item.polygon,
+                expected_polygon=missing_polygon,
                 detected_polygon=None,
                 detected_bbox=None,
                 debug=missing_debug,
@@ -821,6 +854,260 @@ def _missing_slot_debug(
         )
 
     return debug
+
+
+def _try_missing_polygon_refinement(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+) -> _MissingPolygonRefinement | None:
+    if not settings.INSPECTION_MISSING_POLYGON_REFINEMENT:
+        return None
+    if slot is None or projection_data is None:
+        return None
+
+    min_support = max(3, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
+    if slot.feature_support < min_support:
+        return None
+
+    local_reference, local_frame = _missing_polygon_refinement_points(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+    )
+    if len(local_reference) < min_support:
+        return None
+
+    ransac_threshold = max(
+        1.0,
+        min(25.0, settings.INSPECTION_MISSING_POLYGON_MAX_REPROJECTION_ERROR),
+    )
+
+    try:
+        affine, inliers = cv2.estimateAffinePartial2D(
+            local_reference,
+            local_frame,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=ransac_threshold,
+            maxIters=1200,
+            confidence=0.98,
+            refineIters=10,
+        )
+    except cv2.error:
+        return None
+
+    if affine is None or inliers is None:
+        return None
+    if affine.shape != (2, 3) or not np.isfinite(affine).all():
+        return None
+    if not _missing_affine_scale_in_range(affine):
+        return None
+
+    inlier_mask = np.asarray(inliers, dtype=np.uint8).reshape(-1) > 0
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    if inlier_count < min_support:
+        return None
+
+    median_error = _affine_reprojection_median_error(
+        affine,
+        source=local_reference[inlier_mask],
+        target=local_frame[inlier_mask],
+    )
+    if median_error is None:
+        return None
+    if median_error > settings.INSPECTION_MISSING_POLYGON_MAX_REPROJECTION_ERROR:
+        return None
+
+    polygon = _project_polygon_by_affine(
+        expected_item.item.reference_polygon,
+        np.asarray(affine, dtype=np.float32),
+    )
+    if len(polygon) < 3:
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+
+    if (
+        projection_data.frame_size is not None
+        and not _is_visible_in_frame(
+            bbox,
+            projection_data.frame_size,
+            min_visible_fraction=0.05,
+        )
+    ):
+        return None
+
+    containment = _bbox_containment(bbox, slot.search_bbox)
+    if containment < _MISSING_POLYGON_MIN_CONTAINMENT:
+        return None
+
+    area_score = _bbox_area_similarity(bbox, expected_item.bbox)
+    if area_score < _MISSING_POLYGON_MIN_AREA_SCORE:
+        return None
+
+    return _MissingPolygonRefinement(
+        polygon=polygon,
+        bbox=bbox,
+        feature_support=slot.feature_support,
+        feature_total=slot.feature_total,
+        candidate_count=int(len(local_reference)),
+        inlier_count=inlier_count,
+        median_error=float(median_error),
+        containment=float(containment),
+        area_score=float(area_score),
+    )
+
+
+def _merge_missing_refinement_debug(
+    missing_debug: dict[str, Any],
+    refinement: _MissingPolygonRefinement,
+) -> dict[str, Any]:
+    return {
+        **missing_debug,
+        "missing_polygon_refined": True,
+        "missing_polygon_projection": "local_feature_affine",
+        "missing_polygon_bbox": _bbox_debug(refinement.bbox),
+        "missing_polygon_feature_support": refinement.feature_support,
+        "missing_polygon_feature_total": refinement.feature_total,
+        "missing_polygon_candidate_count": refinement.candidate_count,
+        "missing_polygon_inliers": refinement.inlier_count,
+        "missing_polygon_median_error": _round_debug(refinement.median_error),
+        "missing_polygon_containment": _round_debug(refinement.containment),
+        "missing_polygon_area_score": _round_debug(refinement.area_score),
+        "note": (
+            "Missing polygon was refined by local feature matches only; "
+            "YOLO still did not confirm an object of the required class."
+        ),
+    }
+
+
+def _missing_polygon_refinement_points(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot,
+    projection_data: LocalProjectionData,
+) -> tuple[np.ndarray, np.ndarray]:
+    reference_points = _as_match_points(projection_data.reference_points)
+    frame_points = _as_match_points(projection_data.frame_points)
+    if reference_points is None or frame_points is None:
+        return _empty_match_points(), _empty_match_points()
+    if len(reference_points) != len(frame_points):
+        return _empty_match_points(), _empty_match_points()
+
+    reference_bbox = slot.reference_bbox
+    if reference_bbox is None:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return _empty_match_points(), _empty_match_points()
+
+    reference_window = _expand_bbox(
+        reference_bbox,
+        factor=settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
+    )
+
+    selected_reference: list[np.ndarray] = []
+    selected_frame: list[np.ndarray] = []
+    for reference_point, frame_point in zip(reference_points, frame_points, strict=True):
+        if not _point_in_bbox(reference_point, reference_window):
+            continue
+        if not _point_in_bbox(frame_point, slot.search_bbox):
+            continue
+        selected_reference.append(reference_point)
+        selected_frame.append(frame_point)
+
+    if not selected_reference:
+        return _empty_match_points(), _empty_match_points()
+
+    local_reference = np.asarray(selected_reference, dtype=np.float32)
+    local_frame = np.asarray(selected_frame, dtype=np.float32)
+    if len(local_reference) <= _MISSING_POLYGON_MAX_LOCAL_POINTS:
+        return local_reference, local_frame
+
+    reference_center = np.asarray(_bbox_center(reference_bbox), dtype=np.float32)
+    frame_center = np.asarray(_bbox_center(slot.projected_bbox), dtype=np.float32)
+    reference_distance = np.linalg.norm(local_reference - reference_center, axis=1)
+    frame_distance = np.linalg.norm(local_frame - frame_center, axis=1)
+    indices = np.argsort(reference_distance + frame_distance)[
+        :_MISSING_POLYGON_MAX_LOCAL_POINTS
+    ]
+    return local_reference[indices], local_frame[indices]
+
+
+def _project_polygon_by_affine(
+    polygon: list[list[float]],
+    affine: np.ndarray,
+) -> list[list[float]]:
+    if len(polygon) < 3:
+        return []
+
+    source = np.asarray(polygon, dtype=np.float32).reshape(-1, 1, 2)
+    try:
+        projected = cv2.transform(source, affine.astype(np.float32)).reshape(-1, 2)
+    except cv2.error:
+        return []
+
+    if not np.isfinite(projected).all():
+        return []
+
+    return [[float(x), float(y)] for x, y in projected.tolist()]
+
+
+def _affine_reprojection_median_error(
+    affine: np.ndarray,
+    *,
+    source: np.ndarray,
+    target: np.ndarray,
+) -> float | None:
+    if len(source) == 0 or len(target) == 0:
+        return None
+
+    try:
+        projected = cv2.transform(
+            source.reshape(-1, 1, 2),
+            affine.astype(np.float32),
+        ).reshape(-1, 2)
+    except cv2.error:
+        return None
+
+    if not np.isfinite(projected).all():
+        return None
+
+    errors = np.linalg.norm(projected - target, axis=1)
+    if len(errors) == 0 or not np.isfinite(errors).all():
+        return None
+
+    return float(np.median(errors))
+
+
+def _missing_affine_scale_in_range(affine: np.ndarray) -> bool:
+    transform = np.asarray(affine, dtype=np.float32)
+    if transform.shape != (2, 3):
+        return False
+
+    scale_x = float(np.linalg.norm(transform[:, 0]))
+    scale_y = float(np.linalg.norm(transform[:, 1]))
+    return (
+        _MISSING_POLYGON_MIN_AFFINE_SCALE
+        <= scale_x
+        <= _MISSING_POLYGON_MAX_AFFINE_SCALE
+        and _MISSING_POLYGON_MIN_AFFINE_SCALE
+        <= scale_y
+        <= _MISSING_POLYGON_MAX_AFFINE_SCALE
+    )
+
+
+def _bbox_area_similarity(a: BBox, b: BBox) -> float:
+    area_a = max(1.0, _bbox_area(a))
+    area_b = max(1.0, _bbox_area(b))
+    ratio = area_a / area_b
+    return float(max(0.0, min(1.0, min(ratio, 1.0 / ratio))))
+
+
+def _empty_match_points() -> np.ndarray:
+    return np.empty((0, 2), dtype=np.float32)
 
 
 def _slot_feature_support(
