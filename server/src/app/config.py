@@ -50,7 +50,18 @@ class Settings(BaseSettings):
         ge=0.0,
         le=80.0,
     )
-    INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT: bool = True
+    INSPECTION_MISSING_POLYGON_CONTEXT_EXPANSION: float = Field(
+        default=3.0,
+        ge=1.1,
+        le=8.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_EXCLUSION_MARGIN: float = Field(
+        default=8.0,
+        ge=0.0,
+        le=80.0,
+    )
+    INSPECTION_MISSING_POLYGON_CONTEXT_FRAME_EXCLUSION: bool = False
+    INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT: bool = False
     INSPECTION_MISSING_POLYGON_EDGE_SNAP_RADIUS: int = Field(default=14, ge=0, le=64)
     INSPECTION_MISSING_POLYGON_EDGE_BLEND: float = Field(default=0.65, ge=0.0, le=1.0)
     INSPECTION_MISSING_POLYGON_EDGE_DENSIFY_STEP: int = Field(default=8, ge=2, le=32)

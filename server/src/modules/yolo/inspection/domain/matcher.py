@@ -866,15 +866,16 @@ def _missing_slot_debug(
             {
                 "reason": "Ожидаемая область найдена, но YOLO не обнаружила деталь",
                 "reason_code": "feature_slot_unconfirmed_without_yolo",
-                "candidate_source": "feature_support_only",
+                "candidate_source": "context_feature_support_only",
+                "slot_feature_source": "context_ring",
                 "slot_feature_support": slot.feature_support,
                 "slot_feature_total": slot.feature_total,
                 "slot_feature_min_support": (
                     settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT
                 ),
                 "note": (
-                    "Reference/frame features support the expected slot, but YOLO "
-                    "did not confirm an object of the required class."
+                    "Surrounding context features support the expected slot, but "
+                    "YOLO did not confirm an object of the required class."
                 ),
             }
         )
@@ -1024,9 +1025,9 @@ def _merge_missing_refinement_debug(
         **missing_debug,
         "missing_polygon_refined": True,
         "missing_polygon_projection": (
-            "local_feature_affine_active_contour"
+            "context_feature_affine_edge_guarded"
             if refinement.edge_snapped
-            else "local_feature_affine"
+            else "context_feature_affine"
         ),
         "missing_polygon_bbox": _bbox_debug(refinement.bbox),
         "missing_polygon_feature_support": refinement.feature_support,
@@ -1041,9 +1042,8 @@ def _merge_missing_refinement_debug(
         "missing_polygon_edge_mean_shift": _round_debug(refinement.edge_mean_shift),
         "missing_polygon_edge_max_shift": _round_debug(refinement.edge_max_shift),
         "note": (
-            "Missing polygon was refined by local feature matches and an active "
-            "edge-aware contour; YOLO still did not confirm an object of the "
-            "required class."
+            "Missing polygon was positioned from surrounding context features; "
+            "YOLO still did not confirm an object of the required class."
         ),
     }
 
@@ -1067,37 +1067,46 @@ def _missing_polygon_refinement_points(
     if reference_bbox is None:
         return _empty_match_points(), _empty_match_points()
 
-    reference_window = _expand_bbox(
-        reference_bbox,
-        factor=settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
+    context_expansion = settings.INSPECTION_MISSING_POLYGON_CONTEXT_EXPANSION
+    reference_window = _expand_bbox(reference_bbox, factor=context_expansion)
+    frame_window = _expand_bbox(
+        slot.projected_bbox,
+        factor=context_expansion,
+        frame_size=projection_data.frame_size,
     )
 
-    selected_reference: list[np.ndarray] = []
-    selected_frame: list[np.ndarray] = []
-    selected_inner_reference: list[np.ndarray] = []
-    selected_inner_frame: list[np.ndarray] = []
     reference_polygon = np.asarray(
         expected_item.item.reference_polygon,
         dtype=np.float32,
     )
+    projected_polygon = np.asarray(expected_item.polygon, dtype=np.float32)
+    reference_margin = _missing_context_exclusion_margin(reference_bbox)
+    frame_margin = _missing_context_exclusion_margin(expected_item.bbox)
+    exclude_frame_object = settings.INSPECTION_MISSING_POLYGON_CONTEXT_FRAME_EXCLUSION
+
+    selected_reference: list[np.ndarray] = []
+    selected_frame: list[np.ndarray] = []
 
     for reference_point, frame_point in zip(reference_points, frame_points, strict=True):
         if not _point_in_bbox(reference_point, reference_window):
             continue
-        if not _point_in_bbox(frame_point, slot.search_bbox):
+        if not _point_outside_np_polygon_margin(
+            reference_point,
+            reference_polygon,
+            margin=reference_margin,
+        ):
+            continue
+        if not _point_in_bbox(frame_point, frame_window):
+            continue
+        if exclude_frame_object and not _point_outside_np_polygon_margin(
+            frame_point,
+            projected_polygon,
+            margin=frame_margin,
+        ):
             continue
 
         selected_reference.append(reference_point)
         selected_frame.append(frame_point)
-
-        if _point_in_np_polygon(reference_point, reference_polygon):
-            selected_inner_reference.append(reference_point)
-            selected_inner_frame.append(frame_point)
-
-    min_support = max(3, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
-    if len(selected_inner_reference) >= min_support:
-        selected_reference = selected_inner_reference
-        selected_frame = selected_inner_frame
 
     if not selected_reference:
         return _empty_match_points(), _empty_match_points()
@@ -1750,11 +1759,22 @@ def _slot_feature_support(
         reference_bbox,
         factor=settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
     )
+    reference_polygon = np.asarray(
+        expected_item.item.reference_polygon,
+        dtype=np.float32,
+    )
+    reference_margin = _missing_context_exclusion_margin(reference_bbox)
 
     total = 0
     support = 0
     for reference_point, frame_point in zip(reference_points, frame_points, strict=True):
         if not _point_in_bbox(reference_point, reference_window):
+            continue
+        if not _point_outside_np_polygon_margin(
+            reference_point,
+            reference_polygon,
+            margin=reference_margin,
+        ):
             continue
         total += 1
         if _point_in_bbox(frame_point, search_bbox):
@@ -1774,6 +1794,7 @@ def _slot_debug_payload(slot: _ExpectedSlot | None) -> dict[str, Any] | None:
         "feature_total": slot.feature_total,
         "search_expansion": settings.INSPECTION_SLOT_SEARCH_EXPANSION,
         "feature_search_expansion": settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
+        "feature_source": "context_ring",
     }
 
 
@@ -1874,6 +1895,36 @@ def _point_in_np_polygon(point: np.ndarray, polygon: np.ndarray) -> bool:
         )
     except cv2.error:
         return False
+
+
+def _point_outside_np_polygon_margin(
+    point: np.ndarray,
+    polygon: np.ndarray,
+    *,
+    margin: float,
+) -> bool:
+    if polygon.ndim != 2 or polygon.shape[0] < 3 or polygon.shape[1] < 2:
+        return True
+    if not np.isfinite(point).all() or not np.isfinite(polygon).all():
+        return True
+
+    try:
+        signed_distance = cv2.pointPolygonTest(
+            polygon[:, :2].astype(np.float32),
+            (float(point[0]), float(point[1])),
+            True,
+        )
+    except cv2.error:
+        return True
+
+    return float(signed_distance) < -max(0.0, float(margin))
+
+
+def _missing_context_exclusion_margin(bbox: BBox) -> float:
+    x1, y1, x2, y2 = bbox
+    min_side = max(1.0, min(float(x2 - x1), float(y2 - y1)))
+    configured = float(settings.INSPECTION_MISSING_POLYGON_CONTEXT_EXCLUSION_MARGIN)
+    return max(0.0, min(configured, min_side * 0.25))
 
 
 def _display_detected_polygon(
