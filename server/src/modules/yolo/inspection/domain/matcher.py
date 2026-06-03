@@ -28,6 +28,9 @@ _MIN_AREA_RATIO = 0.20
 _MAX_AREA_RATIO = 5.00
 _MAX_OPTIMAL_ASSIGNMENT_CANDIDATES = 72
 _MAX_OPTIMAL_ASSIGNMENT_ITEMS = 18
+_DUPLICATE_MATCHED_BBOX_IOU = 0.55
+_DUPLICATE_MATCHED_CONTAINMENT = 0.80
+
 
 @dataclass(slots=True)
 class _ProjectedExpected:
@@ -308,14 +311,20 @@ def match_segments(
                 expected_index_to_match[expected_item.index] = match
                 break
 
+    unmatched_expected_indices: set[int] = set()
+    occupied_detection_indices = set(matched_detection_indices)
+
     for detection_item in detection_candidates:
-        if detection_item.index in matched_detection_indices:
+        if detection_item.index in occupied_detection_indices:
             continue
 
         action, expected_index, debug = _classify_unmatched_detection(
             detection_item,
             projected_expected,
-            matched_expected_indices,
+            matched_expected_indices | unmatched_expected_indices,
+            slot_by_index=slot_by_index,
+            occupied_detection_indices=occupied_detection_indices,
+            detection_by_index=detection_by_index,
         )
 
         detection = detection_item.detection
@@ -352,7 +361,7 @@ def match_segments(
                     name=expected_item.item.name if expected_item else "Не сопоставлено",
                     hue=expected_item.item.hue if expected_item else None,
                     status="unmatched",
-                    iou=_debug_float(debug, "iou"),
+                    iou=None,
                     confidence=detection.confidence,
                     expected_polygon=None,
                     detected_polygon=detection_item.polygon,
@@ -360,6 +369,9 @@ def match_segments(
                     debug=debug,
                 )
             )
+            if expected_index is not None:
+                unmatched_expected_indices.add(expected_index)
+            occupied_detection_indices.add(detection_item.index)
             continue
 
         matches.append(
@@ -654,18 +666,18 @@ def _build_expected_slots(
     return slots
 
 
-def _try_slot_candidate(
+def _slot_candidate_details(
     expected_item: _ProjectedExpected,
     detection_item: _DetectionCandidate,
     *,
     slot: _ExpectedSlot | None,
     global_debug: dict[str, Any],
 ) -> tuple[float, float, dict[str, Any]] | None:
-    """Match detection inside an expanded expected slot instead of exact projection.
+    """Return slot score details for same-class YOLO detection.
 
-    The projected polygon is only a navigation hint.  A same-class YOLO object that
-    lands inside the expected slot should be accepted even when polygon IoU is low,
-    which is common with 3D perspective drift and thin/round details.
+    A slot candidate exists only when YOLO detection is actually inside the
+    expanded expected slot. The exact projected polygon IoU is kept as a debug
+    metric only and must not be used as proof that a slot candidate is absent.
     """
 
     if slot is None:
@@ -716,12 +728,16 @@ def _try_slot_candidate(
         + feature_score * 0.05
         + confidence_score * 0.12
     )
+    passed = score >= settings.INSPECTION_SLOT_MIN_SCORE
 
     debug = {
-        "reason": "slot_matched",
+        "reason": "slot_matched" if passed else "slot_candidate_rejected",
         "projection": "expected_slot",
         "candidate_source": "yolo_slot",
         "score": _round_debug(score),
+        "threshold": _round_debug(settings.INSPECTION_SLOT_MIN_SCORE),
+        "passed": passed,
+        "reject_reason": None if passed else "slot_score_below_threshold",
         "iou": _round_debug(projected_iou),
         "global_score": global_debug.get("score"),
         "global_iou": global_debug.get("iou"),
@@ -738,10 +754,37 @@ def _try_slot_candidate(
         "slot": _slot_debug_payload(slot),
     }
 
-    if score < settings.INSPECTION_SLOT_MIN_SCORE:
+    return float(score), float(projected_iou), debug
+
+
+def _try_slot_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    slot: _ExpectedSlot | None,
+    global_debug: dict[str, Any],
+) -> tuple[float, float, dict[str, Any]] | None:
+    """Match detection inside an expanded expected slot instead of exact projection.
+
+    The projected polygon is only a navigation hint. A same-class YOLO object that
+    lands inside the expected slot should be accepted even when polygon IoU is low,
+    which is common with 3D perspective drift and thin/round details.
+    """
+
+    details = _slot_candidate_details(
+        expected_item,
+        detection_item,
+        slot=slot,
+        global_debug=global_debug,
+    )
+    if details is None:
         return None
 
-    return float(score), float(projected_iou), debug
+    score, projected_iou, debug = details
+    if not debug.get("passed"):
+        return None
+
+    return score, projected_iou, debug
 
 
 def _missing_slot_debug(
@@ -752,7 +795,8 @@ def _missing_slot_debug(
         return {"reason": "slot_no_evidence", "projection": "expected_slot"}
 
     debug: dict[str, Any] = {
-        "reason": "slot_no_yolo_confirmation",
+        "reason": "Модель YOLO не обнаружила деталь в ожидаемой области",
+        "reason_code": "slot_no_yolo_confirmation",
         "projection": "expected_slot",
         "candidate_source": "none",
         "slot": _slot_debug_payload(slot),
@@ -761,7 +805,8 @@ def _missing_slot_debug(
     if slot.feature_support >= settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT:
         debug.update(
             {
-                "reason": "feature_slot_unconfirmed_without_yolo",
+                "reason": "Ожидаемая область найдена, но YOLO не обнаружила деталь",
+                "reason_code": "feature_slot_unconfirmed_without_yolo",
                 "candidate_source": "feature_support_only",
                 "slot_feature_support": slot.feature_support,
                 "slot_feature_total": slot.feature_total,
@@ -994,17 +1039,6 @@ def _round_debug(value: float) -> float:
     return round(float(value), 4)
 
 
-def _debug_float(debug: dict[str, Any] | None, key: str) -> float | None:
-    if debug is None:
-        return None
-
-    value = debug.get(key)
-    if isinstance(value, int | float):
-        return float(value)
-
-    return None
-
-
 def _match_threshold(expected_bbox: BBox) -> float:
     area = _bbox_area(expected_bbox)
     if area <= 32 * 32:
@@ -1091,7 +1125,7 @@ def _choose_candidate_pairs_greedy(
 ) -> list[tuple[int, int, float]]:
     candidate_pairs = sorted(candidate_pairs, key=lambda item: item[0], reverse=True)
     matched_expected_indices: set[int] = set()
-    matched_detection_indices: set[int] = set()
+    occupied_detection_indices: set[int] = set()
     chosen_pairs: list[tuple[int, int, float]] = []
 
     for _score, iou, expected_index, detection_index in candidate_pairs:
@@ -1135,8 +1169,11 @@ def _is_visible_in_frame(
 def _classify_unmatched_detection(
     detection: _DetectionCandidate,
     projected_expected: list[_ProjectedExpected],
-    matched_expected_indices: set[int],
+    occupied_expected_indices: set[int],
     *,
+    slot_by_index: dict[int, _ExpectedSlot],
+    occupied_detection_indices: set[int],
+    detection_by_index: dict[int, _DetectionCandidate],
     iou_threshold: float = 0.10,
 ) -> tuple[str, int | None, dict[str, Any] | None]:
     if detection.detection.confidence < settings.YOLO_EXTRA_CONF_THRESHOLD:
@@ -1150,43 +1187,61 @@ def _classify_unmatched_detection(
             },
         )
 
+    duplicate_debug = _occupied_detection_duplicate_debug(
+        detection,
+        occupied_detection_indices=occupied_detection_indices,
+        detection_by_index=detection_by_index,
+    )
+    if duplicate_debug is not None:
+        return "discard", None, duplicate_debug
+
     best_same_class: tuple[float, float, _ProjectedExpected, dict[str, Any]] | None = (
         None
     )
 
     for expected_item in projected_expected:
-        if expected_item.index in matched_expected_indices:
+        if expected_item.index in occupied_expected_indices:
             continue
         if expected_item.item.class_key != detection.detection.class_key:
             continue
 
-        debug = _match_score_details(
+        global_debug = _match_score_details(
             expected_item.polygon,
             detection.polygon,
             expected_item.bbox,
             detection.bbox,
         )
-        score = float(debug["score"])
-        iou = float(debug["iou"])
-        candidate = (score, iou, expected_item, debug)
+        slot_details = _slot_candidate_details(
+            expected_item,
+            detection,
+            slot=slot_by_index.get(expected_item.index),
+            global_debug=global_debug,
+        )
+        if slot_details is None:
+            continue
 
-        if best_same_class is None or (score, iou) > (
+        score, _projected_iou, debug = slot_details
+        containment = float(debug.get("slot_detection_containment") or 0.0)
+        candidate = (score, containment, expected_item, debug)
+
+        if best_same_class is None or (score, containment) > (
             best_same_class[0],
             best_same_class[1],
         ):
             best_same_class = candidate
 
     if best_same_class is not None:
-        _score, _iou, expected_item, debug = best_same_class
-        return (
-            "unmatched",
-            expected_item.index,
-            {
-                **debug,
-                "reason": "same_class_detection_not_matched",
-                "expected_name": expected_item.item.name,
-            },
-        )
+        _score, _containment, expected_item, debug = best_same_class
+        debug = {
+            **debug,
+            "reason": "same_class_slot_detection_not_matched",
+            "expected_name": expected_item.item.name,
+        }
+        # The exact projected polygon IoU may legitimately be zero after
+        # perspective drift. Do not expose it as a panel-level match percentage
+        # for an unmatched slot result.
+        debug.pop("iou", None)
+        return "unmatched", expected_item.index, debug
 
     for expected_item in projected_expected:
         iou = _bbox_iou(expected_item.bbox, detection.bbox)
@@ -1208,7 +1263,41 @@ def _classify_unmatched_detection(
         "extra",
         None,
         {
-            "reason": "no_unmatched_expected_of_same_class",
+            "reason": "no_unmatched_expected_slot_of_same_class",
             "confidence": _round_debug(detection.detection.confidence),
         },
     )
+
+
+def _occupied_detection_duplicate_debug(
+    detection: _DetectionCandidate,
+    *,
+    occupied_detection_indices: set[int],
+    detection_by_index: dict[int, _DetectionCandidate],
+) -> dict[str, Any] | None:
+    for occupied_index in occupied_detection_indices:
+        occupied_detection = detection_by_index.get(occupied_index)
+        if occupied_detection is None:
+            continue
+
+        bbox_iou = _bbox_iou(detection.bbox, occupied_detection.bbox)
+        containment = max(
+            _bbox_containment(detection.bbox, occupied_detection.bbox),
+            _bbox_containment(occupied_detection.bbox, detection.bbox),
+        )
+
+        if (
+            bbox_iou < _DUPLICATE_MATCHED_BBOX_IOU
+            and containment < _DUPLICATE_MATCHED_CONTAINMENT
+        ):
+            continue
+
+        return {
+            "reason": "duplicate_of_accepted_detection",
+            "accepted_detection_index": occupied_index,
+            "accepted_class_key": occupied_detection.detection.class_key,
+            "bbox_iou": _round_debug(bbox_iou),
+            "containment": _round_debug(containment),
+        }
+
+    return None

@@ -147,6 +147,7 @@ def _polygon_for_render(
         polygon,
         polygon_transform=polygon_transform,
         frame_shape=frame_shape,
+        relaxed_expected=match.status == "missing",
     )
 
 
@@ -155,6 +156,7 @@ def _prepare_polygon_for_render(
     *,
     polygon_transform: np.ndarray | None,
     frame_shape: tuple[int, int],
+    relaxed_expected: bool = False,
 ) -> list[list[float]] | None:
     if polygon is None or len(polygon) < 3:
         return None
@@ -164,7 +166,11 @@ def _prepare_polygon_for_render(
         if polygon is None or len(polygon) < 3:
             return None
 
-    return _sanitize_polygon_for_render(polygon, frame_shape=frame_shape)
+    return _sanitize_polygon_for_render(
+        polygon,
+        frame_shape=frame_shape,
+        relaxed_expected=relaxed_expected,
+    )
 
 
 def _transform_polygon(
@@ -232,8 +238,6 @@ def _label_for_match(match: SegmentMatch) -> str:
         return f"{name} · нет"
 
     if match.status == "unmatched":
-        if match.confidence is not None:
-            return f"{name} · не сопост. {int(match.confidence * 100)}%"
         return f"{name} · не сопост."
 
     if match.confidence is not None:
@@ -322,6 +326,7 @@ def _sanitize_polygon_for_render(
     polygon: list[list[float]],
     *,
     frame_shape: tuple[int, int],
+    relaxed_expected: bool = False,
 ) -> list[list[float]] | None:
     frame_h, frame_w = frame_shape
 
@@ -341,15 +346,35 @@ def _sanitize_polygon_for_render(
     xs = points[:, 0]
     ys = points[:, 1]
 
-    margin = max(frame_w, frame_h) * POLYGON_OFFSCREEN_MARGIN_FRACTION
+    if relaxed_expected:
+        if (
+            float(np.max(xs)) < 0.0
+            or float(np.min(xs)) > float(frame_w)
+            or float(np.max(ys)) < 0.0
+            or float(np.min(ys)) > float(frame_h)
+        ):
+            return None
 
-    if (
-        np.any(xs < -margin)
-        or np.any(xs > frame_w + margin)
-        or np.any(ys < -margin)
-        or np.any(ys > frame_h + margin)
-    ):
-        return None
+        points = points.copy()
+        points[:, 0] = np.clip(points[:, 0], 0, max(0, frame_w - 1))
+        points[:, 1] = np.clip(points[:, 1], 0, max(0, frame_h - 1))
+
+        points = _remove_near_duplicate_points(points)
+        if points.shape[0] < 3:
+            return None
+
+        xs = points[:, 0]
+        ys = points[:, 1]
+    else:
+        margin = max(frame_w, frame_h) * POLYGON_OFFSCREEN_MARGIN_FRACTION
+
+        if (
+            np.any(xs < -margin)
+            or np.any(xs > frame_w + margin)
+            or np.any(ys < -margin)
+            or np.any(ys > frame_h + margin)
+        ):
+            return None
 
     bbox_w = float(np.max(xs) - np.min(xs))
     bbox_h = float(np.max(ys) - np.min(ys))
@@ -357,20 +382,21 @@ def _sanitize_polygon_for_render(
     if bbox_w < 2.0 or bbox_h < 2.0:
         return None
 
-    if bbox_w > frame_w * POLYGON_MAX_BBOX_SIDE_FRACTION:
-        return None
+    if not relaxed_expected:
+        if bbox_w > frame_w * POLYGON_MAX_BBOX_SIDE_FRACTION:
+            return None
 
-    if bbox_h > frame_h * POLYGON_MAX_BBOX_SIDE_FRACTION:
-        return None
+        if bbox_h > frame_h * POLYGON_MAX_BBOX_SIDE_FRACTION:
+            return None
 
-    if not _has_enough_visible_bbox(points, frame_w=frame_w, frame_h=frame_h):
-        return None
+        if not _has_enough_visible_bbox(points, frame_w=frame_w, frame_h=frame_h):
+            return None
 
-    if (
-        _max_edge_length(points)
-        > np.hypot(frame_w, frame_h) * POLYGON_MAX_EDGE_FRACTION
-    ):
-        return None
+        if (
+            _max_edge_length(points)
+            > np.hypot(frame_w, frame_h) * POLYGON_MAX_EDGE_FRACTION
+        ):
+            return None
 
     area = abs(float(cv2.contourArea(points.reshape(-1, 1, 2))))
     if area < 4.0:
