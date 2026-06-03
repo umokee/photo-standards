@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import cv2
 import numpy as np
 from app.config import settings
 from modules.core.standards.reference_constants import IOU_MATCH_THRESHOLD
@@ -31,6 +32,12 @@ _MAX_AREA_RATIO = 5.00
 _MAX_OPTIMAL_ASSIGNMENT_CANDIDATES = 72
 _MAX_OPTIMAL_ASSIGNMENT_ITEMS = 18
 
+_OBJECT_ALIGNMENT_MIN_CANDIDATES = 2
+_OBJECT_ALIGNMENT_MIN_INLIERS = 2
+_OBJECT_ALIGNMENT_RANSAC_REPROJ_THRESHOLD = 28.0
+_OBJECT_ALIGNMENT_MAX_CENTER_DISTANCE_FACTOR = 3.2
+_OBJECT_ALIGNMENT_MIN_CENTER_LIMIT = 120.0
+
 
 @dataclass(slots=True)
 class _ProjectedExpected:
@@ -46,6 +53,24 @@ class _DetectionCandidate:
     detection: YoloDetection
     polygon: list[list[float]]
     bbox: BBox
+
+
+@dataclass(slots=True)
+class _ObjectAlignment:
+    matrix: np.ndarray
+    candidate_count: int
+    inlier_count: int
+    inlier_ratio: float
+    method: str
+
+
+@dataclass(slots=True)
+class _ExpectedSlot:
+    projected_bbox: BBox
+    search_bbox: BBox
+    reference_bbox: BBox | None
+    feature_support: int
+    feature_total: int
 
 
 def build_expected_segments(
@@ -187,6 +212,19 @@ def match_segments(
     candidate_projected_polygons: dict[tuple[int, int], list[list[float]]] = {}
     projected_by_index = {item.index: item for item in projected_expected}
     detection_by_index = {item.index: item for item in detection_candidates}
+    slot_by_index = (
+        _build_expected_slots(projected_expected, projection_data=projection_data)
+        if settings.INSPECTION_SLOT_MATCHING
+        else {}
+    )
+    object_alignment = (
+        _estimate_object_alignment(
+            projected_expected,
+            detection_candidates,
+        )
+        if settings.INSPECTION_OBJECT_LANDMARK_ALIGNMENT
+        else None
+    )
 
     for expected_item in projected_expected:
         for detection_item in detection_candidates:
@@ -210,6 +248,46 @@ def match_segments(
                 }
                 candidate_pairs.append(
                     (score, iou, expected_item.index, detection_item.index)
+                )
+                continue
+
+            slot_candidate = _try_slot_candidate(
+                expected_item,
+                detection_item,
+                slot=slot_by_index.get(expected_item.index),
+                global_debug=score_debug,
+            )
+            if slot_candidate is not None:
+                slot_score, slot_iou, slot_debug = slot_candidate
+                candidate_debug[(expected_item.index, detection_item.index)] = slot_debug
+                candidate_pairs.append(
+                    (slot_score, slot_iou, expected_item.index, detection_item.index)
+                )
+                continue
+
+            object_alignment_candidate = _try_object_alignment_candidate(
+                expected_item,
+                detection_item,
+                object_alignment=object_alignment,
+                global_debug=score_debug,
+            )
+            if object_alignment_candidate is not None:
+                object_alignment_polygon, object_alignment_debug = object_alignment_candidate
+                object_alignment_score = float(object_alignment_debug["score"])
+                object_alignment_iou = float(object_alignment_debug["iou"])
+                candidate_projected_polygons[
+                    (expected_item.index, detection_item.index)
+                ] = object_alignment_polygon
+                candidate_debug[
+                    (expected_item.index, detection_item.index)
+                ] = object_alignment_debug
+                candidate_pairs.append(
+                    (
+                        object_alignment_score,
+                        object_alignment_iou,
+                        expected_item.index,
+                        detection_item.index,
+                    )
                 )
                 continue
 
@@ -301,6 +379,27 @@ def match_segments(
         if expected_item.index in matched_expected_indices:
             continue
 
+        slot = slot_by_index.get(expected_item.index)
+        feature_only_debug = _feature_only_slot_debug(expected_item, slot)
+        if feature_only_debug is not None:
+            matches.append(
+                SegmentMatch(
+                    annotation_id=expected_item.item.annotation_id,
+                    segment_class_id=expected_item.item.segment_class_id,
+                    class_key=expected_item.item.class_key,
+                    name=expected_item.item.name,
+                    hue=expected_item.item.hue,
+                    status="ok",
+                    iou=None,
+                    confidence=None,
+                    expected_polygon=expected_item.polygon,
+                    detected_polygon=None,
+                    detected_bbox=None,
+                    debug=feature_only_debug,
+                )
+            )
+            continue
+
         matches.append(
             SegmentMatch(
                 annotation_id=expected_item.item.annotation_id,
@@ -314,7 +413,11 @@ def match_segments(
                 expected_polygon=expected_item.polygon,
                 detected_polygon=None,
                 detected_bbox=None,
-                debug={"reason": "no_matching_detection"},
+                debug={
+                    "reason": "slot_no_evidence",
+                    "projection": "expected_slot",
+                    "slot": _slot_debug_payload(slot),
+                },
             )
         )
 
@@ -694,6 +797,419 @@ def _match_score(
     )
     return float(debug["score"]), float(debug["iou"])
 
+
+
+
+def _build_expected_slots(
+    projected_expected: list[_ProjectedExpected],
+    *,
+    projection_data: LocalProjectionData | None,
+) -> dict[int, _ExpectedSlot]:
+    slots: dict[int, _ExpectedSlot] = {}
+
+    for expected_item in projected_expected:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+        search_bbox = _expand_bbox(
+            expected_item.bbox,
+            factor=settings.INSPECTION_SLOT_SEARCH_EXPANSION,
+            frame_size=(projection_data.frame_size if projection_data is not None else None),
+        )
+        feature_support, feature_total = _slot_feature_support(
+            expected_item,
+            search_bbox=search_bbox,
+            projection_data=projection_data,
+        )
+
+        slots[expected_item.index] = _ExpectedSlot(
+            projected_bbox=expected_item.bbox,
+            search_bbox=search_bbox,
+            reference_bbox=reference_bbox,
+            feature_support=feature_support,
+            feature_total=feature_total,
+        )
+
+    return slots
+
+
+def _try_slot_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    slot: _ExpectedSlot | None,
+    global_debug: dict[str, Any],
+) -> tuple[float, float, dict[str, Any]] | None:
+    """Match detection inside an expanded expected slot instead of exact projection.
+
+    The projected polygon is only a navigation hint.  A same-class YOLO object that
+    lands inside the expected slot should be accepted even when polygon IoU is low,
+    which is common with 3D perspective drift and thin/round details.
+    """
+
+    if slot is None:
+        return None
+
+    containment = _bbox_containment(detection_item.bbox, slot.search_bbox)
+    if containment < settings.INSPECTION_SLOT_MIN_DETECTION_CONTAINMENT:
+        return None
+
+    expected_center = _bbox_center(slot.projected_bbox)
+    detection_center = _bbox_center(detection_item.bbox)
+    search_diag = max(1.0, _bbox_diag(slot.search_bbox))
+    center_distance = float(
+        np.hypot(
+            expected_center[0] - detection_center[0],
+            expected_center[1] - detection_center[1],
+        )
+    )
+    center_score = max(0.0, 1.0 - center_distance / max(1.0, search_diag * 0.55))
+
+    expected_area = max(1.0, _bbox_area(slot.projected_bbox))
+    detection_area = max(1.0, _bbox_area(detection_item.bbox))
+    area_ratio = detection_area / expected_area
+    area_score = min(area_ratio, 1.0 / area_ratio)
+    area_score = max(0.0, min(1.0, area_score))
+
+    slot_iou = _bbox_iou(slot.search_bbox, detection_item.bbox)
+    projected_iou = _polygon_iou(expected_item.polygon, detection_item.polygon)
+    feature_score = min(
+        1.0,
+        slot.feature_support / max(1, settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT),
+    )
+
+    score = (
+        center_score * 0.34
+        + containment * 0.28
+        + area_score * 0.16
+        + min(1.0, slot_iou * 5.0) * 0.10
+        + min(1.0, projected_iou * 3.0) * 0.06
+        + feature_score * 0.06
+    )
+
+    debug = {
+        "reason": "slot_matched",
+        "projection": "expected_slot",
+        "candidate_source": "yolo_slot",
+        "score": _round_debug(score),
+        "iou": _round_debug(projected_iou),
+        "global_score": global_debug.get("score"),
+        "global_iou": global_debug.get("iou"),
+        "global_reject_reason": global_debug.get("reject_reason"),
+        "slot_center_score": _round_debug(center_score),
+        "slot_detection_containment": _round_debug(containment),
+        "slot_bbox_iou": _round_debug(slot_iou),
+        "slot_area_score": _round_debug(area_score),
+        "slot_feature_score": _round_debug(feature_score),
+        "slot": _slot_debug_payload(slot),
+    }
+
+    if score < settings.INSPECTION_SLOT_MIN_SCORE:
+        return None
+
+    return float(score), float(projected_iou), debug
+
+
+def _feature_only_slot_debug(
+    expected_item: _ProjectedExpected,
+    slot: _ExpectedSlot | None,
+) -> dict[str, Any] | None:
+    if slot is None:
+        return None
+    if slot.feature_support < settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT:
+        return None
+
+    return {
+        "reason": "feature_slot_matched_without_yolo",
+        "projection": "expected_slot",
+        "candidate_source": "feature_support",
+        "slot_feature_support": slot.feature_support,
+        "slot_feature_total": slot.feature_total,
+        "slot_feature_min_support": settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT,
+        "slot": _slot_debug_payload(slot),
+        "note": (
+            "YOLO did not confirm this object, but matched reference/frame "
+            "features support the expected slot."
+        ),
+    }
+
+
+def _slot_feature_support(
+    expected_item: _ProjectedExpected,
+    *,
+    search_bbox: BBox,
+    projection_data: LocalProjectionData | None,
+) -> tuple[int, int]:
+    if projection_data is None:
+        return 0, 0
+
+    reference_points = _as_match_points(projection_data.reference_points)
+    frame_points = _as_match_points(projection_data.frame_points)
+    if reference_points is None or frame_points is None:
+        return 0, 0
+    if len(reference_points) != len(frame_points):
+        return 0, 0
+
+    reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return 0, 0
+
+    reference_window = _expand_bbox(
+        reference_bbox,
+        factor=settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
+    )
+
+    total = 0
+    support = 0
+    for reference_point, frame_point in zip(reference_points, frame_points, strict=True):
+        if not _point_in_bbox(reference_point, reference_window):
+            continue
+        total += 1
+        if _point_in_bbox(frame_point, search_bbox):
+            support += 1
+
+    return support, total
+
+
+def _slot_debug_payload(slot: _ExpectedSlot | None) -> dict[str, Any] | None:
+    if slot is None:
+        return None
+    return {
+        "projected_bbox": _bbox_debug(slot.projected_bbox),
+        "search_bbox": _bbox_debug(slot.search_bbox),
+        "reference_bbox": _bbox_debug(slot.reference_bbox),
+        "feature_support": slot.feature_support,
+        "feature_total": slot.feature_total,
+        "search_expansion": settings.INSPECTION_SLOT_SEARCH_EXPANSION,
+        "feature_search_expansion": settings.INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION,
+    }
+
+
+def _bbox_debug(bbox: BBox | None) -> dict[str, float] | None:
+    if bbox is None:
+        return None
+    x1, y1, x2, y2 = bbox
+    return {
+        "x": _round_debug(x1),
+        "y": _round_debug(y1),
+        "w": _round_debug(max(0.0, x2 - x1)),
+        "h": _round_debug(max(0.0, y2 - y1)),
+    }
+
+
+def _as_match_points(points: np.ndarray | None) -> np.ndarray | None:
+    if points is None:
+        return None
+    array = np.asarray(points, dtype=np.float32)
+    if array.ndim == 3 and array.shape[1:] == (1, 2):
+        array = array.reshape(-1, 2)
+    if array.ndim != 2 or array.shape[1] < 2:
+        return None
+    if len(array) == 0:
+        return None
+    return array[:, :2]
+
+
+def _expand_bbox(
+    bbox: BBox,
+    *,
+    factor: float,
+    frame_size: tuple[int, int] | None = None,
+) -> BBox:
+    x1, y1, x2, y2 = bbox
+    width = max(1.0, x2 - x1)
+    height = max(1.0, y2 - y1)
+    cx, cy = _bbox_center(bbox)
+    new_w = width * factor
+    new_h = height * factor
+    result = (
+        cx - new_w * 0.5,
+        cy - new_h * 0.5,
+        cx + new_w * 0.5,
+        cy + new_h * 0.5,
+    )
+
+    if frame_size is None:
+        return result
+
+    fw, fh = frame_size
+    return (
+        max(0.0, result[0]),
+        max(0.0, result[1]),
+        min(float(fw), result[2]),
+        min(float(fh), result[3]),
+    )
+
+
+def _bbox_containment(inner: BBox, outer: BBox) -> float:
+    ix1, iy1, ix2, iy2 = inner
+    ox1, oy1, ox2, oy2 = outer
+
+    inter_x1 = max(ix1, ox1)
+    inter_y1 = max(iy1, oy1)
+    inter_x2 = min(ix2, ox2)
+    inter_y2 = min(iy2, oy2)
+
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    inner_area = _bbox_area(inner)
+    if inner_area <= 0:
+        return 0.0
+    return float(inter_area / inner_area)
+
+
+def _point_in_bbox(point: np.ndarray, bbox: BBox) -> bool:
+    x, y = float(point[0]), float(point[1])
+    x1, y1, x2, y2 = bbox
+    return x1 <= x <= x2 and y1 <= y <= y2
+
+
+def _estimate_object_alignment(
+    projected_expected: list[_ProjectedExpected],
+    detection_candidates: list[_DetectionCandidate],
+) -> _ObjectAlignment | None:
+    """Estimate object-level similarity transform from reference objects to YOLO objects.
+
+    Global LightGlue projection is used only as a broad gate for candidate pairs.
+    The transform itself is estimated from object centers: reference annotation
+    centers -> current YOLO detection centers.  This helps when one global
+    homography is unstable on a 3D scene, but enough known objects are visible.
+    """
+
+    reference_points: list[tuple[float, float]] = []
+    frame_points: list[tuple[float, float]] = []
+
+    for expected_item in projected_expected:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+        if reference_bbox is None:
+            continue
+
+        projected_center = _bbox_center(expected_item.bbox)
+        projected_diag = max(1.0, _bbox_diag(expected_item.bbox))
+        center_limit = max(
+            _OBJECT_ALIGNMENT_MIN_CENTER_LIMIT,
+            projected_diag * _OBJECT_ALIGNMENT_MAX_CENTER_DISTANCE_FACTOR,
+        )
+
+        for detection_item in detection_candidates:
+            if expected_item.item.class_key != detection_item.detection.class_key:
+                continue
+
+            detection_center = _bbox_center(detection_item.bbox)
+            center_distance = float(
+                np.hypot(
+                    projected_center[0] - detection_center[0],
+                    projected_center[1] - detection_center[1],
+                )
+            )
+            if center_distance > center_limit:
+                continue
+
+            reference_points.append(_bbox_center(reference_bbox))
+            frame_points.append(detection_center)
+
+    if len(reference_points) < _OBJECT_ALIGNMENT_MIN_CANDIDATES:
+        return None
+
+    source = np.asarray(reference_points, dtype=np.float32).reshape(-1, 1, 2)
+    target = np.asarray(frame_points, dtype=np.float32).reshape(-1, 1, 2)
+
+    try:
+        matrix, inliers = cv2.estimateAffinePartial2D(
+            source,
+            target,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=_OBJECT_ALIGNMENT_RANSAC_REPROJ_THRESHOLD,
+            maxIters=2000,
+            confidence=0.98,
+            refineIters=10,
+        )
+    except cv2.error:
+        return None
+
+    if matrix is None or inliers is None:
+        return None
+
+    inlier_mask = np.asarray(inliers, dtype=np.uint8).reshape(-1) > 0
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    if inlier_count < _OBJECT_ALIGNMENT_MIN_INLIERS:
+        return None
+
+    candidate_count = int(len(reference_points))
+    inlier_ratio = inlier_count / max(1, candidate_count)
+
+    return _ObjectAlignment(
+        matrix=np.asarray(matrix, dtype=np.float32),
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        method="similarity",
+    )
+
+
+def _try_object_alignment_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    object_alignment: _ObjectAlignment | None,
+    global_debug: dict[str, Any],
+) -> tuple[list[list[float]], dict[str, Any]] | None:
+    if object_alignment is None:
+        return None
+
+    projected_polygon = _project_polygon_by_affine(
+        expected_item.item.reference_polygon,
+        object_alignment.matrix,
+    )
+    if len(projected_polygon) < 3:
+        return None
+
+    projected_bbox = _bbox_from_polygon(projected_polygon)
+    if projected_bbox is None:
+        return None
+
+    score_debug = _match_score_details(
+        projected_polygon,
+        detection_item.polygon,
+        projected_bbox,
+        detection_item.bbox,
+    )
+    if not score_debug["passed"]:
+        return None
+
+    return (
+        projected_polygon,
+        {
+            **score_debug,
+            "reason": "matched",
+            "projection": "object_landmark",
+            "object_landmark_method": object_alignment.method,
+            "object_landmark_candidates": object_alignment.candidate_count,
+            "object_landmark_inliers": object_alignment.inlier_count,
+            "object_landmark_inlier_ratio": _round_debug(object_alignment.inlier_ratio),
+            "global_reject_reason": global_debug.get("reject_reason"),
+            "global_score": global_debug.get("score"),
+            "global_iou": global_debug.get("iou"),
+        },
+    )
+
+
+def _project_polygon_by_affine(
+    polygon: list[list[float]],
+    matrix: np.ndarray,
+) -> list[list[float]]:
+    points = np.asarray(polygon, dtype=np.float32)
+    if points.ndim != 2 or points.shape[0] < 3 or points.shape[1] < 2:
+        return []
+
+    transform = np.asarray(matrix, dtype=np.float32)
+    if transform.shape != (2, 3) or not np.isfinite(transform).all():
+        return []
+
+    projected = cv2.transform(points[:, :2].reshape(-1, 1, 2), transform).reshape(-1, 2)
+    if not np.isfinite(projected).all():
+        return []
+
+    return [[float(x), float(y)] for x, y in projected]
 
 
 def _try_object_local_candidate(

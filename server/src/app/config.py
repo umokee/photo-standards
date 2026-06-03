@@ -36,9 +36,17 @@ class Settings(BaseSettings):
     # Inspection behavior.
     INSPECTION_POLYGON_PROJECTION_MODE: Literal["global", "adaptive"] = "adaptive"
     INSPECTION_VERIFICATION_MODE: Literal["alignment", "yolo_count"] = "alignment"
-    INSPECTION_OBJECT_LOCAL_REFINER: bool = True
+    INSPECTION_OBJECT_LANDMARK_ALIGNMENT: bool = False
+    INSPECTION_OBJECT_LOCAL_REFINER: bool = False
     INSPECTION_OBJECT_LOCAL_MAX_SIDE: int = Field(default=768, ge=128, le=2048)
     INSPECTION_OBJECT_LOCAL_MAX_KEYPOINTS: int = Field(default=1536, ge=128, le=4096)
+
+    INSPECTION_SLOT_MATCHING: bool = True
+    INSPECTION_SLOT_SEARCH_EXPANSION: float = Field(default=2.35, ge=1.0, le=8.0)
+    INSPECTION_SLOT_MIN_SCORE: float = Field(default=0.43, ge=0.0, le=1.0)
+    INSPECTION_SLOT_MIN_DETECTION_CONTAINMENT: float = Field(default=0.10, ge=0.0, le=1.0)
+    INSPECTION_SLOT_MIN_FEATURE_SUPPORT: int = Field(default=4, ge=0, le=64)
+    INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION: float = Field(default=2.75, ge=1.0, le=10.0)
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)
 
     # Database connection.
