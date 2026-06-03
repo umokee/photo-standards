@@ -37,6 +37,17 @@ _MISSING_POLYGON_MIN_CONTAINMENT = 0.18
 _MISSING_POLYGON_MIN_AREA_SCORE = 0.16
 _MISSING_POLYGON_MIN_AFFINE_SCALE = 0.45
 _MISSING_POLYGON_MAX_AFFINE_SCALE = 2.80
+_MISSING_POLYGON_EDGE_CROP_PADDING = 8
+_MISSING_POLYGON_EDGE_MIN_PIXELS = 8
+_MISSING_POLYGON_EDGE_MIN_MOVED_POINTS = 3
+_MISSING_POLYGON_EDGE_MIN_MOVED_FRACTION = 0.10
+_MISSING_POLYGON_EDGE_MIN_CONTAINMENT = 0.12
+_MISSING_POLYGON_EDGE_MIN_AREA_SCORE = 0.38
+_MISSING_POLYGON_EDGE_MAX_CENTER_DRIFT_FACTOR = 2.00
+_MISSING_POLYGON_EDGE_MAX_DENSE_POINTS = 220
+_MISSING_POLYGON_EDGE_MIN_GRADIENT_ALIGNMENT = 0.22
+_MISSING_POLYGON_EDGE_TANGENT_BAND_FRACTION = 0.24
+_MISSING_POLYGON_EDGE_SIMPLIFY_EPSILON = 1.25
 
 
 @dataclass(slots=True)
@@ -75,6 +86,19 @@ class _MissingPolygonRefinement:
     median_error: float
     containment: float
     area_score: float
+    edge_snapped: bool = False
+    edge_moved_points: int = 0
+    edge_mean_shift: float = 0.0
+    edge_max_shift: float = 0.0
+
+
+@dataclass(slots=True)
+class _EdgeSnapResult:
+    polygon: list[list[float]]
+    bbox: BBox
+    moved_points: int
+    mean_shift: float
+    max_shift: float
 
 
 def build_expected_segments(
@@ -948,6 +972,31 @@ def _try_missing_polygon_refinement(
     if area_score < _MISSING_POLYGON_MIN_AREA_SCORE:
         return None
 
+    edge_snapped = False
+    edge_moved_points = 0
+    edge_mean_shift = 0.0
+    edge_max_shift = 0.0
+
+    edge_result = _try_snap_missing_polygon_to_edges(
+        polygon,
+        frame=projection_data.frame,
+        frame_size=projection_data.frame_size,
+        slot=slot,
+        base_bbox=bbox,
+    )
+    if edge_result is not None:
+        edge_containment = _bbox_containment(edge_result.bbox, slot.search_bbox)
+        edge_area_score = _bbox_area_similarity(edge_result.bbox, expected_item.bbox)
+
+        polygon = edge_result.polygon
+        bbox = edge_result.bbox
+        containment = edge_containment
+        area_score = edge_area_score
+        edge_snapped = True
+        edge_moved_points = edge_result.moved_points
+        edge_mean_shift = edge_result.mean_shift
+        edge_max_shift = edge_result.max_shift
+
     return _MissingPolygonRefinement(
         polygon=polygon,
         bbox=bbox,
@@ -958,6 +1007,10 @@ def _try_missing_polygon_refinement(
         median_error=float(median_error),
         containment=float(containment),
         area_score=float(area_score),
+        edge_snapped=edge_snapped,
+        edge_moved_points=edge_moved_points,
+        edge_mean_shift=float(edge_mean_shift),
+        edge_max_shift=float(edge_max_shift),
     )
 
 
@@ -968,7 +1021,11 @@ def _merge_missing_refinement_debug(
     return {
         **missing_debug,
         "missing_polygon_refined": True,
-        "missing_polygon_projection": "local_feature_affine",
+        "missing_polygon_projection": (
+            "local_feature_affine_active_contour"
+            if refinement.edge_snapped
+            else "local_feature_affine"
+        ),
         "missing_polygon_bbox": _bbox_debug(refinement.bbox),
         "missing_polygon_feature_support": refinement.feature_support,
         "missing_polygon_feature_total": refinement.feature_total,
@@ -977,9 +1034,14 @@ def _merge_missing_refinement_debug(
         "missing_polygon_median_error": _round_debug(refinement.median_error),
         "missing_polygon_containment": _round_debug(refinement.containment),
         "missing_polygon_area_score": _round_debug(refinement.area_score),
+        "missing_polygon_edge_snapped": refinement.edge_snapped,
+        "missing_polygon_edge_moved_points": refinement.edge_moved_points,
+        "missing_polygon_edge_mean_shift": _round_debug(refinement.edge_mean_shift),
+        "missing_polygon_edge_max_shift": _round_debug(refinement.edge_max_shift),
         "note": (
-            "Missing polygon was refined by local feature matches only; "
-            "YOLO still did not confirm an object of the required class."
+            "Missing polygon was refined by local feature matches and an active "
+            "edge-aware contour; YOLO still did not confirm an object of the "
+            "required class."
         ),
     }
 
@@ -1035,6 +1097,442 @@ def _missing_polygon_refinement_points(
     ]
     return local_reference[indices], local_frame[indices]
 
+
+
+def _try_snap_missing_polygon_to_edges(
+    polygon: list[list[float]],
+    *,
+    frame: np.ndarray | None,
+    frame_size: tuple[int, int] | None,
+    slot: _ExpectedSlot,
+    base_bbox: BBox,
+) -> _EdgeSnapResult | None:
+    if not settings.INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT:
+        return None
+    if frame is None or frame.size == 0:
+        return None
+
+    radius = int(settings.INSPECTION_MISSING_POLYGON_EDGE_SNAP_RADIUS)
+    if radius <= 0:
+        return None
+
+    points = np.asarray(polygon, dtype=np.float32)
+    if points.ndim != 2 or points.shape[1] < 2 or len(points) < 3:
+        return None
+    points = points[:, :2]
+
+    inferred_size = (int(frame.shape[1]), int(frame.shape[0]))
+    effective_frame_size = frame_size or inferred_size
+    if effective_frame_size[0] <= 0 or effective_frame_size[1] <= 0:
+        return None
+
+    dense_points = _densify_closed_polygon(
+        points,
+        step=float(settings.INSPECTION_MISSING_POLYGON_EDGE_DENSIFY_STEP),
+        max_points=_MISSING_POLYGON_EDGE_MAX_DENSE_POINTS,
+    )
+    if dense_points is None or len(dense_points) < 3:
+        return None
+
+    contour_vectors = _closed_contour_vectors(dense_points)
+    if contour_vectors is None:
+        return None
+    tangents, normals = contour_vectors
+
+    dense_bbox = _bbox_from_np_points(dense_points)
+    if dense_bbox is None:
+        return None
+
+    edge_payload = _missing_polygon_edge_payload(
+        frame,
+        polygon=[[float(x), float(y)] for x, y in dense_points.tolist()],
+        bbox=dense_bbox,
+        radius=radius,
+    )
+    if edge_payload is None:
+        return None
+
+    edges, gradient_x, gradient_y, crop_origin = edge_payload
+    snapped_points, displacements = _snap_points_to_edge_map(
+        dense_points,
+        tangents=tangents,
+        normals=normals,
+        edges=edges,
+        gradient_x=gradient_x,
+        gradient_y=gradient_y,
+        crop_origin=crop_origin,
+        radius=radius,
+    )
+    if snapped_points is None or displacements is None:
+        return None
+
+    smoothed_points, smoothed_displacements = _smooth_edge_displacements(
+        base_points=dense_points,
+        snapped_points=snapped_points,
+        radius=radius,
+    )
+    if smoothed_points is None or smoothed_displacements is None:
+        return None
+
+    moved_mask = smoothed_displacements > 0.25
+    moved_points = int(np.count_nonzero(moved_mask))
+    min_moved_points = max(
+        _MISSING_POLYGON_EDGE_MIN_MOVED_POINTS,
+        int(round(len(dense_points) * _MISSING_POLYGON_EDGE_MIN_MOVED_FRACTION)),
+    )
+    if moved_points < min_moved_points:
+        return None
+
+    output_points = _simplify_edge_polygon(smoothed_points)
+    if output_points is None or len(output_points) < 3:
+        return None
+
+    polygon_points = [[float(x), float(y)] for x, y in output_points.tolist()]
+    if not _polygon_has_usable_area(polygon_points):
+        return None
+
+    bbox = _bbox_from_polygon(polygon_points)
+    if bbox is None:
+        return None
+    if not _is_visible_in_frame(
+        bbox,
+        effective_frame_size,
+        min_visible_fraction=0.05,
+    ):
+        return None
+
+    containment = _bbox_containment(bbox, slot.search_bbox)
+    if containment < _MISSING_POLYGON_EDGE_MIN_CONTAINMENT:
+        return None
+
+    area_score = _bbox_area_similarity(bbox, base_bbox)
+    if area_score < _MISSING_POLYGON_EDGE_MIN_AREA_SCORE:
+        return None
+
+    center_drift = _center_distance(base_bbox, bbox)
+    max_center_drift = max(6.0, radius * _MISSING_POLYGON_EDGE_MAX_CENTER_DRIFT_FACTOR)
+    if center_drift > max_center_drift:
+        return None
+
+    moved_displacements = smoothed_displacements[moved_mask]
+    return _EdgeSnapResult(
+        polygon=polygon_points,
+        bbox=bbox,
+        moved_points=moved_points,
+        mean_shift=float(np.mean(moved_displacements)),
+        max_shift=float(np.max(moved_displacements)),
+    )
+
+
+def _missing_polygon_edge_payload(
+    frame: np.ndarray,
+    *,
+    polygon: list[list[float]],
+    bbox: BBox,
+    radius: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, tuple[int, int]] | None:
+    x1, y1, x2, y2 = bbox
+    padding = radius + _MISSING_POLYGON_EDGE_CROP_PADDING
+    frame_height, frame_width = frame.shape[:2]
+
+    crop_x1 = max(0, int(np.floor(x1 - padding)))
+    crop_y1 = max(0, int(np.floor(y1 - padding)))
+    crop_x2 = min(frame_width, int(np.ceil(x2 + padding)))
+    crop_y2 = min(frame_height, int(np.ceil(y2 + padding)))
+    if crop_x2 <= crop_x1 + 2 or crop_y2 <= crop_y1 + 2:
+        return None
+
+    crop = frame[crop_y1:crop_y2, crop_x1:crop_x2]
+    if crop.size == 0:
+        return None
+
+    if crop.ndim == 3:
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = crop.astype(np.uint8, copy=False)
+
+    if gray.dtype != np.uint8:
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    median = float(np.median(blurred))
+    low_threshold = int(max(20.0, min(110.0, median * 0.66)))
+    high_threshold = int(max(60.0, min(220.0, median * 1.33)))
+    if high_threshold <= low_threshold:
+        high_threshold = min(255, low_threshold + 45)
+
+    edges = cv2.Canny(blurred, low_threshold, high_threshold)
+    if int(np.count_nonzero(edges)) < _MISSING_POLYGON_EDGE_MIN_PIXELS:
+        return None
+
+    gradient_x = cv2.Sobel(blurred, cv2.CV_32F, 1, 0, ksize=3)
+    gradient_y = cv2.Sobel(blurred, cv2.CV_32F, 0, 1, ksize=3)
+
+    band = np.zeros(edges.shape, dtype=np.uint8)
+    relative_polygon = np.asarray(
+        [[x - crop_x1, y - crop_y1] for x, y in polygon],
+        dtype=np.float32,
+    )
+    if len(relative_polygon) < 3:
+        return None
+
+    cv2.polylines(
+        band,
+        [np.round(relative_polygon).astype(np.int32)],
+        isClosed=True,
+        color=255,
+        thickness=max(1, radius // 3),
+    )
+    kernel_size = max(3, radius * 2 + 1)
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE,
+        (kernel_size, kernel_size),
+    )
+    band = cv2.dilate(band, kernel, iterations=1)
+    edges = cv2.bitwise_and(edges, band)
+
+    if int(np.count_nonzero(edges)) < _MISSING_POLYGON_EDGE_MIN_PIXELS:
+        return None
+
+    return edges, gradient_x, gradient_y, (crop_x1, crop_y1)
+
+
+def _snap_points_to_edge_map(
+    points: np.ndarray,
+    *,
+    tangents: np.ndarray,
+    normals: np.ndarray,
+    edges: np.ndarray,
+    gradient_x: np.ndarray,
+    gradient_y: np.ndarray,
+    crop_origin: tuple[int, int],
+    radius: int,
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    crop_x, crop_y = crop_origin
+    height, width = edges.shape[:2]
+    blend = float(settings.INSPECTION_MISSING_POLYGON_EDGE_BLEND)
+    if blend <= 0:
+        return None, None
+
+    snapped = points.copy()
+    displacements = np.zeros((len(points),), dtype=np.float32)
+    tangent_band = max(1.25, radius * _MISSING_POLYGON_EDGE_TANGENT_BAND_FRACTION)
+
+    for index, point in enumerate(points):
+        local_x = float(point[0] - crop_x)
+        local_y = float(point[1] - crop_y)
+        if not np.isfinite(local_x) or not np.isfinite(local_y):
+            continue
+
+        tangent = tangents[index]
+        normal = normals[index]
+        if not np.isfinite(tangent).all() or not np.isfinite(normal).all():
+            continue
+
+        px = int(round(local_x))
+        py = int(round(local_y))
+        x1 = max(0, px - radius)
+        y1 = max(0, py - radius)
+        x2 = min(width - 1, px + radius)
+        y2 = min(height - 1, py + radius)
+        if x2 < x1 or y2 < y1:
+            continue
+
+        window = edges[y1 : y2 + 1, x1 : x2 + 1]
+        ys, xs = np.nonzero(window)
+        if len(xs) == 0:
+            continue
+
+        edge_x = xs.astype(np.float32) + float(x1)
+        edge_y = ys.astype(np.float32) + float(y1)
+        offsets = np.stack((edge_x - local_x, edge_y - local_y), axis=1)
+        normal_distance = np.abs(offsets @ normal)
+        tangent_distance = np.abs(offsets @ tangent)
+
+        gx = gradient_x[ys + y1, xs + x1].astype(np.float32)
+        gy = gradient_y[ys + y1, xs + x1].astype(np.float32)
+        gradient_norm = np.hypot(gx, gy)
+        gradient_alignment = np.zeros_like(gradient_norm, dtype=np.float32)
+        valid_gradient = gradient_norm > 1e-3
+        gradient_alignment[valid_gradient] = np.abs(
+            (gx[valid_gradient] * normal[0] + gy[valid_gradient] * normal[1])
+            / gradient_norm[valid_gradient]
+        )
+
+        valid = (
+            (normal_distance <= radius)
+            & (tangent_distance <= tangent_band)
+            & (gradient_alignment >= _MISSING_POLYGON_EDGE_MIN_GRADIENT_ALIGNMENT)
+        )
+        if not bool(np.any(valid)):
+            continue
+
+        scores = (
+            normal_distance
+            + tangent_distance * 2.35
+            + (1.0 - gradient_alignment) * radius * 0.80
+        )
+        scores = np.where(valid, scores, np.inf)
+        best_index = int(np.argmin(scores))
+        if not np.isfinite(scores[best_index]):
+            continue
+
+        target = np.asarray(
+            [edge_x[best_index] + crop_x, edge_y[best_index] + crop_y],
+            dtype=np.float32,
+        )
+        snapped[index] = points[index] + (target - points[index]) * blend
+        displacements[index] = float(np.linalg.norm(snapped[index] - points[index]))
+
+    if not np.isfinite(snapped).all():
+        return None, None
+
+    return snapped, displacements
+
+
+def _densify_closed_polygon(
+    points: np.ndarray,
+    *,
+    step: float,
+    max_points: int,
+) -> np.ndarray | None:
+    if len(points) < 3:
+        return None
+
+    clean_points = np.asarray(points, dtype=np.float32)[:, :2]
+    if not np.isfinite(clean_points).all():
+        return None
+
+    lengths: list[float] = []
+    perimeter = 0.0
+    for index, start in enumerate(clean_points):
+        end = clean_points[(index + 1) % len(clean_points)]
+        length = float(np.linalg.norm(end - start))
+        lengths.append(length)
+        perimeter += length
+
+    if perimeter <= 1.0:
+        return None
+
+    effective_step = max(2.0, float(step))
+    if max_points > 0:
+        effective_step = max(effective_step, perimeter / max_points)
+
+    dense: list[np.ndarray] = []
+    for index, start in enumerate(clean_points):
+        end = clean_points[(index + 1) % len(clean_points)]
+        length = lengths[index]
+        segments = max(1, int(np.ceil(length / effective_step)))
+        for segment_index in range(segments):
+            ratio = float(segment_index) / float(segments)
+            dense.append(start + (end - start) * ratio)
+
+    if len(dense) < 3:
+        return None
+
+    return np.asarray(dense, dtype=np.float32)
+
+
+def _closed_contour_vectors(
+    points: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    if len(points) < 3:
+        return None
+
+    previous_points = np.roll(points, shift=1, axis=0)
+    next_points = np.roll(points, shift=-1, axis=0)
+    tangents = next_points - previous_points
+    tangent_norms = np.linalg.norm(tangents, axis=1)
+    valid = tangent_norms > 1e-6
+    if not bool(np.any(valid)):
+        return None
+
+    tangents[valid] = tangents[valid] / tangent_norms[valid, None]
+    tangents[~valid] = np.asarray([1.0, 0.0], dtype=np.float32)
+    normals = np.stack((-tangents[:, 1], tangents[:, 0]), axis=1).astype(np.float32)
+    return tangents.astype(np.float32), normals
+
+
+def _smooth_edge_displacements(
+    *,
+    base_points: np.ndarray,
+    snapped_points: np.ndarray,
+    radius: int,
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    if len(base_points) != len(snapped_points) or len(base_points) < 3:
+        return None, None
+
+    delta = snapped_points - base_points
+    if not np.isfinite(delta).all():
+        return None, None
+
+    smoothing = float(settings.INSPECTION_MISSING_POLYGON_EDGE_SMOOTHING)
+    iterations = int(settings.INSPECTION_MISSING_POLYGON_EDGE_SMOOTH_ITERATIONS)
+    if smoothing > 0 and iterations > 0:
+        smoothing = min(0.45, max(0.0, smoothing))
+        for _ in range(iterations):
+            neighbor_delta = (np.roll(delta, 1, axis=0) + np.roll(delta, -1, axis=0)) * 0.5
+            delta = delta * (1.0 - smoothing) + neighbor_delta * smoothing
+
+    max_shift = max(1.0, float(radius))
+    lengths = np.linalg.norm(delta, axis=1)
+    too_far = lengths > max_shift
+    if bool(np.any(too_far)):
+        delta[too_far] *= (max_shift / lengths[too_far])[:, None]
+
+    points = base_points + delta
+    if not np.isfinite(points).all():
+        return None, None
+
+    displacements = np.linalg.norm(points - base_points, axis=1).astype(np.float32)
+    return points.astype(np.float32), displacements
+
+
+def _simplify_edge_polygon(points: np.ndarray) -> np.ndarray | None:
+    if len(points) < 3:
+        return None
+
+    contour = points.reshape(-1, 1, 2).astype(np.float32)
+    simplified = cv2.approxPolyDP(
+        contour,
+        epsilon=_MISSING_POLYGON_EDGE_SIMPLIFY_EPSILON,
+        closed=True,
+    ).reshape(-1, 2)
+
+    if len(simplified) < 3:
+        return points.astype(np.float32)
+
+    return simplified.astype(np.float32)
+
+
+def _bbox_from_np_points(points: np.ndarray) -> BBox | None:
+    if len(points) == 0 or not np.isfinite(points).all():
+        return None
+
+    x_min = float(np.min(points[:, 0]))
+    y_min = float(np.min(points[:, 1]))
+    x_max = float(np.max(points[:, 0]))
+    y_max = float(np.max(points[:, 1]))
+    if x_max <= x_min or y_max <= y_min:
+        return None
+
+    return (x_min, y_min, x_max, y_max)
+
+
+def _polygon_has_usable_area(polygon: list[list[float]]) -> bool:
+    if len(polygon) < 3:
+        return False
+    try:
+        shape = make_valid(Polygon(polygon))
+    except (ValueError, GEOSException):
+        return False
+    return not shape.is_empty and float(shape.area) > 1.0
+
+
+def _center_distance(a: BBox, b: BBox) -> float:
+    acx, acy = _bbox_center(a)
+    bcx, bcy = _bbox_center(b)
+    return float(np.hypot(acx - bcx, acy - bcy))
 
 def _project_polygon_by_affine(
     polygon: list[list[float]],

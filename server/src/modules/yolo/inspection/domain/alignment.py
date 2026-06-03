@@ -40,6 +40,7 @@ class LocalProjectionData:
     reference_points: np.ndarray | None
     frame_points: np.ndarray | None
     frame_size: tuple[int, int] | None = None
+    frame: np.ndarray | None = None
 
     @property
     def has_local_points(self) -> bool:

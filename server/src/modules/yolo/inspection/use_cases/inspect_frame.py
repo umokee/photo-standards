@@ -577,6 +577,7 @@ def _build_projection_data(
         reference_points=reference_points,
         frame_points=frame_points,
         frame_size=(frame.shape[1], frame.shape[0]),
+        frame=frame,
     )
 
 

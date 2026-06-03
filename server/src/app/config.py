@@ -50,6 +50,20 @@ class Settings(BaseSettings):
         ge=0.0,
         le=80.0,
     )
+    INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT: bool = True
+    INSPECTION_MISSING_POLYGON_EDGE_SNAP_RADIUS: int = Field(default=14, ge=0, le=64)
+    INSPECTION_MISSING_POLYGON_EDGE_BLEND: float = Field(default=0.65, ge=0.0, le=1.0)
+    INSPECTION_MISSING_POLYGON_EDGE_DENSIFY_STEP: int = Field(default=8, ge=2, le=32)
+    INSPECTION_MISSING_POLYGON_EDGE_SMOOTHING: float = Field(
+        default=0.18,
+        ge=0.0,
+        le=0.45,
+    )
+    INSPECTION_MISSING_POLYGON_EDGE_SMOOTH_ITERATIONS: int = Field(
+        default=2,
+        ge=0,
+        le=8,
+    )
 
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)
 
