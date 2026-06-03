@@ -58,7 +58,7 @@ def render_overlay(
     polygon_transform: np.ndarray | None = None,
     debug_projection: bool = True,
 ) -> np.ndarray:
-    del fps
+    del fps, debug_projection
 
     output = frame.copy()
 
@@ -75,7 +75,6 @@ def render_overlay(
         output,
         matches,
         polygon_transform=polygon_transform,
-        debug_projection=debug_projection,
     )
 
     if alignment_message is not None:
@@ -94,7 +93,6 @@ def _render_polygon_overlay(
     matches: list[SegmentMatch],
     *,
     polygon_transform: np.ndarray | None,
-    debug_projection: bool = False,
 ) -> None:
     frame_shape = output.shape[:2]
     thickness = _line_thickness(frame_shape)
@@ -102,56 +100,8 @@ def _render_polygon_overlay(
     label_padding = _label_padding(label_font_size)
 
     normal_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
-    debug_expected_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
-    debug_detected_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
 
     for match in matches:
-        if match.status == "unmatched":
-            detected_polygon = _prepare_polygon_for_render(
-                match.detected_polygon,
-                polygon_transform=polygon_transform,
-                frame_shape=frame_shape,
-            )
-            if detected_polygon is not None:
-                normal_items.append(
-                    (
-                        detected_polygon,
-                        COLOR_UNMATCHED,
-                        _label_for_match(match),
-                    )
-                )
-
-            if debug_projection:
-                expected_debug_polygon = _prepare_debug_polygon_for_render(
-                    match.expected_polygon,
-                    polygon_transform=polygon_transform,
-                    frame_shape=frame_shape,
-                )
-                if expected_debug_polygon is not None:
-                    debug_expected_items.append(
-                        (
-                            expected_debug_polygon,
-                            COLOR_DEBUG_EXPECTED,
-                            _expected_label_for_match(match),
-                        )
-                    )
-
-                detected_debug_polygon = _prepare_debug_polygon_for_render(
-                    match.detected_polygon,
-                    polygon_transform=polygon_transform,
-                    frame_shape=frame_shape,
-                )
-                if detected_debug_polygon is not None:
-                    debug_detected_items.append(
-                        (
-                            detected_debug_polygon,
-                            COLOR_DEBUG_DETECTED,
-                            _detected_debug_label_for_match(match),
-                        )
-                    )
-
-            continue
-
         polygon = _polygon_for_render(
             match,
             polygon_transform=polygon_transform,
@@ -177,16 +127,6 @@ def _render_polygon_overlay(
             label_padding=label_padding,
         )
 
-    if debug_projection and (debug_expected_items or debug_detected_items):
-        _draw_debug_projection_items(
-            output,
-            expected_items=debug_expected_items,
-            detected_items=debug_detected_items,
-            thickness=max(2, thickness - 1),
-            label_font_size=label_font_size,
-            label_padding=label_padding,
-        )
-
 
 def _polygon_for_render(
     match: SegmentMatch,
@@ -198,7 +138,7 @@ def _polygon_for_render(
         polygon = match.expected_polygon
     elif match.status == "ok":
         polygon = match.detected_polygon or match.expected_polygon
-    elif match.status == "extra":
+    elif match.status in ("extra", "unmatched"):
         polygon = match.detected_polygon
     else:
         return None
