@@ -48,6 +48,8 @@ _MISSING_POLYGON_EDGE_MAX_DENSE_POINTS = 220
 _MISSING_POLYGON_EDGE_MIN_GRADIENT_ALIGNMENT = 0.22
 _MISSING_POLYGON_EDGE_TANGENT_BAND_FRACTION = 0.24
 _MISSING_POLYGON_EDGE_SIMPLIFY_EPSILON = 1.25
+_MISSING_POLYGON_EDGE_MIN_INWARD_SHIFT = 2.0
+_MISSING_POLYGON_EDGE_AREA_RATIO_FACTOR = 0.80
 
 
 @dataclass(slots=True)
@@ -1072,13 +1074,30 @@ def _missing_polygon_refinement_points(
 
     selected_reference: list[np.ndarray] = []
     selected_frame: list[np.ndarray] = []
+    selected_inner_reference: list[np.ndarray] = []
+    selected_inner_frame: list[np.ndarray] = []
+    reference_polygon = np.asarray(
+        expected_item.item.reference_polygon,
+        dtype=np.float32,
+    )
+
     for reference_point, frame_point in zip(reference_points, frame_points, strict=True):
         if not _point_in_bbox(reference_point, reference_window):
             continue
         if not _point_in_bbox(frame_point, slot.search_bbox):
             continue
+
         selected_reference.append(reference_point)
         selected_frame.append(frame_point)
+
+        if _point_in_np_polygon(reference_point, reference_polygon):
+            selected_inner_reference.append(reference_point)
+            selected_inner_frame.append(frame_point)
+
+    min_support = max(3, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
+    if len(selected_inner_reference) >= min_support:
+        selected_reference = selected_inner_reference
+        selected_frame = selected_inner_frame
 
     if not selected_reference:
         return _empty_match_points(), _empty_match_points()
@@ -1138,6 +1157,7 @@ def _try_snap_missing_polygon_to_edges(
     if contour_vectors is None:
         return None
     tangents, normals = contour_vectors
+    normals = _orient_normals_outward(dense_points, normals)
 
     dense_bbox = _bbox_from_np_points(dense_points)
     if dense_bbox is None:
@@ -1173,6 +1193,8 @@ def _try_snap_missing_polygon_to_edges(
     )
     if smoothed_points is None or smoothed_displacements is None:
         return None
+    if not _edge_refinement_preserves_shape(dense_points, smoothed_points):
+        return None
 
     moved_mask = smoothed_displacements > 0.25
     moved_points = int(np.count_nonzero(moved_mask))
@@ -1185,6 +1207,8 @@ def _try_snap_missing_polygon_to_edges(
 
     output_points = _simplify_edge_polygon(smoothed_points)
     if output_points is None or len(output_points) < 3:
+        return None
+    if not _edge_refinement_preserves_shape(dense_points, output_points):
         return None
 
     polygon_points = [[float(x), float(y)] for x, y in output_points.tolist()]
@@ -1317,6 +1341,8 @@ def _snap_points_to_edge_map(
     snapped = points.copy()
     displacements = np.zeros((len(points),), dtype=np.float32)
     tangent_band = max(1.25, radius * _MISSING_POLYGON_EDGE_TANGENT_BAND_FRACTION)
+    max_inward_shift = _edge_max_inward_shift(radius)
+    max_outward_shift = max(1.0, float(radius))
 
     for index, point in enumerate(points):
         local_x = float(point[0] - crop_x)
@@ -1346,7 +1372,8 @@ def _snap_points_to_edge_map(
         edge_x = xs.astype(np.float32) + float(x1)
         edge_y = ys.astype(np.float32) + float(y1)
         offsets = np.stack((edge_x - local_x, edge_y - local_y), axis=1)
-        normal_distance = np.abs(offsets @ normal)
+        signed_normal_distance = offsets @ normal
+        normal_distance = np.abs(signed_normal_distance)
         tangent_distance = np.abs(offsets @ tangent)
 
         gx = gradient_x[ys + y1, xs + x1].astype(np.float32)
@@ -1360,16 +1387,20 @@ def _snap_points_to_edge_map(
         )
 
         valid = (
-            (normal_distance <= radius)
+            (signed_normal_distance >= -max_inward_shift)
+            & (signed_normal_distance <= max_outward_shift)
+            & (normal_distance <= radius)
             & (tangent_distance <= tangent_band)
             & (gradient_alignment >= _MISSING_POLYGON_EDGE_MIN_GRADIENT_ALIGNMENT)
         )
         if not bool(np.any(valid)):
             continue
 
+        inward_penalty = np.maximum(-signed_normal_distance, 0.0)
         scores = (
             normal_distance
             + tangent_distance * 2.35
+            + inward_penalty * 1.65
             + (1.0 - gradient_alignment) * radius * 0.80
         )
         scores = np.where(valid, scores, np.inf)
@@ -1381,7 +1412,12 @@ def _snap_points_to_edge_map(
             [edge_x[best_index] + crop_x, edge_y[best_index] + crop_y],
             dtype=np.float32,
         )
-        snapped[index] = points[index] + (target - points[index]) * blend
+        delta = (target - points[index]) * blend
+        inward_delta = float(delta @ normal)
+        if inward_delta < -max_inward_shift:
+            delta += normal * (-max_inward_shift - inward_delta)
+
+        snapped[index] = points[index] + delta
         displacements[index] = float(np.linalg.norm(snapped[index] - points[index]))
 
     if not np.isfinite(snapped).all():
@@ -1451,6 +1487,88 @@ def _closed_contour_vectors(
     tangents[~valid] = np.asarray([1.0, 0.0], dtype=np.float32)
     normals = np.stack((-tangents[:, 1], tangents[:, 0]), axis=1).astype(np.float32)
     return tangents.astype(np.float32), normals
+
+
+def _orient_normals_outward(points: np.ndarray, normals: np.ndarray) -> np.ndarray:
+    if len(points) != len(normals) or len(points) == 0:
+        return normals.astype(np.float32)
+
+    center = np.mean(points, axis=0)
+    oriented = normals.astype(np.float32, copy=True)
+    radial = points - center
+    dot = np.sum(oriented * radial, axis=1)
+    flip = dot < 0
+    oriented[flip] *= -1.0
+    return oriented
+
+
+def _edge_max_inward_shift(radius: int) -> float:
+    fraction = float(settings.INSPECTION_MISSING_POLYGON_EDGE_MAX_INWARD_SHIFT_FRACTION)
+    return max(
+        _MISSING_POLYGON_EDGE_MIN_INWARD_SHIFT,
+        min(float(radius), float(radius) * fraction),
+    )
+
+
+def _edge_refinement_preserves_shape(
+    base_points: np.ndarray,
+    refined_points: np.ndarray,
+) -> bool:
+    if len(base_points) < 3 or len(refined_points) < 3:
+        return False
+    if not np.isfinite(base_points).all() or not np.isfinite(refined_points).all():
+        return False
+
+    min_width_ratio = float(settings.INSPECTION_MISSING_POLYGON_EDGE_MIN_WIDTH_RATIO)
+
+    base_width = _oriented_min_side(base_points)
+    refined_width = _oriented_min_side(refined_points)
+    if base_width is not None and refined_width is not None and base_width > 2.0:
+        if refined_width / base_width < min_width_ratio:
+            return False
+
+    base_area = _contour_area(base_points)
+    refined_area = _contour_area(refined_points)
+    if base_area is not None and refined_area is not None and base_area > 2.0:
+        min_area_ratio = max(
+            0.20,
+            min_width_ratio * _MISSING_POLYGON_EDGE_AREA_RATIO_FACTOR,
+        )
+        if refined_area / base_area < min_area_ratio:
+            return False
+
+    return True
+
+
+def _oriented_min_side(points: np.ndarray) -> float | None:
+    if len(points) < 3:
+        return None
+
+    try:
+        _center, size, _angle = cv2.minAreaRect(points.astype(np.float32))
+    except cv2.error:
+        return None
+
+    width, height = float(size[0]), float(size[1])
+    if width <= 0.0 or height <= 0.0:
+        return None
+    return min(width, height)
+
+
+def _contour_area(points: np.ndarray) -> float | None:
+    if len(points) < 3:
+        return None
+
+    try:
+        area = float(
+            abs(cv2.contourArea(points.reshape(-1, 1, 2).astype(np.float32)))
+        )
+    except cv2.error:
+        return None
+
+    if area <= 0.0:
+        return None
+    return area
 
 
 def _smooth_edge_displacements(
@@ -1737,6 +1855,25 @@ def _point_in_bbox(point: np.ndarray, bbox: BBox) -> bool:
     x, y = float(point[0]), float(point[1])
     x1, y1, x2, y2 = bbox
     return x1 <= x <= x2 and y1 <= y <= y2
+
+
+def _point_in_np_polygon(point: np.ndarray, polygon: np.ndarray) -> bool:
+    if polygon.ndim != 2 or polygon.shape[0] < 3 or polygon.shape[1] < 2:
+        return False
+    if not np.isfinite(point).all() or not np.isfinite(polygon).all():
+        return False
+
+    try:
+        return (
+            cv2.pointPolygonTest(
+                polygon[:, :2].astype(np.float32),
+                (float(point[0]), float(point[1])),
+                False,
+            )
+            >= 0
+        )
+    except cv2.error:
+        return False
 
 
 def _display_detected_polygon(

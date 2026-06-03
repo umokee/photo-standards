@@ -64,6 +64,16 @@ class Settings(BaseSettings):
         ge=0,
         le=8,
     )
+    INSPECTION_MISSING_POLYGON_EDGE_MAX_INWARD_SHIFT_FRACTION: float = Field(
+        default=0.35,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_POLYGON_EDGE_MIN_WIDTH_RATIO: float = Field(
+        default=0.55,
+        ge=0.05,
+        le=1.0,
+    )
 
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)
 
