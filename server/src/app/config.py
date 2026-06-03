@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     INSPECTION_SLOT_SEARCH_EXPANSION: float = Field(default=2.35, ge=1.0, le=8.0)
     INSPECTION_SLOT_MIN_SCORE: float = Field(default=0.43, ge=0.0, le=1.0)
     INSPECTION_SLOT_MIN_DETECTION_CONTAINMENT: float = Field(default=0.10, ge=0.0, le=1.0)
+    INSPECTION_SLOT_MIN_YOLO_CONFIDENCE: float = Field(default=0.08, ge=0.0, le=1.0)
     INSPECTION_SLOT_MIN_FEATURE_SUPPORT: int = Field(default=4, ge=0, le=64)
     INSPECTION_SLOT_FEATURE_SEARCH_EXPANSION: float = Field(default=2.75, ge=1.0, le=10.0)
     MAX_REALTIME_INSPECTIONS: int = Field(default=2, ge=1, le=10)

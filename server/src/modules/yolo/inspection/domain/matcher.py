@@ -259,6 +259,19 @@ def match_segments(
             )
             if slot_candidate is not None:
                 slot_score, slot_iou, slot_debug = slot_candidate
+                shaped_polygon, shape_debug = _try_detection_shaped_polygon(
+                    expected_item,
+                    detection_item,
+                    projection_data=projection_data,
+                    object_refiner=object_refiner,
+                    global_debug=score_debug,
+                )
+                if shaped_polygon is not None:
+                    candidate_projected_polygons[
+                        (expected_item.index, detection_item.index)
+                    ] = shaped_polygon
+                    slot_debug = _merge_slot_shape_debug(slot_debug, shape_debug)
+
                 candidate_debug[(expected_item.index, detection_item.index)] = slot_debug
                 candidate_pairs.append(
                     (slot_score, slot_iou, expected_item.index, detection_item.index)
@@ -353,9 +366,14 @@ def match_segments(
         detection_item = detection_by_index[detection_index]
         detection = detection_item.detection
 
-        expected_polygon = candidate_projected_polygons.get(
-            (expected_index, detection_index),
-            expected_item.polygon,
+        shaped_polygon = candidate_projected_polygons.get(
+            (expected_index, detection_index)
+        )
+        expected_polygon = shaped_polygon or expected_item.polygon
+        detected_polygon = _display_detected_polygon(
+            detection,
+            detection_item,
+            shaped_polygon=shaped_polygon,
         )
 
         matches.append(
@@ -369,7 +387,7 @@ def match_segments(
                 iou=round(float(iou), 4),
                 confidence=detection.confidence,
                 expected_polygon=expected_polygon,
-                detected_polygon=detection_item.polygon,
+                detected_polygon=detected_polygon,
                 detected_bbox=detection.bbox,
                 debug=candidate_debug.get((expected_index, detection_index)),
             )
@@ -380,25 +398,7 @@ def match_segments(
             continue
 
         slot = slot_by_index.get(expected_item.index)
-        feature_only_debug = _feature_only_slot_debug(expected_item, slot)
-        if feature_only_debug is not None:
-            matches.append(
-                SegmentMatch(
-                    annotation_id=expected_item.item.annotation_id,
-                    segment_class_id=expected_item.item.segment_class_id,
-                    class_key=expected_item.item.class_key,
-                    name=expected_item.item.name,
-                    hue=expected_item.item.hue,
-                    status="ok",
-                    iou=None,
-                    confidence=None,
-                    expected_polygon=expected_item.polygon,
-                    detected_polygon=None,
-                    detected_bbox=None,
-                    debug=feature_only_debug,
-                )
-            )
-            continue
+        missing_debug = _missing_slot_debug(expected_item, slot)
 
         matches.append(
             SegmentMatch(
@@ -413,11 +413,7 @@ def match_segments(
                 expected_polygon=expected_item.polygon,
                 detected_polygon=None,
                 detected_bbox=None,
-                debug={
-                    "reason": "slot_no_evidence",
-                    "projection": "expected_slot",
-                    "slot": _slot_debug_payload(slot),
-                },
+                debug=missing_debug,
             )
         )
 
@@ -848,6 +844,12 @@ def _try_slot_candidate(
     if slot is None:
         return None
 
+    if (
+        detection_item.detection.confidence
+        < settings.INSPECTION_SLOT_MIN_YOLO_CONFIDENCE
+    ):
+        return None
+
     containment = _bbox_containment(detection_item.bbox, slot.search_bbox)
     if containment < settings.INSPECTION_SLOT_MIN_DETECTION_CONTAINMENT:
         return None
@@ -876,13 +878,16 @@ def _try_slot_candidate(
         slot.feature_support / max(1, settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT),
     )
 
+    confidence_score = max(0.0, min(1.0, float(detection_item.detection.confidence)))
+
     score = (
-        center_score * 0.34
-        + containment * 0.28
-        + area_score * 0.16
-        + min(1.0, slot_iou * 5.0) * 0.10
-        + min(1.0, projected_iou * 3.0) * 0.06
-        + feature_score * 0.06
+        center_score * 0.30
+        + containment * 0.26
+        + area_score * 0.14
+        + min(1.0, slot_iou * 5.0) * 0.08
+        + min(1.0, projected_iou * 3.0) * 0.05
+        + feature_score * 0.05
+        + confidence_score * 0.12
     )
 
     debug = {
@@ -899,6 +904,10 @@ def _try_slot_candidate(
         "slot_bbox_iou": _round_debug(slot_iou),
         "slot_area_score": _round_debug(area_score),
         "slot_feature_score": _round_debug(feature_score),
+        "slot_yolo_confidence": _round_debug(detection_item.detection.confidence),
+        "slot_yolo_min_confidence": _round_debug(
+            settings.INSPECTION_SLOT_MIN_YOLO_CONFIDENCE
+        ),
         "slot": _slot_debug_payload(slot),
     }
 
@@ -908,28 +917,38 @@ def _try_slot_candidate(
     return float(score), float(projected_iou), debug
 
 
-def _feature_only_slot_debug(
+def _missing_slot_debug(
     expected_item: _ProjectedExpected,
     slot: _ExpectedSlot | None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any]:
     if slot is None:
-        return None
-    if slot.feature_support < settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT:
-        return None
+        return {"reason": "slot_no_evidence", "projection": "expected_slot"}
 
-    return {
-        "reason": "feature_slot_matched_without_yolo",
+    debug: dict[str, Any] = {
+        "reason": "slot_no_yolo_confirmation",
         "projection": "expected_slot",
-        "candidate_source": "feature_support",
-        "slot_feature_support": slot.feature_support,
-        "slot_feature_total": slot.feature_total,
-        "slot_feature_min_support": settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT,
+        "candidate_source": "none",
         "slot": _slot_debug_payload(slot),
-        "note": (
-            "YOLO did not confirm this object, but matched reference/frame "
-            "features support the expected slot."
-        ),
     }
+
+    if slot.feature_support >= settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT:
+        debug.update(
+            {
+                "reason": "feature_slot_unconfirmed_without_yolo",
+                "candidate_source": "feature_support_only",
+                "slot_feature_support": slot.feature_support,
+                "slot_feature_total": slot.feature_total,
+                "slot_feature_min_support": (
+                    settings.INSPECTION_SLOT_MIN_FEATURE_SUPPORT
+                ),
+                "note": (
+                    "Reference/frame features support the expected slot, but YOLO "
+                    "did not confirm an object of the required class."
+                ),
+            }
+        )
+
+    return debug
 
 
 def _slot_feature_support(
@@ -1299,6 +1318,69 @@ def _try_detection_guided_candidate(
             "global_score": global_debug.get("score"),
         },
     )
+
+
+def _try_detection_shaped_polygon(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    projection_data: LocalProjectionData | None,
+    object_refiner: ObjectLocalRefiner | None,
+    global_debug: dict[str, Any],
+) -> tuple[list[list[float]] | None, dict[str, Any] | None]:
+    object_local_candidate = _try_object_local_candidate(
+        expected_item,
+        detection_item,
+        object_refiner=object_refiner,
+        global_debug=global_debug,
+    )
+    if object_local_candidate is not None:
+        return object_local_candidate
+
+    guided_candidate = _try_detection_guided_candidate(
+        expected_item,
+        detection_item,
+        projection_data=projection_data,
+        global_debug=global_debug,
+    )
+    if guided_candidate is not None:
+        return guided_candidate
+
+    return None, None
+
+
+def _merge_slot_shape_debug(
+    slot_debug: dict[str, Any],
+    shape_debug: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if shape_debug is None:
+        return slot_debug
+
+    return {
+        **slot_debug,
+        "shape_projection": shape_debug.get("projection"),
+        "shape_reason": shape_debug.get("reason"),
+        "shape_score": shape_debug.get("score"),
+        "shape_iou": shape_debug.get("iou"),
+        "shape_bbox_iou": shape_debug.get("bbox_iou"),
+        "shape_polygon_iou": shape_debug.get("polygon_iou"),
+        "shape_refined_by_detection": True,
+    }
+
+
+def _display_detected_polygon(
+    detection: YoloDetection,
+    detection_item: _DetectionCandidate,
+    *,
+    shaped_polygon: list[list[float]] | None,
+) -> list[list[float]] | None:
+    if detection.polygon is not None and len(detection.polygon) >= 3:
+        return detection_item.polygon
+
+    if shaped_polygon is not None and len(shaped_polygon) >= 3:
+        return shaped_polygon
+
+    return detection_item.polygon
 
 
 def _safe_project_guided_by_detection(
