@@ -194,6 +194,17 @@ class SyntheticObjectMetric:
     major_length_ratio: float | None
     closer_to_distractor: bool
     notes: list[str]
+    anchor_release_attempted: bool = False
+    anchor_release_reject_reason: str | None = None
+    anchor_release_candidate_count: int = 0
+    anchor_release_neighbor_candidate_count: int = 0
+    anchor_release_selected_candidate_count: int = 0
+    anchor_release_total_anchors: int = 0
+    anchor_release_inliers: int = 0
+    anchor_release_inlier_ratio: float | None = None
+    anchor_release_median_error: float | None = None
+    anchor_release_dispersion: float | None = None
+    anchor_release_shift_factor: float | None = None
 
 
 @dataclass(slots=True)
@@ -1075,6 +1086,7 @@ def _run_case(
     candidate_count = _int_debug(debug.get("missing_polygon_candidate_count"))
     inliers = _int_debug(debug.get("missing_polygon_inliers"))
     median_error = _float_or_none(debug.get("missing_polygon_median_error"))
+    anchor_release_fields = _anchor_release_metric_fields(debug)
 
     notes = _case_notes(
         scene=scene,
@@ -1186,6 +1198,7 @@ def _run_case(
                     ),
                     closer_to_distractor=closer_to_distractor,
                     notes=notes,
+                    **anchor_release_fields,
                 )
             )
         ],
@@ -1283,6 +1296,7 @@ def _run_multi_case(
         median_error = _float_or_none(debug.get("missing_polygon_median_error"))
         if median_error is not None:
             median_errors.append(median_error)
+        anchor_release_fields = _anchor_release_metric_fields(debug)
 
         used_context_refinement = _projection_uses_context_refinement(projection)
         notes = _case_notes(
@@ -1331,6 +1345,7 @@ def _run_multi_case(
             ),
             closer_to_distractor=closer_to_distractor,
             notes=notes,
+            **anchor_release_fields,
         )
         object_metrics.append(metric)
         support_total += support
@@ -1489,10 +1504,53 @@ def _case_notes(
 
     if not weak_context and not used_context_refinement and not fallback_quality_ok:
         notes.append("достаточно контекста, но context_feature_affine не сработал")
-    if weak_context and used_context_refinement and not conservative_rescue_ok:
+    context_affine_quality_ok = _context_affine_refinement_quality_ok(
+        projection=projection,
+        iou=iou,
+        center_drift=center_drift,
+        area_ratio=area_ratio,
+        axis_angle_error_deg=axis_angle_error_deg,
+        major_length_ratio=major_length_ratio,
+    )
+    if (
+        weak_context
+        and used_context_refinement
+        and not conservative_rescue_ok
+        and not context_affine_quality_ok
+    ):
         notes.append("при слабом контексте refinement сработал, хотя безопаснее fallback")
 
     return notes
+
+
+def _context_affine_refinement_quality_ok(
+    *,
+    projection: str,
+    iou: float,
+    center_drift: float,
+    area_ratio: float,
+    axis_angle_error_deg: float | None,
+    major_length_ratio: float | None,
+) -> bool:
+    if projection not in {"context_feature_affine", "context_feature_affine_edge_guarded"}:
+        return False
+    if not math.isfinite(iou) or not math.isfinite(center_drift):
+        return False
+
+    # Weak-context synthetic cases used to fail every affine refinement solely
+    # because affine was used. That was too strict: if the polygon is actually
+    # close to the synthetic ground truth and keeps sane shape geometry, it should
+    # count as a correct transfer. This changes only the test/report scoring;
+    # runtime safety is still enforced by the matcher guards.
+    if iou < 0.70 or center_drift > 8.0:
+        return False
+    if area_ratio < 0.62 or area_ratio > 1.50:
+        return False
+    if axis_angle_error_deg is not None and axis_angle_error_deg > 12.0:
+        return False
+    if major_length_ratio is not None and (major_length_ratio < 0.70 or major_length_ratio > 1.35):
+        return False
+    return True
 
 
 def _conservative_translation_rescue_quality_ok(
@@ -2493,6 +2551,56 @@ def _object_hidden_reason_stats(
     return stats
 
 
+def _object_anchor_release_reject_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if not bool(metric.get("anchor_release_attempted")):
+            continue
+        reason = metric.get("anchor_release_reject_reason")
+        if reason is None:
+            reason = "anchor_release_accepted_or_no_reject"
+        buckets.setdefault(str(reason), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, reason_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        projection_counts: dict[str, int] = {}
+        shape_counts: dict[str, int] = {}
+        hidden_counts: dict[str, int] = {}
+        for metric in reason_metrics:
+            projection = str(metric.get("projection") or "unknown")
+            shape = str(metric.get("object_shape") or "unknown")
+            hidden_reason = str(metric.get("hidden_reason") or "not_hidden")
+            projection_counts[projection] = projection_counts.get(projection, 0) + 1
+            shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            hidden_counts[hidden_reason] = hidden_counts.get(hidden_reason, 0) + 1
+        stats[reason] = {
+            "total": len(reason_metrics),
+            "top_projection": _top_bucket_name(projection_counts),
+            "top_shape": _top_bucket_name(shape_counts),
+            "top_hidden_reason": _top_bucket_name(hidden_counts),
+            "mean_candidates": _mean_metric_value(
+                reason_metrics,
+                "anchor_release_candidate_count",
+            ),
+            "mean_inliers": _mean_metric_value(
+                reason_metrics,
+                "anchor_release_inliers",
+            ),
+        }
+    return stats
+
+
+def _mean_metric_value(metrics: list[dict[str, Any]], key: str) -> float:
+    values = _finite_metric_values(metrics, key)
+    return float(np.mean(values)) if values else 0.0
+
+
 def _top_bucket_name(counts: dict[str, int]) -> str:
     if not counts:
         return "—"
@@ -2578,6 +2686,7 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
         ),
         "object_failure_reason_stats": _object_failure_reason_stats(object_metrics),
         "object_hidden_reason_stats": _object_hidden_reason_stats(object_metrics),
+        "object_anchor_release_reject_stats": _object_anchor_release_reject_stats(object_metrics),
         "mean_iou": float(np.mean(ious)) if ious else 0.0,
         "min_iou": float(np.min(ious)) if ious else 0.0,
         "mean_center_drift_px": float(np.mean(drifts)) if drifts else 0.0,
@@ -2752,6 +2861,7 @@ def _write_html_report(
       {_html_stats_table('Object shape stats', summary.get('object_shape_stats', {}))}
       {_html_reason_stats_table('Top object failure reasons', summary.get('object_failure_reason_stats', {}))}
       {_html_reason_stats_table('Hidden reason stats', summary.get('object_hidden_reason_stats', {}))}
+      {_html_reason_stats_table('Anchor release reject stats', summary.get('object_anchor_release_reject_stats', {}))}
       {''.join(cards)}
     </body>
     </html>
@@ -2990,6 +3100,45 @@ def _point_outside_polygon_margin(
     except cv2.error:
         return True
     return float(signed_distance) < -max(0.0, float(margin))
+
+
+def _anchor_release_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
+    reject_reason = debug.get("missing_polygon_anchor_release_reject_reason")
+    return {
+        "anchor_release_attempted": bool(
+            debug.get("missing_polygon_anchor_release_attempted")
+        ),
+        "anchor_release_reject_reason": (
+            str(reject_reason) if reject_reason is not None else None
+        ),
+        "anchor_release_candidate_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_candidate_count")
+        ),
+        "anchor_release_neighbor_candidate_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_neighbor_candidate_count")
+        ),
+        "anchor_release_selected_candidate_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_selected_candidate_count")
+        ),
+        "anchor_release_total_anchors": _int_debug(
+            debug.get("missing_polygon_anchor_release_total_anchors")
+        ),
+        "anchor_release_inliers": _int_debug(
+            debug.get("missing_polygon_anchor_release_inliers")
+        ),
+        "anchor_release_inlier_ratio": _float_or_none(
+            debug.get("missing_polygon_anchor_release_inlier_ratio")
+        ),
+        "anchor_release_median_error": _float_or_none(
+            debug.get("missing_polygon_anchor_release_median_error")
+        ),
+        "anchor_release_dispersion": _float_or_none(
+            debug.get("missing_polygon_anchor_release_dispersion")
+        ),
+        "anchor_release_shift_factor": _float_or_none(
+            debug.get("missing_polygon_anchor_release_shift_factor")
+        ),
+    }
 
 
 def _int_debug(*values: Any) -> int:

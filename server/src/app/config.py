@@ -173,7 +173,162 @@ class Settings(BaseSettings):
         ge=0.01,
         le=2.0,
     )
-    INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED: bool = True
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_GUARDED_RELEASE_ENABLED: bool = False
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_SUPPORT: int = Field(
+        default=4,
+        ge=0,
+        le=128,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_SUPPORT_RATIO: float = Field(
+        default=0.16,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_GLOBAL_AREA_SCORE: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MAX_GLOBAL_CENTER_FACTOR: float = Field(
+        default=0.34,
+        ge=0.01,
+        le=4.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_REFERENCE_AREA_SCORE: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MAX_OTHER_OVERLAP: float = Field(
+        default=0.28,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_GLOBAL_POLYGON_IOU: float = Field(
+        default=0.20,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MAX_GLOBAL_AXIS_ANGLE: float = Field(
+        default=18.0,
+        ge=0.0,
+        le=90.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_GLOBAL_MAJOR_RATIO: float = Field(
+        default=0.65,
+        ge=0.01,
+        le=4.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MAX_GLOBAL_MAJOR_RATIO: float = Field(
+        default=1.55,
+        ge=0.01,
+        le=4.0,
+    )
+    INSPECTION_MISSING_MULTI_EXPECTED_SLOT_RELEASE_MIN_VISIBLE_FRACTION: float = Field(
+        default=0.12,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_DEBUG: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_MIN_ANCHORS: int = Field(
+        default=2,
+        ge=1,
+        le=16,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR: float = Field(
+        default=9.0,
+        ge=0.5,
+        le=40.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR: float = Field(
+        default=0.55,
+        ge=0.02,
+        le=1.5,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MIN_LOCAL_AREA_SCORE: float = Field(
+        default=0.24,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_LOCAL_CENTER_FACTOR: float = Field(
+        default=0.95,
+        ge=0.02,
+        le=3.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_OTHER_OVERLAP: float = Field(
+        default=0.32,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_ARBITRATION_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_MIN_INLIERS: int = Field(
+        default=2,
+        ge=1,
+        le=16,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_MIN_INLIER_RATIO: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_MAX_DISPERSION_FACTOR: float = Field(
+        default=0.035,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_MAX_SHIFT_FACTOR: float = Field(
+        default=0.36,
+        ge=0.02,
+        le=1.5,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_OVERLAP_CENTER_MARGIN: float = Field(
+        default=0.88,
+        ge=0.1,
+        le=2.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MIN_VISIBLE_FRACTION: float = Field(
+        default=0.12,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_SHIFT_FACTOR: float = Field(
+        default=0.24,
+        ge=0.02,
+        le=0.80,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MIN_LOCAL_AREA_SCORE: float = Field(
+        default=0.42,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_LOCAL_CENTER_FACTOR: float = Field(
+        default=0.52,
+        ge=0.02,
+        le=2.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_LOCAL_MIN_INLIER_RATIO: float = Field(
+        default=0.25,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_DISPERSION_FACTOR: float = Field(
+        default=0.14,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_MAX_NEIGHBOR_DISTANCE_FACTOR: float = Field(
+        default=6.0,
+        ge=0.5,
+        le=20.0,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED: bool = False
     INSPECTION_MISSING_MULTI_CONSENSUS_MIN_NEIGHBORS: int = Field(
         default=2,
         ge=1,
