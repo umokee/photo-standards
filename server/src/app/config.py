@@ -106,6 +106,69 @@ class Settings(BaseSettings):
         ge=0.05,
         le=4.0,
     )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_ENABLED: bool = False
+    INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MIN_AREA_SCORE: float = Field(
+        default=0.006,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_CENTER_FACTOR: float = Field(
+        default=4.6,
+        ge=0.01,
+        le=8.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_SLOT_SUPPORT: int = Field(
+        default=2,
+        ge=0,
+        le=128,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_SLOT_SUPPORT_RATIO: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_ENABLED: bool = True
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_DIAGNOSTICS_ENABLED: bool = True
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_SUPPORT: int = Field(
+        default=3,
+        ge=2,
+        le=64,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_INLIER_RATIO: float = Field(
+        default=0.72,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_RESIDUAL_ERROR: float = Field(
+        default=6.5,
+        ge=0.5,
+        le=40.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_SHIFT_FACTOR: float = Field(
+        default=0.62,
+        ge=0.05,
+        le=2.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_LOCAL_AREA_SCORE: float = Field(
+        default=0.24,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_LOCAL_CENTER_FACTOR: float = Field(
+        default=1.05,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_SEARCH_CONTAINMENT: float = Field(
+        default=0.05,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_OTHER_OVERLAP: float = Field(
+        default=0.28,
+        ge=0.0,
+        le=1.0,
+    )
     INSPECTION_MISSING_RESCUE_TRANSLATION_ENABLED: bool = True
     INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT: int = Field(
         default=6,
@@ -231,6 +294,9 @@ class Settings(BaseSettings):
     )
     INSPECTION_MISSING_ANCHOR_RELEASE_ENABLED: bool = True
     INSPECTION_MISSING_ANCHOR_RELEASE_DEBUG: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_SOURCE_DIAGNOSTICS_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_ORDER_DIAGNOSTICS_ENABLED: bool = True
+    INSPECTION_MISSING_FALLBACK_DIAGNOSTICS_ENABLED: bool = True
     INSPECTION_MISSING_ANCHOR_RELEASE_MIN_ANCHORS: int = Field(
         default=2,
         ge=1,
@@ -298,6 +364,21 @@ class Settings(BaseSettings):
         le=1.0,
     )
     INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MIN_INLIERS: int = Field(
+        default=5,
+        ge=1,
+        le=64,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MIN_INLIER_RATIO: float = Field(
+        default=0.50,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_ANCHOR_ERROR: float = Field(
+        default=7.0,
+        ge=0.5,
+        le=40.0,
+    )
     INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_SHIFT_FACTOR: float = Field(
         default=0.24,
         ge=0.02,
@@ -312,6 +393,37 @@ class Settings(BaseSettings):
         default=0.52,
         ge=0.02,
         le=2.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MIN_INLIERS: int = Field(
+        default=8,
+        ge=1,
+        le=96,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MIN_INLIER_RATIO: float = Field(
+        default=0.62,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_ANCHOR_ERROR: float = Field(
+        default=6.5,
+        ge=0.5,
+        le=40.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_SHIFT_FACTOR: float = Field(
+        default=0.18,
+        ge=0.02,
+        le=0.80,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_DISPERSION_FACTOR: float = Field(
+        default=0.018,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_UNRESOLVED: int = Field(
+        default=1,
+        ge=1,
+        le=16,
     )
     INSPECTION_MISSING_ANCHOR_RELEASE_LOCAL_MIN_INLIER_RATIO: float = Field(
         default=0.25,
@@ -328,7 +440,48 @@ class Settings(BaseSettings):
         ge=0.5,
         le=20.0,
     )
-    INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED: bool = False
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_HINT_ENABLED: bool = True
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_INLIERS: int = Field(
+        default=3,
+        ge=2,
+        le=16,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_INLIER_RATIO: float = Field(
+        default=0.72,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_DISPERSION_FACTOR: float = Field(
+        default=0.045,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_FEATURE_SUPPORT: int = Field(
+        default=2,
+        ge=1,
+        le=64,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_FEATURE_RATIO: float = Field(
+        default=0.03,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_AREA_SCORE: float = Field(
+        default=0.28,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_CENTER_FACTOR: float = Field(
+        default=1.20,
+        ge=0.02,
+        le=4.0,
+    )
+    INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_SHIFT_FACTOR: float = Field(
+        default=0.36,
+        ge=0.02,
+        le=1.5,
+    )
+    INSPECTION_MISSING_MULTI_CONSENSUS_RESCUE_ENABLED: bool = True
     INSPECTION_MISSING_MULTI_CONSENSUS_MIN_NEIGHBORS: int = Field(
         default=2,
         ge=1,
@@ -363,6 +516,105 @@ class Settings(BaseSettings):
         default=0.95,
         ge=0.05,
         le=4.0,
+    )
+
+    INSPECTION_MISSING_HIDDEN_CLUSTER_CONSENSUS_ENABLED: bool = True
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_CANDIDATES: int = Field(
+        default=3,
+        ge=2,
+        le=32,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_INLIERS: int = Field(
+        default=3,
+        ge=2,
+        le=32,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_INLIER_RATIO: float = Field(
+        default=0.72,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_RESIDUAL_ERROR: float = Field(
+        default=11.0,
+        ge=1.0,
+        le=80.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_CURRENT_ERROR: float = Field(
+        default=14.0,
+        ge=1.0,
+        le=80.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_SHIFT_FACTOR: float = Field(
+        default=0.38,
+        ge=0.02,
+        le=1.5,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_AREA_SCORE: float = Field(
+        default=0.24,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_CENTER_FACTOR: float = Field(
+        default=1.35,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_FALLBACK_AREA_SCORE: float = Field(
+        default=0.32,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_FALLBACK_CENTER_FACTOR: float = Field(
+        default=0.72,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_OTHER_OVERLAP: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+    )
+
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_ENABLED: bool = True
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_SUPPORT: int = Field(
+        default=24,
+        ge=3,
+        le=128,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_TOTAL: int = Field(
+        default=42,
+        ge=3,
+        le=256,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_SPARSE_SUPPORT: int = Field(
+        default=8,
+        ge=3,
+        le=64,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_SPARSE_CANDIDATES: int = Field(
+        default=10,
+        ge=3,
+        le=128,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_MEDIAN_ERROR: float = Field(
+        default=3.25,
+        ge=0.0,
+        le=40.0,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_INLIER_RATIO: float = Field(
+        default=0.86,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_CENTER_FACTOR: float = Field(
+        default=0.14,
+        ge=0.0,
+        le=2.0,
+    )
+    INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_AREA_SCORE: float = Field(
+        default=0.86,
+        ge=0.0,
+        le=1.0,
     )
     INSPECTION_MISSING_POLYGON_EDGE_REFINEMENT: bool = False
     INSPECTION_MISSING_POLYGON_EDGE_SNAP_RADIUS: int = Field(default=14, ge=0, le=64)

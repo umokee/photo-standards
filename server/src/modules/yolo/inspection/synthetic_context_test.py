@@ -7,7 +7,7 @@ import math
 import random
 import sys
 import types
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -194,6 +194,34 @@ class SyntheticObjectMetric:
     major_length_ratio: float | None
     closer_to_distractor: bool
     notes: list[str]
+    reason_code: str | None = None
+    fallback_source: str | None = None
+    fallback_reason: str | None = None
+    fallback_global_available: bool = False
+    fallback_local_global_disagrees: bool = False
+    fallback_local_global_area_score: float | None = None
+    fallback_local_global_center_factor: float | None = None
+    fallback_slot_feature_support: int = 0
+    fallback_slot_feature_total: int = 0
+    global_translation_rescue_attempted: bool = False
+    global_translation_rescue_accepted: bool = False
+    global_translation_rescue_reject_reason: str | None = None
+    global_translation_rescue_local_point_count: int = 0
+    global_translation_rescue_min_support: int = 0
+    global_translation_rescue_candidate_count: int = 0
+    global_translation_rescue_inlier_count: int = 0
+    global_translation_rescue_inlier_ratio: float | None = None
+    global_translation_rescue_median_error: float | None = None
+    global_translation_rescue_shift_factor: float | None = None
+    global_translation_rescue_context_spread: float | None = None
+    global_translation_rescue_search_containment: float | None = None
+    global_translation_rescue_local_area_score: float | None = None
+    global_translation_rescue_local_center_factor: float | None = None
+    global_translation_rescue_slot_feature_support: int = 0
+    global_translation_rescue_slot_feature_total: int = 0
+    none_reason: str | None = None
+    none_has_homography: bool = False
+    none_projected_point_count: int = 0
     anchor_release_attempted: bool = False
     anchor_release_reject_reason: str | None = None
     anchor_release_candidate_count: int = 0
@@ -205,6 +233,28 @@ class SyntheticObjectMetric:
     anchor_release_median_error: float | None = None
     anchor_release_dispersion: float | None = None
     anchor_release_shift_factor: float | None = None
+    anchor_release_build_expected_count: int = 0
+    anchor_release_build_attempt_count: int = 0
+    anchor_release_build_built_count: int = 0
+    anchor_release_build_source_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_build_reject_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_build_probe_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_runtime_trusted_anchor_count: int = 0
+    anchor_release_runtime_trusted_anchor_source_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_runtime_anchor_before_current_count: int = 0
+    anchor_release_runtime_anchor_after_current_count: int = 0
+    anchor_release_runtime_processed_expected_count: int = 0
+    anchor_release_runtime_future_expected_count: int = 0
+    anchor_release_runtime_built_count: int = 0
+    anchor_release_runtime_source_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_runtime_reject_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_runtime_probe_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_final_trusted_anchor_count: int = 0
+    anchor_release_final_trusted_anchor_source_counts: dict[str, int] = field(default_factory=dict)
+    anchor_release_final_anchor_before_current_count: int = 0
+    anchor_release_final_anchor_after_current_count: int = 0
+    anchor_release_final_resolved_anchor_count: int = 0
+    anchor_release_final_resolved_anchor_source_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -1087,6 +1137,7 @@ def _run_case(
     inliers = _int_debug(debug.get("missing_polygon_inliers"))
     median_error = _float_or_none(debug.get("missing_polygon_median_error"))
     anchor_release_fields = _anchor_release_metric_fields(debug)
+    fallback_fields = _fallback_metric_fields(debug, reason_code=reason_code)
 
     notes = _case_notes(
         scene=scene,
@@ -1198,6 +1249,7 @@ def _run_case(
                     ),
                     closer_to_distractor=closer_to_distractor,
                     notes=notes,
+                    **fallback_fields,
                     **anchor_release_fields,
                 )
             )
@@ -1275,6 +1327,7 @@ def _run_multi_case(
             and nearest_distractor_distance + 1.0 < center_drift
         )
         projection = str(debug.get("missing_polygon_projection") or debug.get("projection") or "none")
+        reason_code = debug.get("reason_code")
         unsafe_hidden = debug.get("missing_polygon_projection_safety") == "unsafe_hidden"
         hidden_reason = (
             str(debug.get("missing_polygon_hidden_reason"))
@@ -1297,6 +1350,7 @@ def _run_multi_case(
         if median_error is not None:
             median_errors.append(median_error)
         anchor_release_fields = _anchor_release_metric_fields(debug)
+        fallback_fields = _fallback_metric_fields(debug, reason_code=reason_code)
 
         used_context_refinement = _projection_uses_context_refinement(projection)
         notes = _case_notes(
@@ -1345,6 +1399,7 @@ def _run_multi_case(
             ),
             closer_to_distractor=closer_to_distractor,
             notes=notes,
+            **fallback_fields,
             **anchor_release_fields,
         )
         object_metrics.append(metric)
@@ -1607,6 +1662,7 @@ def _projection_is_conservative_translation_rescue(projection: str) -> bool:
         "context_feature_affine_scene_translation_rescue",
         "expected_slot_context_translation_rescue",
         "expected_slot_scene_translation_rescue",
+        "expected_slot_global_translation_rescue",
     }
 
 
@@ -1614,6 +1670,7 @@ def _projection_uses_context_refinement(projection: str) -> bool:
     return projection.startswith("context_feature_affine") or projection in {
         "expected_slot_context_translation_rescue",
         "expected_slot_scene_translation_rescue",
+        "expected_slot_global_translation_rescue",
     }
 
 
@@ -2440,6 +2497,38 @@ def _object_metric_dicts(results: list[SyntheticResult]) -> list[dict[str, Any]]
                 "major_length_ratio": result.major_length_ratio,
                 "closer_to_distractor": result.closer_to_distractor,
                 "notes": result.notes,
+                "global_translation_rescue_attempted": False,
+                "global_translation_rescue_accepted": False,
+                "global_translation_rescue_reject_reason": None,
+                "global_translation_rescue_local_point_count": 0,
+                "global_translation_rescue_min_support": 0,
+                "global_translation_rescue_candidate_count": 0,
+                "global_translation_rescue_inlier_count": 0,
+                "global_translation_rescue_inlier_ratio": None,
+                "global_translation_rescue_median_error": None,
+                "global_translation_rescue_shift_factor": None,
+                "global_translation_rescue_context_spread": None,
+                "global_translation_rescue_search_containment": None,
+                "global_translation_rescue_local_area_score": None,
+                "global_translation_rescue_local_center_factor": None,
+                "global_translation_rescue_slot_feature_support": 0,
+                "global_translation_rescue_slot_feature_total": 0,
+                "anchor_release_runtime_trusted_anchor_count": 0,
+                "anchor_release_runtime_trusted_anchor_source_counts": {},
+                "anchor_release_runtime_anchor_before_current_count": 0,
+                "anchor_release_runtime_anchor_after_current_count": 0,
+                "anchor_release_runtime_processed_expected_count": 0,
+                "anchor_release_runtime_future_expected_count": 0,
+                "anchor_release_runtime_built_count": 0,
+                "anchor_release_runtime_source_counts": {},
+                "anchor_release_runtime_reject_counts": {},
+                "anchor_release_runtime_probe_counts": {},
+                "anchor_release_final_trusted_anchor_count": 0,
+                "anchor_release_final_trusted_anchor_source_counts": {},
+                "anchor_release_final_anchor_before_current_count": 0,
+                "anchor_release_final_anchor_after_current_count": 0,
+                "anchor_release_final_resolved_anchor_count": 0,
+                "anchor_release_final_resolved_anchor_source_counts": {},
             }
         )
     return metrics
@@ -2596,6 +2685,336 @@ def _object_anchor_release_reject_stats(
     return stats
 
 
+
+def _object_anchor_build_reject_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    reject_counts: dict[str, int] = {}
+    source_counts: dict[str, int] = {}
+    probe_counts: dict[str, int] = {}
+    affected_objects = 0
+
+    for metric in metrics:
+        if not bool(metric.get("anchor_release_attempted")):
+            continue
+        if metric.get("anchor_release_reject_reason") != "anchor_release_rejected_no_trusted_anchors":
+            continue
+        affected_objects += 1
+        for key, value in (metric.get("anchor_release_build_reject_counts") or {}).items():
+            reject_counts[str(key)] = reject_counts.get(str(key), 0) + int(value)
+        for key, value in (metric.get("anchor_release_build_source_counts") or {}).items():
+            source_counts[str(key)] = source_counts.get(str(key), 0) + int(value)
+        for key, value in (metric.get("anchor_release_build_probe_counts") or {}).items():
+            probe_counts[str(key)] = probe_counts.get(str(key), 0) + int(value)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, total in sorted(reject_counts.items(), key=lambda item: item[1], reverse=True):
+        stats[reason] = {
+            "total": total,
+            "affected_objects": affected_objects,
+            "top_built_source": _top_bucket_name(source_counts),
+            "top_probe": _top_bucket_name(probe_counts),
+        }
+    return stats
+
+
+
+def _object_anchor_order_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    no_trusted_metrics = [
+        metric
+        for metric in metrics
+        if bool(metric.get("anchor_release_attempted"))
+        and metric.get("anchor_release_reject_reason") == "anchor_release_rejected_no_trusted_anchors"
+    ]
+    attempted_metrics = [
+        metric for metric in metrics if bool(metric.get("anchor_release_attempted"))
+    ]
+
+    def sum_counts(metric_list: list[dict[str, Any]], key: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for metric in metric_list:
+            for source, value in (metric.get(key) or {}).items():
+                counts[str(source)] = counts.get(str(source), 0) + int(value)
+        return counts
+
+    def count_positive(metric_list: list[dict[str, Any]], key: str) -> int:
+        return sum(1 for metric in metric_list if int(metric.get(key) or 0) > 0)
+
+    return {
+        "no_trusted_anchor_order": {
+            "total": len(no_trusted_metrics),
+            "runtime_has_any_anchor": count_positive(
+                no_trusted_metrics,
+                "anchor_release_runtime_trusted_anchor_count",
+            ),
+            "final_has_any_anchor": count_positive(
+                no_trusted_metrics,
+                "anchor_release_final_trusted_anchor_count",
+            ),
+            "final_has_previous_anchor": count_positive(
+                no_trusted_metrics,
+                "anchor_release_final_anchor_before_current_count",
+            ),
+            "final_has_future_anchor": count_positive(
+                no_trusted_metrics,
+                "anchor_release_final_anchor_after_current_count",
+            ),
+            "final_has_resolved_anchor": count_positive(
+                no_trusted_metrics,
+                "anchor_release_final_resolved_anchor_count",
+            ),
+            "top_runtime_source": _top_bucket_name(
+                sum_counts(no_trusted_metrics, "anchor_release_runtime_trusted_anchor_source_counts")
+            ),
+            "top_final_source": _top_bucket_name(
+                sum_counts(no_trusted_metrics, "anchor_release_final_trusted_anchor_source_counts")
+            ),
+            "top_final_resolved_source": _top_bucket_name(
+                sum_counts(no_trusted_metrics, "anchor_release_final_resolved_anchor_source_counts")
+            ),
+        },
+        "all_anchor_release_attempts": {
+            "total": len(attempted_metrics),
+            "runtime_has_any_anchor": count_positive(
+                attempted_metrics,
+                "anchor_release_runtime_trusted_anchor_count",
+            ),
+            "final_has_any_anchor": count_positive(
+                attempted_metrics,
+                "anchor_release_final_trusted_anchor_count",
+            ),
+            "runtime_built_count": sum(
+                int(metric.get("anchor_release_runtime_built_count") or 0)
+                for metric in attempted_metrics
+            ),
+            "top_runtime_source": _top_bucket_name(
+                sum_counts(attempted_metrics, "anchor_release_runtime_source_counts")
+            ),
+            "top_runtime_reject": _top_bucket_name(
+                sum_counts(attempted_metrics, "anchor_release_runtime_reject_counts")
+            ),
+            "top_runtime_probe": _top_bucket_name(
+                sum_counts(attempted_metrics, "anchor_release_runtime_probe_counts")
+            ),
+        },
+    }
+
+
+def _object_none_projection_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if str(metric.get("projection") or "") != "none":
+            continue
+        reason = str(
+            metric.get("none_reason")
+            or metric.get("reason_code")
+            or "unknown_none_reason"
+        )
+        buckets.setdefault(reason, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, reason_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        shape_counts: dict[str, int] = {}
+        code_counts: dict[str, int] = {}
+        for metric in reason_metrics:
+            shape = str(metric.get("object_shape") or "unknown")
+            code = str(metric.get("reason_code") or "unknown")
+            shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            code_counts[code] = code_counts.get(code, 0) + 1
+        passed = sum(1 for metric in reason_metrics if bool(metric.get("passed")))
+        has_homography = sum(
+            1 for metric in reason_metrics if bool(metric.get("none_has_homography"))
+        )
+        stats[reason] = {
+            "total": len(reason_metrics),
+            "passed": passed,
+            "failed": len(reason_metrics) - passed,
+            "pass_rate": (passed / len(reason_metrics) * 100.0) if reason_metrics else 0.0,
+            "top_shape": _top_bucket_name(shape_counts),
+            "top_reason_code": _top_bucket_name(code_counts),
+            "has_homography": has_homography,
+            "mean_projected_point_count": _mean_metric_value(
+                reason_metrics,
+                "none_projected_point_count",
+            ),
+        }
+    return stats
+
+
+def _object_global_fallback_diagnostics(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if str(metric.get("projection") or "") != "expected_slot_global_fallback":
+            continue
+        reason = str(
+            metric.get("fallback_reason")
+            or metric.get("reason_code")
+            or "unknown_global_fallback_reason"
+        )
+        buckets.setdefault(reason, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, reason_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        shape_counts: dict[str, int] = {}
+        code_counts: dict[str, int] = {}
+        disagrees = 0
+        global_available = 0
+        for metric in reason_metrics:
+            shape = str(metric.get("object_shape") or "unknown")
+            code = str(metric.get("reason_code") or "unknown")
+            shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            code_counts[code] = code_counts.get(code, 0) + 1
+            if bool(metric.get("fallback_local_global_disagrees")):
+                disagrees += 1
+            if bool(metric.get("fallback_global_available")):
+                global_available += 1
+        passed = sum(1 for metric in reason_metrics if bool(metric.get("passed")))
+        stats[reason] = {
+            "total": len(reason_metrics),
+            "passed": passed,
+            "failed": len(reason_metrics) - passed,
+            "pass_rate": (passed / len(reason_metrics) * 100.0) if reason_metrics else 0.0,
+            "top_shape": _top_bucket_name(shape_counts),
+            "top_reason_code": _top_bucket_name(code_counts),
+            "global_available": global_available,
+            "local_global_disagrees": disagrees,
+            "mean_area_score": _mean_metric_value(
+                reason_metrics,
+                "fallback_local_global_area_score",
+            ),
+            "mean_center_factor": _mean_metric_value(
+                reason_metrics,
+                "fallback_local_global_center_factor",
+            ),
+            "mean_slot_support": _mean_metric_value(
+                reason_metrics,
+                "fallback_slot_feature_support",
+            ),
+            "mean_slot_total": _mean_metric_value(
+                reason_metrics,
+                "fallback_slot_feature_total",
+            ),
+        }
+    return stats
+
+def _object_global_translation_rescue_diagnostics(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if not bool(metric.get("global_translation_rescue_attempted")):
+            continue
+        reason = (
+            "accepted"
+            if bool(metric.get("global_translation_rescue_accepted"))
+            else str(
+                metric.get("global_translation_rescue_reject_reason")
+                or "unknown_global_translation_reject"
+            )
+        )
+        buckets.setdefault(reason, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, reason_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        projection_counts: dict[str, int] = {}
+        shape_counts: dict[str, int] = {}
+        fallback_counts: dict[str, int] = {}
+        passed = sum(1 for metric in reason_metrics if bool(metric.get("passed")))
+        accepted = sum(
+            1
+            for metric in reason_metrics
+            if bool(metric.get("global_translation_rescue_accepted"))
+        )
+        for metric in reason_metrics:
+            projection = str(metric.get("projection") or "unknown")
+            shape = str(metric.get("object_shape") or "unknown")
+            fallback_reason = str(metric.get("fallback_reason") or "unknown")
+            projection_counts[projection] = projection_counts.get(projection, 0) + 1
+            shape_counts[shape] = shape_counts.get(shape, 0) + 1
+            fallback_counts[fallback_reason] = fallback_counts.get(fallback_reason, 0) + 1
+        stats[reason] = {
+            "total": len(reason_metrics),
+            "accepted": accepted,
+            "passed": passed,
+            "failed": len(reason_metrics) - passed,
+            "pass_rate": (passed / len(reason_metrics) * 100.0) if reason_metrics else 0.0,
+            "top_projection": _top_bucket_name(projection_counts),
+            "top_shape": _top_bucket_name(shape_counts),
+            "top_fallback_reason": _top_bucket_name(fallback_counts),
+            "mean_local_points": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_local_point_count",
+            ),
+            "mean_min_support": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_min_support",
+            ),
+            "mean_candidates": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_candidate_count",
+            ),
+            "mean_inliers": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_inlier_count",
+            ),
+            "mean_inlier_ratio": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_inlier_ratio",
+            ),
+            "mean_median_error": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_median_error",
+            ),
+            "mean_shift_factor": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_shift_factor",
+            ),
+            "mean_context_spread": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_context_spread",
+            ),
+            "mean_search_containment": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_search_containment",
+            ),
+            "mean_local_area_score": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_local_area_score",
+            ),
+            "mean_local_center_factor": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_local_center_factor",
+            ),
+            "mean_slot_support": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_slot_feature_support",
+            ),
+            "mean_slot_total": _mean_metric_value(
+                reason_metrics,
+                "global_translation_rescue_slot_feature_total",
+            ),
+        }
+    return stats
+
+
 def _mean_metric_value(metrics: list[dict[str, Any]], key: str) -> float:
     values = _finite_metric_values(metrics, key)
     return float(np.mean(values)) if values else 0.0
@@ -2687,6 +3106,15 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
         "object_failure_reason_stats": _object_failure_reason_stats(object_metrics),
         "object_hidden_reason_stats": _object_hidden_reason_stats(object_metrics),
         "object_anchor_release_reject_stats": _object_anchor_release_reject_stats(object_metrics),
+        "object_anchor_build_reject_stats": _object_anchor_build_reject_stats(object_metrics),
+        "object_anchor_order_stats": _object_anchor_order_stats(object_metrics),
+        "object_none_projection_stats": _object_none_projection_stats(object_metrics),
+        "object_global_fallback_diagnostics": _object_global_fallback_diagnostics(
+            object_metrics
+        ),
+        "object_global_translation_rescue_diagnostics": _object_global_translation_rescue_diagnostics(
+            object_metrics
+        ),
         "mean_iou": float(np.mean(ious)) if ious else 0.0,
         "min_iou": float(np.min(ious)) if ious else 0.0,
         "mean_center_drift_px": float(np.mean(drifts)) if drifts else 0.0,
@@ -2743,6 +3171,62 @@ def _html_stats_table(
     """
 
 
+def _html_anchor_build_stats_table(
+    title: str,
+    stats: dict[str, dict[str, Any]],
+) -> str:
+    if not stats:
+        return ""
+    rows = [
+        "<tr><th>reason</th><th>total</th><th>affected objects</th><th>top built source</th><th>top probe</th></tr>"
+    ]
+    for reason, item in stats.items():
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(reason))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('affected_objects') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_built_source') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_probe') or '—'))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>{html.escape(title)}</h2>
+      <table>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_anchor_order_stats_table(
+    title: str,
+    stats: dict[str, dict[str, Any]],
+) -> str:
+    if not stats:
+        return ""
+    rows = [
+        "<tr><th>bucket</th><th>total</th><th>runtime anchors</th><th>final anchors</th><th>future anchors</th><th>top runtime</th><th>top final</th></tr>"
+    ]
+    for name, item in stats.items():
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('runtime_has_any_anchor') or 0)}</td>"
+            f"<td>{int(item.get('final_has_any_anchor') or 0)}</td>"
+            f"<td>{int(item.get('final_has_future_anchor') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_runtime_source') or item.get('top_runtime_probe') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_final_source') or item.get('top_final_resolved_source') or '—'))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>{html.escape(title)}</h2>
+      <table>
+        {''.join(rows)}
+      </table>
+    """
+
+
 def _html_reason_stats_table(
     title: str,
     stats: dict[str, dict[str, Any]],
@@ -2774,6 +3258,109 @@ def _html_reason_stats_table(
       </table>
     """
 
+
+
+
+def _html_global_translation_rescue_diagnostics_table(
+    title: str,
+    stats: dict[str, dict[str, Any]],
+) -> str:
+    if not stats:
+        return ""
+
+    rows = []
+    for reason, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(reason))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('accepted') or 0)}</td>"
+            f"<td>{int(item.get('passed') or 0)}</td>"
+            f"<td>{float(item.get('pass_rate') or 0.0):.1f}%</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{float(item.get('mean_local_points') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_candidates') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_inliers') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_inlier_ratio') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_median_error') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_shift_factor') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_local_area_score') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_local_center_factor') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_slot_support') or 0.0):.1f}</td>"
+            "</tr>"
+        )
+
+    return f"""
+      <h2>{html.escape(title)}</h2>
+      <table>
+        <tr>
+          <th>reason</th>
+          <th>objects</th>
+          <th>accepted</th>
+          <th>passed</th>
+          <th>pass rate</th>
+          <th>top projection</th>
+          <th>top shape</th>
+          <th>local pts</th>
+          <th>candidates</th>
+          <th>inliers</th>
+          <th>ratio</th>
+          <th>median err</th>
+          <th>shift</th>
+          <th>area</th>
+          <th>center</th>
+          <th>slot support</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_fallback_diagnostics_table(
+    title: str,
+    stats: dict[str, dict[str, Any]],
+) -> str:
+    if not stats:
+        return ""
+
+    rows = []
+    for reason, item in stats.items():
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(reason))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('passed') or 0)}</td>"
+            f"<td>{float(item.get('pass_rate') or 0.0):.1f}%</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_reason_code') or '—'))}</td>"
+            f"<td>{float(item.get('mean_area_score') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_factor') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_slot_support') or 0.0):.1f}</td>"
+            "</tr>"
+        )
+
+    return f"""
+      <h2>{html.escape(title)}</h2>
+      <table>
+        <tr>
+          <th>reason</th>
+          <th>objects</th>
+          <th>passed</th>
+          <th>pass rate</th>
+          <th>top shape</th>
+          <th>top code</th>
+          <th>mean area</th>
+          <th>mean center</th>
+          <th>mean support</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
 
 def _write_html_report(
     path: Path,
@@ -2862,6 +3449,11 @@ def _write_html_report(
       {_html_reason_stats_table('Top object failure reasons', summary.get('object_failure_reason_stats', {}))}
       {_html_reason_stats_table('Hidden reason stats', summary.get('object_hidden_reason_stats', {}))}
       {_html_reason_stats_table('Anchor release reject stats', summary.get('object_anchor_release_reject_stats', {}))}
+      {_html_anchor_build_stats_table('Anchor build reject stats', summary.get('object_anchor_build_reject_stats', {}))}
+      {_html_anchor_order_stats_table('Anchor order diagnostics', summary.get('object_anchor_order_stats', {}))}
+      {_html_fallback_diagnostics_table('None projection diagnostics', summary.get('object_none_projection_stats', {}))}
+      {_html_fallback_diagnostics_table('Global fallback diagnostics', summary.get('object_global_fallback_diagnostics', {}))}
+      {_html_global_translation_rescue_diagnostics_table('Global translation rescue diagnostics', summary.get('object_global_translation_rescue_diagnostics', {}))}
       {''.join(cards)}
     </body>
     </html>
@@ -3102,6 +3694,95 @@ def _point_outside_polygon_margin(
     return float(signed_distance) < -max(0.0, float(margin))
 
 
+
+
+def _fallback_metric_fields(
+    debug: dict[str, Any],
+    *,
+    reason_code: Any,
+) -> dict[str, Any]:
+    fallback_source = debug.get("missing_polygon_fallback_source")
+    fallback_reason = debug.get("missing_polygon_fallback_reason")
+    none_reason = debug.get("missing_polygon_none_reason")
+    return {
+        "reason_code": str(reason_code) if reason_code is not None else None,
+        "fallback_source": str(fallback_source) if fallback_source is not None else None,
+        "fallback_reason": str(fallback_reason) if fallback_reason is not None else None,
+        "fallback_global_available": bool(
+            debug.get("missing_polygon_fallback_global_available")
+        ),
+        "fallback_local_global_disagrees": bool(
+            debug.get("missing_polygon_fallback_local_global_disagrees")
+        ),
+        "fallback_local_global_area_score": _float_or_none(
+            debug.get("missing_polygon_fallback_local_global_area_score")
+        ),
+        "fallback_local_global_center_factor": _float_or_none(
+            debug.get("missing_polygon_fallback_local_global_center_factor")
+        ),
+        "fallback_slot_feature_support": _int_debug(
+            debug.get("missing_polygon_fallback_slot_feature_support")
+        ),
+        "fallback_slot_feature_total": _int_debug(
+            debug.get("missing_polygon_fallback_slot_feature_total")
+        ),
+        "global_translation_rescue_attempted": bool(
+            debug.get("missing_polygon_global_translation_rescue_attempted")
+        ),
+        "global_translation_rescue_accepted": bool(
+            debug.get("missing_polygon_global_translation_rescue_accepted")
+        ),
+        "global_translation_rescue_reject_reason": (
+            str(debug.get("missing_polygon_global_translation_rescue_reject_reason"))
+            if debug.get("missing_polygon_global_translation_rescue_reject_reason") is not None
+            else None
+        ),
+        "global_translation_rescue_local_point_count": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_local_point_count")
+        ),
+        "global_translation_rescue_min_support": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_min_support")
+        ),
+        "global_translation_rescue_candidate_count": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_candidate_count")
+        ),
+        "global_translation_rescue_inlier_count": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_inlier_count")
+        ),
+        "global_translation_rescue_inlier_ratio": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_inlier_ratio")
+        ),
+        "global_translation_rescue_median_error": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_median_error")
+        ),
+        "global_translation_rescue_shift_factor": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_shift_factor")
+        ),
+        "global_translation_rescue_context_spread": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_context_spread")
+        ),
+        "global_translation_rescue_search_containment": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_search_containment")
+        ),
+        "global_translation_rescue_local_area_score": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_local_area_score")
+        ),
+        "global_translation_rescue_local_center_factor": _float_or_none(
+            debug.get("missing_polygon_global_translation_rescue_local_center_factor")
+        ),
+        "global_translation_rescue_slot_feature_support": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_slot_feature_support")
+        ),
+        "global_translation_rescue_slot_feature_total": _int_debug(
+            debug.get("missing_polygon_global_translation_rescue_slot_feature_total")
+        ),
+        "none_reason": str(none_reason) if none_reason is not None else None,
+        "none_has_homography": bool(debug.get("missing_polygon_none_has_homography")),
+        "none_projected_point_count": _int_debug(
+            debug.get("missing_polygon_none_projected_point_count")
+        ),
+    }
+
 def _anchor_release_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
     reject_reason = debug.get("missing_polygon_anchor_release_reject_reason")
     return {
@@ -3138,8 +3819,86 @@ def _anchor_release_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
         "anchor_release_shift_factor": _float_or_none(
             debug.get("missing_polygon_anchor_release_shift_factor")
         ),
+        "anchor_release_build_expected_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_build_expected_count")
+        ),
+        "anchor_release_build_attempt_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_build_attempt_count")
+        ),
+        "anchor_release_build_built_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_build_built_count")
+        ),
+        "anchor_release_build_source_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_build_source_counts")
+        ),
+        "anchor_release_build_reject_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_build_reject_counts")
+        ),
+        "anchor_release_build_probe_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_build_probe_counts")
+        ),
+        "anchor_release_runtime_trusted_anchor_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_trusted_anchor_count")
+        ),
+        "anchor_release_runtime_trusted_anchor_source_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_trusted_anchor_source_counts")
+        ),
+        "anchor_release_runtime_anchor_before_current_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_anchor_before_current_count")
+        ),
+        "anchor_release_runtime_anchor_after_current_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_anchor_after_current_count")
+        ),
+        "anchor_release_runtime_processed_expected_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_processed_expected_count")
+        ),
+        "anchor_release_runtime_future_expected_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_future_expected_count")
+        ),
+        "anchor_release_runtime_built_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_built_count")
+        ),
+        "anchor_release_runtime_source_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_source_counts")
+        ),
+        "anchor_release_runtime_reject_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_reject_counts")
+        ),
+        "anchor_release_runtime_probe_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_runtime_probe_counts")
+        ),
+        "anchor_release_final_trusted_anchor_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_final_trusted_anchor_count")
+        ),
+        "anchor_release_final_trusted_anchor_source_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_final_trusted_anchor_source_counts")
+        ),
+        "anchor_release_final_anchor_before_current_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_final_anchor_before_current_count")
+        ),
+        "anchor_release_final_anchor_after_current_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_final_anchor_after_current_count")
+        ),
+        "anchor_release_final_resolved_anchor_count": _int_debug(
+            debug.get("missing_polygon_anchor_release_final_resolved_anchor_count")
+        ),
+        "anchor_release_final_resolved_anchor_source_counts": _dict_int_debug(
+            debug.get("missing_polygon_anchor_release_final_resolved_anchor_source_counts")
+        ),
     }
 
+
+
+def _dict_int_debug(value: Any) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, int] = {}
+    for key, item in value.items():
+        try:
+            result[str(key)] = int(item)
+        except (TypeError, ValueError):
+            continue
+    return result
 
 def _int_debug(*values: Any) -> int:
     for value in values:

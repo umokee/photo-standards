@@ -285,7 +285,7 @@ def match_segments(
     projection_data: LocalProjectionData | None = None,
 ) -> list[SegmentMatch]:
     projected_expected: list[_ProjectedExpected] = []
-    unprojected_expected: list[ExpectedSegment] = []
+    unprojected_expected: list[tuple[int, ExpectedSegment, dict[str, Any]]] = []
 
     for index, item in enumerate(expected):
         projected = _safe_project(
@@ -294,16 +294,29 @@ def match_segments(
             projection_data=projection_data,
         )
         if len(projected) < 3:
-            unprojected_expected.append(item)
+            unprojected_expected.append((index, item, _missing_none_projection_debug(
+                reason="projection_failed_invalid_polygon",
+                homography=homography,
+                projected_point_count=len(projected),
+            )))
             continue
 
         bbox = _bbox_from_polygon(projected)
         if bbox is None:
-            unprojected_expected.append(item)
+            unprojected_expected.append((index, item, _missing_none_projection_debug(
+                reason="projection_failed_invalid_bbox",
+                homography=homography,
+                projected_point_count=len(projected),
+            )))
             continue
 
         if frame_size is not None and not _is_visible_in_frame(bbox, frame_size):
-            unprojected_expected.append(item)
+            unprojected_expected.append((index, item, _missing_none_projection_debug(
+                reason="projection_failed_outside_frame",
+                homography=homography,
+                projected_point_count=len(projected),
+                bbox=bbox,
+            )))
             continue
 
         projected_expected.append(
@@ -348,10 +361,20 @@ def match_segments(
         projected_expected,
         projection_data=projection_data,
     )
+    trusted_anchor_build_debug: dict[str, Any] = {}
     trusted_anchors = _build_trusted_missing_anchors(
         projected_expected,
         slot_by_index=slot_by_index,
         projection_data=projection_data,
+        build_debug=trusted_anchor_build_debug,
+    )
+    _record_anchor_release_order_snapshot(
+        trusted_anchor_build_debug,
+        trusted_anchors=trusted_anchors,
+        expected_item=None,
+        all_expected=projected_expected,
+        processed_expected_indices=set(),
+        label="initial",
     )
 
     for expected_item in projected_expected:
@@ -385,6 +408,25 @@ def match_segments(
     matched_detection_indices = {detection_index for _, detection_index, _ in chosen_pairs}
 
     matches: list[SegmentMatch] = []
+
+    for expected_index, detection_index, iou in chosen_pairs:
+        expected_item = projected_by_index[expected_index]
+        detection_item = detection_by_index[detection_index]
+        matched_anchor = _trusted_anchor_from_matched_detection(
+            expected_item,
+            detection_item=detection_item,
+            match_iou=iou,
+            projection_data=projection_data,
+        )
+        _append_or_replace_trusted_anchor(trusted_anchors, matched_anchor)
+        _record_runtime_anchor_source(
+            trusted_anchor_build_debug,
+            anchor=matched_anchor,
+            probe="matched_detection",
+            reject="matched_detection_rejected",
+        )
+
+    processed_expected_indices: set[int] = set(matched_expected_indices)
 
     for expected_index, detection_index, iou in chosen_pairs:
         expected_item = projected_by_index[expected_index]
@@ -426,6 +468,20 @@ def match_segments(
             all_expected=projected_expected,
         )
         if missing_refinement is not None:
+            demotion_reason = _missing_refinement_affine_demotion_reason(
+                missing_refinement,
+                slot=slot,
+                all_expected=projected_expected,
+            )
+            if demotion_reason is not None:
+                missing_debug = _merge_missing_refinement_demotion_debug(
+                    missing_debug,
+                    missing_refinement,
+                    reason=demotion_reason,
+                )
+                missing_refinement = None
+
+        if missing_refinement is not None:
             translation_override = _try_missing_refinement_translation_override(
                 expected_item,
                 refinement=missing_refinement,
@@ -456,6 +512,14 @@ def match_segments(
                     missing_refinement,
                 )
         else:
+            _record_anchor_release_order_snapshot(
+                trusted_anchor_build_debug,
+                trusted_anchors=trusted_anchors,
+                expected_item=expected_item,
+                all_expected=projected_expected,
+                processed_expected_indices=processed_expected_indices,
+                label="before_fallback",
+            )
             fallback = _resolve_missing_fallback_projection(
                 expected_item,
                 slot=slot,
@@ -463,12 +527,29 @@ def match_segments(
                 all_expected=projected_expected,
                 all_slots=slot_by_index,
                 trusted_anchors=trusted_anchors,
+                trusted_anchor_build_debug=trusted_anchor_build_debug,
             )
             missing_polygon = fallback.polygon
             if fallback.debug:
                 missing_debug = {**missing_debug, **fallback.debug}
             if fallback.hidden:
                 missing_debug = _merge_unsafe_missing_projection_debug(missing_debug)
+
+        resolved_projection_name = _missing_debug_projection_name(missing_debug)
+        resolved_anchor = _trusted_anchor_from_resolved_projection(
+            expected_item,
+            polygon=missing_polygon,
+            bbox=_bbox_from_polygon(missing_polygon) if missing_polygon is not None else None,
+            projection_data=projection_data,
+            debug=missing_debug,
+        )
+        _append_or_replace_trusted_anchor(trusted_anchors, resolved_anchor)
+        _record_runtime_anchor_source(
+            trusted_anchor_build_debug,
+            anchor=resolved_anchor,
+            probe=f"resolved_projection_{resolved_projection_name or 'unknown'}",
+            reject=f"resolved_projection_rejected_{resolved_projection_name or 'unknown'}",
+        )
 
         matches.append(
             SegmentMatch(
@@ -486,8 +567,9 @@ def match_segments(
                 debug=missing_debug,
             )
         )
+        processed_expected_indices.add(expected_item.index)
 
-    for item in unprojected_expected:
+    for _, item, debug in unprojected_expected:
         matches.append(
             SegmentMatch(
                 annotation_id=item.annotation_id,
@@ -501,7 +583,7 @@ def match_segments(
                 expected_polygon=None,
                 detected_polygon=None,
                 detected_bbox=None,
-                debug={"reason": "projection_failed"},
+                debug=debug,
             )
         )
 
@@ -517,6 +599,11 @@ def match_segments(
             ):
                 expected_index_to_match[expected_item.index] = match
                 break
+
+    _finalize_anchor_release_order_diagnostics(
+        expected_index_to_match,
+        trusted_anchors=trusted_anchors,
+    )
 
     unmatched_expected_indices: set[int] = set()
     occupied_detection_indices = set(matched_detection_indices)
@@ -1265,6 +1352,97 @@ def _merge_missing_refinement_debug(
 
 
 
+def _missing_refinement_affine_demotion_reason(
+    refinement: _MissingPolygonRefinement,
+    *,
+    slot: _ExpectedSlot | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> str | None:
+    if not settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_ENABLED:
+        return None
+    if refinement.edge_snapped:
+        return None
+    if all_expected is None or len(all_expected) <= 1:
+        return None
+
+    feature_support = int(refinement.feature_support)
+    feature_total = int(refinement.feature_total)
+    candidate_count = int(refinement.candidate_count)
+    quadrant_count = int(refinement.quadrant_count)
+    median_error = float(refinement.median_error)
+    inlier_ratio = float(refinement.inlier_ratio)
+    center_factor = float(refinement.center_drift_factor)
+    area_score = float(refinement.area_score)
+
+    max_support = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_SUPPORT
+    max_total = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_TOTAL
+    min_error = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_MEDIAN_ERROR
+    max_ratio = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MAX_INLIER_RATIO
+    min_center = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_CENTER_FACTOR
+    min_area = settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_MIN_AREA_SCORE
+
+    weak_evidence = (
+        feature_support <= max_support
+        or feature_total <= max_total
+        or candidate_count <= max(4, max_support + 2)
+    )
+    sparse_evidence = (
+        feature_support <= settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_SPARSE_SUPPORT
+        or candidate_count <= settings.INSPECTION_MISSING_WEAK_CONTEXT_AFFINE_DEMOTION_SPARSE_CANDIDATES
+    )
+    weak_geometry = quadrant_count <= 3
+
+    if (
+        weak_evidence
+        and weak_geometry
+        and median_error >= min_error
+        and (inlier_ratio <= max_ratio or center_factor >= min_center or area_score <= min_area)
+    ):
+        return "weak_context_affine_unstable"
+
+    if sparse_evidence and weak_geometry and center_factor >= min_center * 0.85:
+        return "sparse_context_affine_center_drift"
+
+    if weak_evidence and weak_geometry and area_score <= min_area * 0.94 and median_error >= min_error * 0.85:
+        return "weak_context_affine_bad_area"
+
+    return None
+
+
+def _merge_missing_refinement_demotion_debug(
+    missing_debug: dict[str, Any],
+    refinement: _MissingPolygonRefinement,
+    *,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        **missing_debug,
+        "missing_polygon_affine_demoted": True,
+        "missing_polygon_affine_demoted_reason": reason,
+        "missing_polygon_demoted_projection": (
+            "context_feature_affine_edge_guarded"
+            if refinement.edge_snapped
+            else "context_feature_affine"
+        ),
+        "missing_polygon_demoted_feature_support": refinement.feature_support,
+        "missing_polygon_demoted_feature_total": refinement.feature_total,
+        "missing_polygon_demoted_candidate_count": refinement.candidate_count,
+        "missing_polygon_demoted_inliers": refinement.inlier_count,
+        "missing_polygon_demoted_inlier_ratio": _round_debug(refinement.inlier_ratio),
+        "missing_polygon_demoted_median_error": _round_debug(refinement.median_error),
+        "missing_polygon_demoted_context_quadrants": refinement.quadrant_count,
+        "missing_polygon_demoted_center_drift_factor": _round_debug(
+            refinement.center_drift_factor
+        ),
+        "missing_polygon_demoted_area_score": _round_debug(refinement.area_score),
+        "note": (
+            "Local affine refinement was demoted because multi-object context was "
+            "sparse or unstable. The matcher will use the conservative fallback "
+            "path instead of rendering a weak affine polygon."
+        ),
+    }
+
+
 def _try_missing_refinement_translation_override(
     expected_item: _ProjectedExpected,
     *,
@@ -1429,6 +1607,133 @@ def _merge_missing_translation_rescue_debug(
         ),
     }
 
+
+def _missing_none_projection_debug(
+    *,
+    reason: str,
+    homography: np.ndarray | None,
+    projected_point_count: int,
+    bbox: BBox | None = None,
+) -> dict[str, Any]:
+    debug: dict[str, Any] = {
+        "reason": "projection_failed",
+        "reason_code": "missing_projection_failed",
+        "missing_polygon_projection": "none",
+        "missing_polygon_projection_safety": "none",
+        "missing_polygon_none_reason": reason,
+        "missing_polygon_none_has_homography": homography is not None,
+        "missing_polygon_none_projected_point_count": int(projected_point_count),
+    }
+    if bbox is not None:
+        debug["missing_polygon_none_bbox"] = _bbox_debug(bbox)
+    return debug
+
+def _missing_global_fallback_should_demote(
+    *,
+    local_global_area_score: float,
+    local_global_center_factor: float,
+    slot: _ExpectedSlot | None,
+) -> bool:
+    if not settings.INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_ENABLED:
+        return False
+
+    slot_support = int(slot.feature_support) if slot is not None else 0
+    slot_total = int(slot.feature_total) if slot is not None else 0
+    slot_ratio = (slot_support / slot_total) if slot_total > 0 else 0.0
+
+    global_projection_is_extreme = (
+        local_global_area_score
+        < settings.INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MIN_AREA_SCORE
+        or local_global_center_factor
+        > settings.INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_CENTER_FACTOR
+    )
+    slot_evidence_is_weak = (
+        slot_support
+        <= settings.INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_SLOT_SUPPORT
+        or slot_ratio
+        <= settings.INSPECTION_MISSING_GLOBAL_FALLBACK_DEMOTION_MAX_SLOT_SUPPORT_RATIO
+    )
+    return bool(global_projection_is_extreme and slot_evidence_is_weak)
+
+
+def _record_missing_translation_rescue_reject(
+    reject_debug: dict[str, Any] | None,
+    reason: str,
+    **values: Any,
+) -> None:
+    if reject_debug is None:
+        return
+
+    reject_debug["reject_reason"] = reason
+    for key, value in values.items():
+        if isinstance(value, np.generic):
+            value = value.item()
+        if isinstance(value, float):
+            reject_debug[key] = _round_debug(value)
+        else:
+            reject_debug[key] = value
+
+
+def _merge_global_translation_rescue_debug(
+    debug: dict[str, Any] | None,
+    rescue_debug: dict[str, Any],
+    *,
+    accepted: bool,
+    reject_reason: str | None = None,
+    slot: _ExpectedSlot | None = None,
+) -> None:
+    if debug is None or not settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_DIAGNOSTICS_ENABLED:
+        return
+
+    slot_support = int(slot.feature_support) if slot is not None else 0
+    slot_total = int(slot.feature_total) if slot is not None else 0
+    reason = reject_reason or str(rescue_debug.get("reject_reason") or "accepted")
+    debug.update(
+        {
+            "missing_polygon_global_translation_rescue_attempted": True,
+            "missing_polygon_global_translation_rescue_accepted": bool(accepted),
+            "missing_polygon_global_translation_rescue_reject_reason": (
+                None if accepted else reason
+            ),
+            "missing_polygon_global_translation_rescue_local_point_count": int(
+                rescue_debug.get("local_point_count") or 0
+            ),
+            "missing_polygon_global_translation_rescue_min_support": int(
+                rescue_debug.get("min_support") or 0
+            ),
+            "missing_polygon_global_translation_rescue_candidate_count": int(
+                rescue_debug.get("candidate_count") or 0
+            ),
+            "missing_polygon_global_translation_rescue_inlier_count": int(
+                rescue_debug.get("inlier_count") or 0
+            ),
+            "missing_polygon_global_translation_rescue_inlier_ratio": _round_debug(
+                float(rescue_debug.get("inlier_ratio") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_median_error": _round_debug(
+                float(rescue_debug.get("median_error") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_shift_factor": _round_debug(
+                float(rescue_debug.get("shift_factor") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_context_spread": _round_debug(
+                float(rescue_debug.get("context_spread") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_search_containment": _round_debug(
+                float(rescue_debug.get("search_containment") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_local_area_score": _round_debug(
+                float(rescue_debug.get("local_area_score") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_local_center_factor": _round_debug(
+                float(rescue_debug.get("local_center_factor") or 0.0)
+            ),
+            "missing_polygon_global_translation_rescue_slot_feature_support": slot_support,
+            "missing_polygon_global_translation_rescue_slot_feature_total": slot_total,
+        }
+    )
+
+
 def _merge_unsafe_missing_projection_debug(
     missing_debug: dict[str, Any],
 ) -> dict[str, Any]:
@@ -1454,6 +1759,7 @@ def _resolve_missing_fallback_projection(
     all_expected: list[_ProjectedExpected] | None = None,
     all_slots: dict[int, _ExpectedSlot] | None = None,
     trusted_anchors: list[_TrustedAnchor] | None = None,
+    trusted_anchor_build_debug: dict[str, Any] | None = None,
 ) -> _MissingFallbackProjection:
     fallback_polygon: list[list[float]] | None = expected_item.polygon
     fallback_bbox: BBox | None = expected_item.bbox
@@ -1461,12 +1767,73 @@ def _resolve_missing_fallback_projection(
     context_rescue_used = False
     fallback_source = "expected_slot"
 
+    fallback_diagnostics_enabled = bool(
+        settings.INSPECTION_MISSING_FALLBACK_DIAGNOSTICS_ENABLED
+    )
+    if fallback_diagnostics_enabled:
+        debug.update(
+            {
+                "missing_polygon_fallback_source": fallback_source,
+                "missing_polygon_fallback_reason": "fallback_started",
+                "missing_polygon_fallback_slot_feature_support": (
+                    int(slot.feature_support) if slot is not None else 0
+                ),
+                "missing_polygon_fallback_slot_feature_total": (
+                    int(slot.feature_total) if slot is not None else 0
+                ),
+                "missing_polygon_fallback_has_slot": slot is not None,
+                "missing_polygon_fallback_has_projection_data": projection_data is not None,
+                "missing_polygon_fallback_has_global_homography": (
+                    projection_data is not None
+                    and projection_data.global_homography is not None
+                ),
+            }
+        )
+
     global_projection = _missing_global_projection(
         expected_item,
         projection_data=projection_data,
     )
-    if global_projection is not None:
+    if global_projection is None:
+        if fallback_diagnostics_enabled:
+            debug.update(
+                {
+                    "missing_polygon_fallback_global_available": False,
+                    "missing_polygon_fallback_reason": "no_global_projection",
+                }
+            )
+    else:
         global_polygon, global_bbox = global_projection
+        local_global_area_score = _bbox_area_similarity(
+            expected_item.bbox,
+            global_bbox,
+        )
+        local_global_center_factor = _bbox_center_distance_factor(
+            expected_item.bbox,
+            global_bbox,
+        )
+        local_projection_disagrees = (
+            local_global_area_score
+            < settings.INSPECTION_MISSING_FALLBACK_MIN_LOCAL_GLOBAL_AREA_SCORE
+            or local_global_center_factor
+            > settings.INSPECTION_MISSING_FALLBACK_MAX_LOCAL_GLOBAL_CENTER_FACTOR
+        )
+        if fallback_diagnostics_enabled:
+            debug.update(
+                {
+                    "missing_polygon_fallback_global_available": True,
+                    "missing_polygon_fallback_global_bbox": _bbox_debug(global_bbox),
+                    "missing_polygon_fallback_local_global_area_score": _round_debug(
+                        local_global_area_score
+                    ),
+                    "missing_polygon_fallback_local_global_center_factor": _round_debug(
+                        local_global_center_factor
+                    ),
+                    "missing_polygon_fallback_local_global_disagrees": bool(
+                        local_projection_disagrees
+                    ),
+                }
+            )
         rescue = _try_missing_translation_rescue(
             expected_item,
             slot=slot,
@@ -1556,6 +1923,7 @@ def _resolve_missing_fallback_projection(
                     all_expected=all_expected,
                     all_slots=all_slots,
                     trusted_anchors=trusted_anchors,
+                    trusted_anchor_build_debug=trusted_anchor_build_debug,
                     reject_debug=anchor_release_debug,
                 )
                 if anchor_release is not None:
@@ -1608,7 +1976,7 @@ def _resolve_missing_fallback_projection(
                     )
                 else:
                     debug.update(anchor_release_debug)
-                    consensus_rescue = _try_missing_multi_consensus_rescue(
+                    cluster_rescue = _try_missing_hidden_cluster_consensus_rescue(
                         expected_item,
                         projection_data=projection_data,
                         global_polygon=global_polygon,
@@ -1616,79 +1984,203 @@ def _resolve_missing_fallback_projection(
                         fallback_bbox=fallback_bbox,
                         all_expected=all_expected,
                     )
-                    if consensus_rescue is not None:
-                        fallback_polygon = consensus_rescue.polygon
-                        fallback_bbox = consensus_rescue.bbox
+                    if cluster_rescue is not None:
+                        fallback_polygon = cluster_rescue.polygon
+                        fallback_bbox = cluster_rescue.bbox
                         context_rescue_used = True
-                        fallback_source = "multi_consensus_rescue"
+                        fallback_source = "hidden_cluster_consensus"
                         debug.update(
                             {
-                                "projection": "expected_slot_multi_consensus_rescue",
-                                "missing_polygon_projection": "expected_slot_multi_consensus_rescue",
-                                "missing_polygon_projection_safety": "multi_slot_consensus",
-                                "missing_polygon_candidate_count": consensus_rescue.candidate_count,
-                                "missing_polygon_inliers": consensus_rescue.inlier_count,
+                                "projection": "expected_slot_hidden_cluster_consensus",
+                                "missing_polygon_projection": "expected_slot_hidden_cluster_consensus",
+                                "missing_polygon_projection_safety": "hidden_cluster_consensus",
+                                "missing_polygon_candidate_count": cluster_rescue.candidate_count,
+                                "missing_polygon_inliers": cluster_rescue.inlier_count,
                                 "missing_polygon_inlier_ratio": _round_debug(
-                                    consensus_rescue.inlier_ratio
+                                    cluster_rescue.inlier_ratio
                                 ),
                                 "missing_polygon_median_error": _round_debug(
-                                    consensus_rescue.median_error
+                                    cluster_rescue.median_error
                                 ),
                                 "missing_polygon_translation_shift_x": _round_debug(
-                                    consensus_rescue.shift_x
+                                    cluster_rescue.shift_x
                                 ),
                                 "missing_polygon_translation_shift_y": _round_debug(
-                                    consensus_rescue.shift_y
+                                    cluster_rescue.shift_y
                                 ),
                                 "missing_polygon_translation_shift_factor": _round_debug(
-                                    consensus_rescue.shift_factor
+                                    cluster_rescue.shift_factor
+                                ),
+                                "missing_polygon_anchor_sources": (
+                                    cluster_rescue.source_counts or {}
+                                ),
+                                "missing_polygon_anchor_dispersion": _round_debug(
+                                    cluster_rescue.anchor_dispersion
                                 ),
                                 "note": (
-                                    "Local context was not safe for this missing slot, "
-                                    "but neighboring expected slots agreed on a common "
-                                    "scene translation. The missing zone was rendered "
-                                    "from that conservative multi-slot consensus."
+                                    "Several hidden multi-object slots had no trusted "
+                                    "anchors, but their local/global slot offsets formed "
+                                    "a compact cluster. The missing zone was rendered "
+                                    "from a translation-only hidden-cluster consensus."
                                 ),
                             }
                         )
                     else:
-                        local_global_area_score = _bbox_area_similarity(
-                            expected_item.bbox,
-                            global_bbox,
+                        consensus_rescue = _try_missing_multi_consensus_rescue(
+                            expected_item,
+                            projection_data=projection_data,
+                            global_polygon=global_polygon,
+                            global_bbox=global_bbox,
+                            fallback_bbox=fallback_bbox,
+                            all_expected=all_expected,
                         )
-                        local_global_center_factor = _bbox_center_distance_factor(
-                            expected_item.bbox,
-                            global_bbox,
-                        )
-                        local_projection_disagrees = (
-                            local_global_area_score
-                            < settings.INSPECTION_MISSING_FALLBACK_MIN_LOCAL_GLOBAL_AREA_SCORE
-                            or local_global_center_factor
-                            > settings.INSPECTION_MISSING_FALLBACK_MAX_LOCAL_GLOBAL_CENTER_FACTOR
-                        )
-
-                        if local_projection_disagrees:
-                            fallback_polygon = global_polygon
-                            fallback_bbox = global_bbox
-                            fallback_source = "global_fallback"
+                        if consensus_rescue is not None:
+                            fallback_polygon = consensus_rescue.polygon
+                            fallback_bbox = consensus_rescue.bbox
+                            context_rescue_used = True
+                            fallback_source = "multi_consensus_rescue"
                             debug.update(
                                 {
-                                    "projection": "expected_slot_global_fallback",
-                                    "missing_polygon_projection": "expected_slot_global_fallback",
-                                    "missing_polygon_projection_safety": "global_fallback",
-                                    "missing_polygon_local_global_area_score": _round_debug(
-                                        local_global_area_score
+                                    "projection": "expected_slot_multi_consensus_rescue",
+                                    "missing_polygon_projection": "expected_slot_multi_consensus_rescue",
+                                    "missing_polygon_projection_safety": "multi_slot_consensus",
+                                    "missing_polygon_candidate_count": consensus_rescue.candidate_count,
+                                    "missing_polygon_inliers": consensus_rescue.inlier_count,
+                                    "missing_polygon_inlier_ratio": _round_debug(
+                                        consensus_rescue.inlier_ratio
                                     ),
-                                    "missing_polygon_local_global_center_factor": _round_debug(
-                                        local_global_center_factor
+                                    "missing_polygon_median_error": _round_debug(
+                                        consensus_rescue.median_error
+                                    ),
+                                    "missing_polygon_translation_shift_x": _round_debug(
+                                        consensus_rescue.shift_x
+                                    ),
+                                    "missing_polygon_translation_shift_y": _round_debug(
+                                        consensus_rescue.shift_y
+                                    ),
+                                    "missing_polygon_translation_shift_factor": _round_debug(
+                                        consensus_rescue.shift_factor
                                     ),
                                     "note": (
-                                        "Adaptive local projection disagreed with the global "
-                                        "alignment, so missing expected zone was rendered from "
-                                        "global alignment instead of local object-near matches."
+                                        "Local context was not safe for this missing slot, "
+                                        "but neighboring expected slots agreed on a common "
+                                        "scene translation. The missing zone was rendered "
+                                        "from that conservative multi-slot consensus."
                                     ),
                                 }
                             )
+                        else:
+                            if local_projection_disagrees:
+                                global_translation_rescue = _try_missing_global_fallback_translation_rescue(
+                                    expected_item,
+                                    slot=slot,
+                                    projection_data=projection_data,
+                                    global_polygon=global_polygon,
+                                    global_bbox=global_bbox,
+                                    all_expected=all_expected,
+                                    debug=debug,
+                                )
+                                if global_translation_rescue is not None:
+                                    fallback_polygon = global_translation_rescue.polygon
+                                    fallback_bbox = global_translation_rescue.bbox
+                                    context_rescue_used = True
+                                    fallback_source = "global_fallback_translation_rescue"
+                                    debug.update(
+                                        {
+                                            "projection": "expected_slot_global_translation_rescue",
+                                            "missing_polygon_projection": "expected_slot_global_translation_rescue",
+                                            "missing_polygon_projection_safety": "global_fallback_translation_rescue",
+                                            "missing_polygon_candidate_count": global_translation_rescue.candidate_count,
+                                            "missing_polygon_inliers": global_translation_rescue.inlier_count,
+                                            "missing_polygon_inlier_ratio": _round_debug(
+                                                global_translation_rescue.inlier_ratio
+                                            ),
+                                            "missing_polygon_median_error": _round_debug(
+                                                global_translation_rescue.median_error
+                                            ),
+                                            "missing_polygon_translation_shift_x": _round_debug(
+                                                global_translation_rescue.shift_x
+                                            ),
+                                            "missing_polygon_translation_shift_y": _round_debug(
+                                                global_translation_rescue.shift_y
+                                            ),
+                                            "missing_polygon_translation_shift_factor": _round_debug(
+                                                global_translation_rescue.shift_factor
+                                            ),
+                                            "missing_polygon_local_global_area_score": _round_debug(
+                                                local_global_area_score
+                                            ),
+                                            "missing_polygon_local_global_center_factor": _round_debug(
+                                                local_global_center_factor
+                                            ),
+                                            "missing_polygon_anchor_sources": (
+                                                global_translation_rescue.source_counts or {}
+                                            ),
+                                            "missing_polygon_fallback_source": "global_fallback_translation_rescue",
+                                            "missing_polygon_fallback_reason": "global_fallback_translation_rescue",
+                                            "note": (
+                                                "Adaptive local projection disagreed with the global "
+                                                "alignment, but local context still agreed on a "
+                                                "translation-only correction. The matcher rendered the "
+                                                "global polygon after that conservative translation "
+                                                "instead of using raw global fallback."
+                                            ),
+                                        }
+                                    )
+                                else:
+                                    demote_global_fallback = _missing_global_fallback_should_demote(
+                                        local_global_area_score=local_global_area_score,
+                                        local_global_center_factor=local_global_center_factor,
+                                        slot=slot,
+                                    )
+                                    if demote_global_fallback:
+                                        debug.update(
+                                            {
+                                                "projection": "expected_slot",
+                                                "missing_polygon_projection": "expected_slot",
+                                                "missing_polygon_projection_safety": "global_fallback_demoted",
+                                                "missing_polygon_local_global_area_score": _round_debug(
+                                                    local_global_area_score
+                                                ),
+                                                "missing_polygon_local_global_center_factor": _round_debug(
+                                                    local_global_center_factor
+                                                ),
+                                                "missing_polygon_fallback_source": "expected_slot",
+                                                "missing_polygon_fallback_reason": "global_fallback_demoted_extreme_geometry",
+                                                "missing_polygon_global_fallback_demoted": True,
+                                                "note": (
+                                                    "Adaptive local projection disagreed with the global "
+                                                    "alignment, but the global fallback was an extreme "
+                                                    "outlier with weak slot evidence. The matcher kept the "
+                                                    "conservative expected slot instead of drawing the unstable "
+                                                    "global polygon."
+                                                ),
+                                            }
+                                        )
+                                    else:
+                                        fallback_polygon = global_polygon
+                                        fallback_bbox = global_bbox
+                                        fallback_source = "global_fallback"
+                                        debug.update(
+                                            {
+                                                "projection": "expected_slot_global_fallback",
+                                                "missing_polygon_projection": "expected_slot_global_fallback",
+                                                "missing_polygon_projection_safety": "global_fallback",
+                                                "missing_polygon_local_global_area_score": _round_debug(
+                                                    local_global_area_score
+                                                ),
+                                                "missing_polygon_local_global_center_factor": _round_debug(
+                                                    local_global_center_factor
+                                                ),
+                                                "missing_polygon_fallback_source": "global_fallback",
+                                                "missing_polygon_fallback_reason": "local_global_disagrees",
+                                                "note": (
+                                                    "Adaptive local projection disagreed with the global "
+                                                    "alignment, so missing expected zone was rendered from "
+                                                    "global alignment instead of local object-near matches."
+                                                ),
+                                            }
+                                        )
 
 
     if (
@@ -1722,6 +2214,31 @@ def _resolve_missing_fallback_projection(
                 ),
             }
         )
+
+    if fallback_diagnostics_enabled:
+        debug["missing_polygon_fallback_source"] = fallback_source
+        if fallback_source == "expected_slot":
+            current_reason = debug.get("missing_polygon_fallback_reason")
+            if current_reason in {None, "fallback_started"}:
+                debug["missing_polygon_fallback_reason"] = (
+                    "kept_expected_slot_no_safe_rescue"
+                )
+        elif fallback_source == "expected_slot_local_guarded":
+            debug["missing_polygon_fallback_reason"] = "local_guarded_expected_slot"
+        elif fallback_source == "context_translation_rescue":
+            debug["missing_polygon_fallback_reason"] = "context_translation_rescue"
+        elif fallback_source == "scene_translation_rescue":
+            debug["missing_polygon_fallback_reason"] = "scene_translation_rescue"
+        elif fallback_source == "anchor_release":
+            debug["missing_polygon_fallback_reason"] = "anchor_release"
+        elif fallback_source == "global_fallback":
+            debug["missing_polygon_fallback_reason"] = "local_global_disagrees"
+        elif fallback_source == "global_fallback_translation_rescue":
+            debug["missing_polygon_fallback_reason"] = "global_fallback_translation_rescue"
+        elif fallback_source == "hidden_cluster_consensus":
+            debug["missing_polygon_fallback_reason"] = "hidden_cluster_consensus"
+        elif fallback_source == "multi_consensus_rescue":
+            debug["missing_polygon_fallback_reason"] = "multi_consensus_rescue"
 
     hidden_reason = _missing_fallback_projection_unsafe_reason(
         expected_item,
@@ -1759,18 +2276,46 @@ def _try_missing_translation_rescue(
     global_polygon: list[list[float]],
     global_bbox: BBox,
     all_expected: list[_ProjectedExpected] | None = None,
+    min_support_override: int | None = None,
+    min_inlier_ratio_override: float | None = None,
+    max_residual_error_override: float | None = None,
+    max_shift_factor_override: float | None = None,
+    min_context_spread_override: float | None = None,
+    min_search_containment_override: float | None = None,
+    max_other_overlap: float | None = None,
+    reject_debug: dict[str, Any] | None = None,
 ) -> _MissingTranslationRescue | None:
     if not settings.INSPECTION_MISSING_RESCUE_TRANSLATION_ENABLED:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "translation_disabled",
+        )
         return None
     if slot is None or projection_data is None:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "no_slot_or_projection_data",
+        )
         return None
     if projection_data.global_homography is None:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "no_global_homography",
+        )
         return None
 
-    min_support = max(
-        settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT,
-        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT,
-        3,
+    if min_support_override is None:
+        min_support = max(
+            settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT,
+            settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT,
+            3,
+        )
+    else:
+        min_support = max(2, int(min_support_override))
+    _record_missing_translation_rescue_reject(
+        reject_debug,
+        "started",
+        min_support=min_support,
     )
 
     local_reference, local_frame = _missing_polygon_refinement_points(
@@ -1779,7 +2324,15 @@ def _try_missing_translation_rescue(
         projection_data=projection_data,
         all_expected=all_expected,
     )
-    if len(local_reference) < min_support or len(local_reference) != len(local_frame):
+    local_point_count = int(len(local_reference))
+    if local_point_count < min_support or len(local_reference) != len(local_frame):
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "too_few_local_points",
+            local_point_count=local_point_count,
+            local_frame_point_count=int(len(local_frame)),
+            min_support=min_support,
+        )
         return None
 
     projected_reference = _project_points_with_homography(
@@ -1787,29 +2340,81 @@ def _try_missing_translation_rescue(
         projection_data.global_homography,
     )
     if projected_reference is None or len(projected_reference) != len(local_frame):
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "projection_failed",
+            local_point_count=local_point_count,
+            min_support=min_support,
+        )
         return None
 
     residuals = local_frame.astype(np.float32) - projected_reference.astype(np.float32)
     if residuals.ndim != 2 or residuals.shape[1] < 2 or not np.isfinite(residuals).all():
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "invalid_residuals",
+            local_point_count=local_point_count,
+            min_support=min_support,
+        )
         return None
 
     median_residual = np.median(residuals[:, :2], axis=0).astype(np.float32)
     if not np.isfinite(median_residual).all():
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "invalid_median_residual",
+            local_point_count=local_point_count,
+            min_support=min_support,
+        )
         return None
 
     residual_errors = np.linalg.norm(residuals[:, :2] - median_residual[None, :], axis=1)
     if len(residual_errors) == 0 or not np.isfinite(residual_errors).all():
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "invalid_residual_errors",
+            local_point_count=local_point_count,
+            min_support=min_support,
+        )
         return None
 
-    threshold = float(settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_RESIDUAL_ERROR)
+    threshold = float(
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_RESIDUAL_ERROR
+        if max_residual_error_override is None
+        else max_residual_error_override
+    )
     inlier_mask = residual_errors <= threshold
     inlier_count = int(np.count_nonzero(inlier_mask))
     candidate_count = int(len(residual_errors))
     if inlier_count < min_support:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "too_few_inliers",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            min_support=min_support,
+            max_residual_error=threshold,
+        )
         return None
 
     inlier_ratio = inlier_count / max(1, candidate_count)
-    if inlier_ratio < settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO:
+    min_inlier_ratio = (
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO
+        if min_inlier_ratio_override is None
+        else float(min_inlier_ratio_override)
+    )
+    if inlier_ratio < min_inlier_ratio:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "low_inlier_ratio",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            min_inlier_ratio=float(min_inlier_ratio),
+            min_support=min_support,
+        )
         return None
 
     inlier_reference = local_reference[inlier_mask]
@@ -1818,48 +2423,203 @@ def _try_missing_translation_rescue(
         spread = _missing_context_spread_score(inlier_reference, reference_bbox)
         # Translation-only rescue may work with weaker geometry than affine, but
         # points collapsed into a line/corner are still too risky.
-        if spread < max(0.07, settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_SPREAD * 0.55):
+        min_spread = (
+            max(0.07, settings.INSPECTION_MISSING_POLYGON_CONTEXT_MIN_SPREAD * 0.55)
+            if min_context_spread_override is None
+            else float(min_context_spread_override)
+        )
+        if spread < min_spread:
+            _record_missing_translation_rescue_reject(
+                reject_debug,
+                "low_context_spread",
+                local_point_count=local_point_count,
+                candidate_count=candidate_count,
+                inlier_count=inlier_count,
+                inlier_ratio=float(inlier_ratio),
+                context_spread=float(spread),
+                min_context_spread=float(min_spread),
+                min_support=min_support,
+            )
             return None
+    else:
+        spread = 0.0
 
     median_error = float(np.median(residual_errors[inlier_mask]))
     if median_error > threshold:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "high_median_error",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            max_residual_error=threshold,
+            min_support=min_support,
+        )
         return None
 
     shift_x = float(median_residual[0])
     shift_y = float(median_residual[1])
     shift_length = float(np.hypot(shift_x, shift_y))
     shift_factor = shift_length / max(1.0, _bbox_diag(global_bbox))
-    if shift_factor > settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR:
+    max_shift_factor = (
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR
+        if max_shift_factor_override is None
+        else float(max_shift_factor_override)
+    )
+    if shift_factor > max_shift_factor:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "large_shift",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            max_shift_factor=float(max_shift_factor),
+            min_support=min_support,
+        )
         return None
 
     polygon = _translate_polygon(global_polygon, dx=shift_x, dy=shift_y)
     if len(polygon) < 3:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "invalid_polygon",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            min_support=min_support,
+        )
         return None
 
     bbox = _bbox_from_polygon(polygon)
     if bbox is None:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "invalid_bbox",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            min_support=min_support,
+        )
         return None
     if projection_data.frame_size is not None and not _is_visible_in_frame(
         bbox,
         projection_data.frame_size,
         min_visible_fraction=0.05,
     ):
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "outside_frame",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            min_support=min_support,
+        )
         return None
 
     # Translation rescue must remain close to the conservative global expected
     # zone and must not change object scale/shape.
-    if _bbox_area_similarity(bbox, global_bbox) < 0.92:
+    area_score = _bbox_area_similarity(bbox, global_bbox)
+    if area_score < 0.92:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "area_changed",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            area_score=float(area_score),
+            min_support=min_support,
+        )
         return None
-    if _bbox_center_distance_factor(bbox, global_bbox) > max(
-        0.05,
-        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MAX_SHIFT_FACTOR,
-    ):
+    center_factor = _bbox_center_distance_factor(bbox, global_bbox)
+    if center_factor > max(0.05, max_shift_factor):
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "center_far_from_global",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            center_factor=float(center_factor),
+            max_shift_factor=float(max_shift_factor),
+            min_support=min_support,
+        )
         return None
 
     search_containment = _bbox_containment(bbox, slot.search_bbox)
-    if search_containment < 0.05:
+    min_search_containment = (
+        0.05
+        if min_search_containment_override is None
+        else float(min_search_containment_override)
+    )
+    if search_containment < min_search_containment:
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "low_search_containment",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            search_containment=float(search_containment),
+            min_search_containment=float(min_search_containment),
+            min_support=min_support,
+        )
         return None
 
+    if max_other_overlap is not None and _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=bbox,
+        all_expected=all_expected,
+        max_overlap=float(max_other_overlap),
+    ):
+        _record_missing_translation_rescue_reject(
+            reject_debug,
+            "bad_overlap",
+            local_point_count=local_point_count,
+            candidate_count=candidate_count,
+            inlier_count=inlier_count,
+            inlier_ratio=float(inlier_ratio),
+            median_error=float(median_error),
+            shift_factor=float(shift_factor),
+            search_containment=float(search_containment),
+            max_other_overlap=float(max_other_overlap),
+            min_support=min_support,
+        )
+        return None
+
+    _record_missing_translation_rescue_reject(
+        reject_debug,
+        "accepted",
+        local_point_count=local_point_count,
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        median_error=float(median_error),
+        shift_factor=float(shift_factor),
+        context_spread=float(spread),
+        search_containment=float(search_containment),
+        min_support=min_support,
+    )
     return _MissingTranslationRescue(
         polygon=polygon,
         bbox=bbox,
@@ -1871,6 +2631,135 @@ def _try_missing_translation_rescue(
         shift_y=shift_y,
         shift_factor=float(shift_factor),
     )
+
+
+def _try_missing_global_fallback_translation_rescue(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    global_polygon: list[list[float]],
+    global_bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None = None,
+    debug: dict[str, Any] | None = None,
+) -> _MissingTranslationRescue | None:
+    diagnostics_enabled = (
+        settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_DIAGNOSTICS_ENABLED
+        and debug is not None
+    )
+    rescue_debug: dict[str, Any] = {}
+
+    if not settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_ENABLED:
+        _record_missing_translation_rescue_reject(
+            rescue_debug,
+            "global_translation_rescue_disabled",
+        )
+        if diagnostics_enabled:
+            _merge_global_translation_rescue_debug(
+                debug,
+                rescue_debug,
+                accepted=False,
+                slot=slot,
+            )
+        return None
+    if slot is None or projection_data is None:
+        _record_missing_translation_rescue_reject(
+            rescue_debug,
+            "no_slot_or_projection_data",
+        )
+        if diagnostics_enabled:
+            _merge_global_translation_rescue_debug(
+                debug,
+                rescue_debug,
+                accepted=False,
+                slot=slot,
+            )
+        return None
+
+    rescue = _try_missing_translation_rescue(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        global_polygon=global_polygon,
+        global_bbox=global_bbox,
+        all_expected=all_expected,
+        min_support_override=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_SUPPORT,
+        min_inlier_ratio_override=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_INLIER_RATIO,
+        max_residual_error_override=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_RESIDUAL_ERROR,
+        max_shift_factor_override=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_SHIFT_FACTOR,
+        min_context_spread_override=0.055,
+        min_search_containment_override=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_SEARCH_CONTAINMENT,
+        max_other_overlap=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_OTHER_OVERLAP,
+        reject_debug=rescue_debug if diagnostics_enabled else None,
+    )
+    if rescue is None:
+        if diagnostics_enabled:
+            _merge_global_translation_rescue_debug(
+                debug,
+                rescue_debug or {"reject_reason": "translation_rescue_rejected"},
+                accepted=False,
+                slot=slot,
+            )
+        return None
+
+    # The global fallback branch is entered only when adaptive local and global
+    # geometry disagree.  This rescue is allowed to replace the unstable global
+    # polygon only if the translated global polygon lands back near the adaptive
+    # expected slot.  Otherwise it is just another global-level guess.
+    local_area_score = _bbox_area_similarity(rescue.bbox, expected_item.bbox)
+    rescue_debug["local_area_score"] = _round_debug(local_area_score)
+    if (
+        local_area_score
+        < settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_LOCAL_AREA_SCORE
+    ):
+        _record_missing_translation_rescue_reject(
+            rescue_debug,
+            "local_area_score_low",
+            local_area_score=float(local_area_score),
+            min_local_area_score=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MIN_LOCAL_AREA_SCORE,
+        )
+        if diagnostics_enabled:
+            _merge_global_translation_rescue_debug(
+                debug,
+                rescue_debug,
+                accepted=False,
+                slot=slot,
+            )
+        return None
+
+    local_center_factor = _bbox_center_distance_factor(rescue.bbox, expected_item.bbox)
+    rescue_debug["local_center_factor"] = _round_debug(local_center_factor)
+    if (
+        local_center_factor
+        > settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_LOCAL_CENTER_FACTOR
+    ):
+        _record_missing_translation_rescue_reject(
+            rescue_debug,
+            "local_center_factor_high",
+            local_center_factor=float(local_center_factor),
+            max_local_center_factor=settings.INSPECTION_MISSING_GLOBAL_FALLBACK_TRANSLATION_RESCUE_MAX_LOCAL_CENTER_FACTOR,
+        )
+        if diagnostics_enabled:
+            _merge_global_translation_rescue_debug(
+                debug,
+                rescue_debug,
+                accepted=False,
+                slot=slot,
+            )
+        return None
+
+    rescue.source_counts = {
+        "global_fallback_translation_rescue": rescue.inlier_count,
+        "global_fallback_translation_candidates": rescue.candidate_count,
+    }
+    if diagnostics_enabled:
+        _merge_global_translation_rescue_debug(
+            debug,
+            rescue_debug,
+            accepted=True,
+            slot=slot,
+        )
+    return rescue
 
 
 def _try_missing_scene_translation_rescue(
@@ -2077,6 +2966,7 @@ def _try_missing_anchor_release(
     all_expected: list[_ProjectedExpected] | None = None,
     all_slots: dict[int, _ExpectedSlot] | None = None,
     trusted_anchors: list[_TrustedAnchor] | None = None,
+    trusted_anchor_build_debug: dict[str, Any] | None = None,
     reject_debug: dict[str, Any] | None = None,
 ) -> _MissingTranslationRescue | None:
     """Release a hidden slot only through a local consensus of trusted anchors.
@@ -2094,6 +2984,75 @@ def _try_missing_anchor_release(
         attempted=True,
         total_anchors=len(trusted_anchors or []),
     )
+    if trusted_anchor_build_debug:
+        _update_anchor_release_debug(
+            reject_debug,
+            build_expected_count=trusted_anchor_build_debug.get(
+                "expected_count",
+                0,
+            ),
+            build_attempt_count=trusted_anchor_build_debug.get(
+                "attempt_count",
+                0,
+            ),
+            build_built_count=trusted_anchor_build_debug.get(
+                "built_count",
+                0,
+            ),
+            build_source_counts=dict(
+                trusted_anchor_build_debug.get("source_counts", {})
+            ),
+            build_reject_counts=dict(
+                trusted_anchor_build_debug.get("reject_counts", {})
+            ),
+            build_probe_counts=dict(
+                trusted_anchor_build_debug.get("probe_counts", {})
+            ),
+            runtime_snapshot_label=trusted_anchor_build_debug.get(
+                "runtime_snapshot_label",
+                "",
+            ),
+            runtime_current_expected_index=trusted_anchor_build_debug.get(
+                "runtime_current_expected_index",
+                None,
+            ),
+            runtime_trusted_anchor_count=trusted_anchor_build_debug.get(
+                "runtime_trusted_anchor_count",
+                len(trusted_anchors or []),
+            ),
+            runtime_trusted_anchor_source_counts=dict(
+                trusted_anchor_build_debug.get("runtime_trusted_anchor_source_counts", {})
+            ),
+            runtime_anchor_before_current_count=trusted_anchor_build_debug.get(
+                "runtime_anchor_before_current_count",
+                0,
+            ),
+            runtime_anchor_after_current_count=trusted_anchor_build_debug.get(
+                "runtime_anchor_after_current_count",
+                0,
+            ),
+            runtime_processed_expected_count=trusted_anchor_build_debug.get(
+                "runtime_processed_expected_count",
+                0,
+            ),
+            runtime_future_expected_count=trusted_anchor_build_debug.get(
+                "runtime_future_expected_count",
+                0,
+            ),
+            runtime_built_count=trusted_anchor_build_debug.get(
+                "runtime_built_count",
+                0,
+            ),
+            runtime_source_counts=dict(
+                trusted_anchor_build_debug.get("runtime_source_counts", {})
+            ),
+            runtime_reject_counts=dict(
+                trusted_anchor_build_debug.get("runtime_reject_counts", {})
+            ),
+            runtime_probe_counts=dict(
+                trusted_anchor_build_debug.get("runtime_probe_counts", {})
+            ),
+        )
 
     if not settings.INSPECTION_MISSING_ANCHOR_RELEASE_ENABLED:
         _set_anchor_release_reject(reject_debug, "anchor_release_rejected_disabled")
@@ -2176,9 +3135,26 @@ def _try_missing_anchor_release(
         _set_anchor_release_reject(reject_debug, "anchor_release_rejected_no_candidates")
         return None
 
+    strong_candidates = [
+        item
+        for item in all_candidates
+        if item[0].source != "weak_local_global_slot_hint"
+    ]
+    candidate_pool = (
+        strong_candidates
+        if len(strong_candidates) >= min_anchors
+        else all_candidates
+    )
+    _update_anchor_release_debug(
+        reject_debug,
+        strong_candidate_count=len(strong_candidates),
+        weak_candidate_count=len(all_candidates) - len(strong_candidates),
+        weak_candidate_pool_used=(candidate_pool is all_candidates),
+    )
+
     neighbor_candidates = [
         (anchor, residual, weight)
-        for anchor, residual, weight, distance in all_candidates
+        for anchor, residual, weight, distance in candidate_pool
         if distance <= max_neighbor_distance
     ]
     _update_anchor_release_debug(
@@ -2191,7 +3167,7 @@ def _try_missing_anchor_release(
     else:
         candidates = [
             (anchor, residual, weight)
-            for anchor, residual, weight, _ in all_candidates
+            for anchor, residual, weight, _ in candidate_pool
         ]
 
     _update_anchor_release_debug(
@@ -2244,6 +3220,47 @@ def _try_missing_anchor_release(
         for candidate, is_inlier in zip(candidates, consensus.inlier_mask, strict=True)
         if bool(is_inlier)
     ]
+    source_counts = _trusted_anchor_source_counts(inlier_anchors)
+    weak_slot_anchor_count = sum(
+        1 for anchor in inlier_anchors if anchor.source == "weak_local_global_slot_hint"
+    )
+    weak_slot_only = weak_slot_anchor_count > 0 and weak_slot_anchor_count == len(inlier_anchors)
+    if weak_slot_only:
+        if (
+            weak_slot_anchor_count
+            < settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_INLIERS
+        ):
+            _set_anchor_release_reject(
+                reject_debug,
+                "anchor_release_rejected_weak_slot_guard",
+                weak_slot_anchors=weak_slot_anchor_count,
+            )
+            return None
+        if (
+            consensus.inlier_ratio
+            < settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_INLIER_RATIO
+        ):
+            _set_anchor_release_reject(
+                reject_debug,
+                "anchor_release_rejected_weak_slot_guard",
+                weak_slot_inlier_ratio=_round_debug(consensus.inlier_ratio),
+            )
+            return None
+        if (
+            consensus.dispersion
+            > settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_DISPERSION_FACTOR
+        ):
+            _set_anchor_release_reject(
+                reject_debug,
+                "anchor_release_rejected_weak_slot_guard",
+                weak_slot_dispersion=_round_debug(consensus.dispersion),
+            )
+            return None
+    _update_anchor_release_debug(
+        reject_debug,
+        weak_slot_anchor_count=weak_slot_anchor_count,
+        weak_slot_only=weak_slot_only,
+    )
     source_counts = _trusted_anchor_source_counts(inlier_anchors)
     single_anchor = consensus.inlier_count == 1
     median_error = consensus.median_error
@@ -2385,6 +3402,7 @@ def _try_missing_anchor_release(
         all_expected=all_expected,
         trusted_anchors=trusted_anchors,
         consensus=consensus,
+        inlier_anchors=inlier_anchors,
         single_anchor=single_anchor,
         shift_factor=shift_factor,
     )
@@ -2571,24 +3589,181 @@ def _set_anchor_release_reject(
     _update_anchor_release_debug(reject_debug, **fields)
 
 
+def _anchor_release_order_diagnostics_enabled() -> bool:
+    return (
+        bool(settings.INSPECTION_MISSING_ANCHOR_RELEASE_DEBUG)
+        and bool(settings.INSPECTION_MISSING_ANCHOR_RELEASE_ORDER_DIAGNOSTICS_ENABLED)
+    )
+
+
+def _anchor_build_debug_counter(
+    build_debug: dict[str, Any] | None,
+    section: str,
+    key: str,
+    amount: int = 1,
+) -> None:
+    if build_debug is None or not _anchor_release_order_diagnostics_enabled():
+        return
+    bucket = build_debug.setdefault(section, {})
+    if not isinstance(bucket, dict):
+        return
+    bucket[key] = int(bucket.get(key, 0)) + int(amount)
+
+
+def _anchor_build_debug_value(
+    build_debug: dict[str, Any] | None,
+    key: str,
+    value: Any,
+) -> None:
+    if build_debug is None or not _anchor_release_order_diagnostics_enabled():
+        return
+    build_debug[key] = value
+
+
+def _record_runtime_anchor_source(
+    build_debug: dict[str, Any] | None,
+    *,
+    anchor: _TrustedAnchor | None,
+    probe: str,
+    reject: str,
+) -> None:
+    if build_debug is None or not _anchor_release_order_diagnostics_enabled():
+        return
+    _anchor_build_debug_counter(build_debug, "runtime_probe_counts", probe)
+    if anchor is None:
+        _anchor_build_debug_counter(build_debug, "runtime_reject_counts", reject)
+        return
+    _anchor_build_debug_counter(build_debug, "runtime_source_counts", anchor.source)
+    _anchor_build_debug_value(
+        build_debug,
+        "runtime_built_count",
+        int(build_debug.get("runtime_built_count", 0)) + 1,
+    )
+
+
+def _record_anchor_release_order_snapshot(
+    build_debug: dict[str, Any] | None,
+    *,
+    trusted_anchors: list[_TrustedAnchor],
+    expected_item: _ProjectedExpected | None,
+    all_expected: list[_ProjectedExpected],
+    processed_expected_indices: set[int],
+    label: str,
+) -> None:
+    if build_debug is None or not _anchor_release_order_diagnostics_enabled():
+        return
+
+    current_index = expected_item.index if expected_item is not None else None
+    source_counts = _trusted_anchor_source_counts(trusted_anchors)
+    before_current = 0
+    after_current = 0
+    if current_index is not None:
+        before_current = sum(1 for anchor in trusted_anchors if anchor.expected_index < current_index)
+        after_current = sum(1 for anchor in trusted_anchors if anchor.expected_index > current_index)
+
+    _anchor_build_debug_value(build_debug, "runtime_snapshot_label", label)
+    _anchor_build_debug_value(build_debug, "runtime_current_expected_index", current_index)
+    _anchor_build_debug_value(build_debug, "runtime_trusted_anchor_count", len(trusted_anchors))
+    _anchor_build_debug_value(build_debug, "runtime_trusted_anchor_source_counts", source_counts)
+    _anchor_build_debug_value(build_debug, "runtime_anchor_before_current_count", before_current)
+    _anchor_build_debug_value(build_debug, "runtime_anchor_after_current_count", after_current)
+    _anchor_build_debug_value(build_debug, "runtime_processed_expected_count", len(processed_expected_indices))
+    _anchor_build_debug_value(
+        build_debug,
+        "runtime_future_expected_count",
+        max(0, len(all_expected) - len(processed_expected_indices) - (1 if current_index is not None else 0)),
+    )
+
+
+def _finalize_anchor_release_order_diagnostics(
+    expected_index_to_match: dict[int, SegmentMatch],
+    *,
+    trusted_anchors: list[_TrustedAnchor],
+) -> None:
+    if not _anchor_release_order_diagnostics_enabled():
+        return
+
+    final_source_counts = _trusted_anchor_source_counts(trusted_anchors)
+    resolved_source_counts = {
+        source: count
+        for source, count in final_source_counts.items()
+        if source.startswith("resolved_")
+    }
+    for expected_index, match in expected_index_to_match.items():
+        if match.debug is None:
+            match.debug = {}
+        before_current = sum(
+            1 for anchor in trusted_anchors if anchor.expected_index < expected_index
+        )
+        after_current = sum(
+            1 for anchor in trusted_anchors if anchor.expected_index > expected_index
+        )
+        _update_anchor_release_debug(
+            match.debug,
+            final_trusted_anchor_count=len(trusted_anchors),
+            final_trusted_anchor_source_counts=final_source_counts,
+            final_anchor_before_current_count=before_current,
+            final_anchor_after_current_count=after_current,
+            final_resolved_anchor_count=sum(resolved_source_counts.values()),
+            final_resolved_anchor_source_counts=resolved_source_counts,
+        )
+
+
+def _missing_debug_projection_name(debug: dict[str, Any] | None) -> str:
+    if not debug:
+        return ""
+    value = debug.get("missing_polygon_projection") or debug.get("projection")
+    return str(value or "")
+
+
 def _build_trusted_missing_anchors(
     all_expected: list[_ProjectedExpected],
     *,
     slot_by_index: dict[int, _ExpectedSlot],
     projection_data: LocalProjectionData | None,
+    build_debug: dict[str, Any] | None = None,
 ) -> list[_TrustedAnchor]:
+    diagnostics_enabled = (
+        settings.INSPECTION_MISSING_ANCHOR_RELEASE_DEBUG
+        and settings.INSPECTION_MISSING_ANCHOR_RELEASE_SOURCE_DIAGNOSTICS_ENABLED
+    )
+
+    def debug_counter(section: str, key: str, amount: int = 1) -> None:
+        if build_debug is None or not diagnostics_enabled:
+            return
+        bucket = build_debug.setdefault(section, {})
+        if not isinstance(bucket, dict):
+            return
+        bucket[key] = int(bucket.get(key, 0)) + int(amount)
+
+    def debug_value(key: str, value: Any) -> None:
+        if build_debug is None or not diagnostics_enabled:
+            return
+        build_debug[key] = value
+
+    debug_value("expected_count", len(all_expected))
+
     if not settings.INSPECTION_MISSING_ANCHOR_RELEASE_ENABLED:
+        debug_counter("reject_counts", "anchor_release_disabled")
         return []
     if projection_data is None or projection_data.global_homography is None:
+        debug_counter("reject_counts", "no_global_homography")
         return []
     if len(all_expected) <= 1:
+        debug_counter("reject_counts", "not_multi_object")
         return []
 
     anchors: list[_TrustedAnchor] = []
 
     for expected_item in all_expected:
+        if build_debug is not None:
+            debug_value(
+                "attempt_count",
+                int(build_debug.get("attempt_count", 0)) + 1,
+            )
         slot = slot_by_index.get(expected_item.index)
         if slot is None:
+            debug_counter("reject_counts", "no_slot")
             continue
 
         global_projection = _missing_global_projection(
@@ -2596,6 +3771,7 @@ def _build_trusted_missing_anchors(
             projection_data=projection_data,
         )
         if global_projection is None:
+            debug_counter("reject_counts", "no_global_projection")
             continue
         global_polygon, global_bbox = global_projection
 
@@ -2608,14 +3784,24 @@ def _build_trusted_missing_anchors(
             all_expected=all_expected,
         )
         if rescue is not None:
-            anchor = _trusted_anchor_from_translation_rescue(
-                expected_item,
-                rescue=rescue,
-                global_bbox=global_bbox,
+            debug_counter("probe_counts", "translation_rescue_available")
+            reject_reason = _trusted_anchor_translation_reject_reason(
+                rescue,
             )
-            if anchor is not None:
-                anchors.append(anchor)
-                continue
+            if reject_reason is None:
+                anchor = _trusted_anchor_from_translation_rescue(
+                    expected_item,
+                    rescue=rescue,
+                    global_bbox=global_bbox,
+                )
+                if anchor is not None:
+                    anchors.append(anchor)
+                    debug_counter("source_counts", anchor.source)
+                    continue
+            else:
+                debug_counter("reject_counts", f"translation_{reject_reason}")
+        else:
+            debug_counter("reject_counts", "translation_no_rescue")
 
         refinement = _try_missing_polygon_refinement(
             expected_item,
@@ -2624,24 +3810,216 @@ def _build_trusted_missing_anchors(
             all_expected=all_expected,
         )
         if refinement is not None:
-            anchor = _trusted_anchor_from_affine_refinement(
-                expected_item,
-                refinement=refinement,
-                global_bbox=global_bbox,
-            )
-            if anchor is not None:
-                anchors.append(anchor)
-                continue
+            debug_counter("probe_counts", "context_feature_affine_available")
+            reject_reason = _trusted_anchor_affine_reject_reason(refinement, global_bbox)
+            if reject_reason is None:
+                anchor = _trusted_anchor_from_affine_refinement(
+                    expected_item,
+                    refinement=refinement,
+                    global_bbox=global_bbox,
+                )
+                if anchor is not None:
+                    anchors.append(anchor)
+                    debug_counter("source_counts", anchor.source)
+                    continue
+            else:
+                debug_counter("reject_counts", f"affine_{reject_reason}")
+        else:
+            debug_counter("reject_counts", "affine_no_refinement")
 
-        anchor = _trusted_anchor_from_local_global_slot(
+        local_reject_reason = _trusted_anchor_local_global_reject_reason(
             expected_item,
             slot=slot,
             global_bbox=global_bbox,
         )
-        if anchor is not None:
-            anchors.append(anchor)
+        if local_reject_reason is None:
+            anchor = _trusted_anchor_from_local_global_slot(
+                expected_item,
+                slot=slot,
+                global_bbox=global_bbox,
+            )
+            if anchor is not None:
+                anchors.append(anchor)
+                debug_counter("source_counts", anchor.source)
+        else:
+            debug_counter("reject_counts", f"local_global_{local_reject_reason}")
+            weak_reject_reason = _trusted_anchor_weak_local_global_reject_reason(
+                expected_item,
+                slot=slot,
+                global_bbox=global_bbox,
+            )
+            if weak_reject_reason is None:
+                anchor = _trusted_anchor_from_weak_local_global_slot(
+                    expected_item,
+                    slot=slot,
+                    global_bbox=global_bbox,
+                )
+                if anchor is not None:
+                    anchors.append(anchor)
+                    debug_counter("source_counts", anchor.source)
+            else:
+                debug_counter("reject_counts", f"weak_local_global_{weak_reject_reason}")
 
+    debug_value("built_count", len(anchors))
     return anchors
+
+
+
+def _trusted_anchor_translation_reject_reason(
+    rescue: _MissingTranslationRescue,
+) -> str | None:
+    max_anchor_error = float(settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR)
+    min_anchor_ratio = max(
+        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO,
+        settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO,
+    )
+
+    if rescue.inlier_count < settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT:
+        return "low_support"
+    if rescue.inlier_ratio < min_anchor_ratio:
+        return "low_inlier_ratio"
+    if rescue.median_error > max_anchor_error:
+        return "high_median_error"
+    if rescue.shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+        return "large_shift"
+
+    residual = np.asarray([rescue.shift_x, rescue.shift_y], dtype=np.float32)
+    if not np.isfinite(residual).all():
+        return "bad_residual"
+    return None
+
+
+def _trusted_anchor_affine_reject_reason(
+    refinement: _MissingPolygonRefinement,
+    global_bbox: BBox,
+) -> str | None:
+    max_anchor_error = float(settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR)
+    min_support = max(6, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
+    min_ratio = max(0.55, settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO)
+
+    if refinement.inlier_count < min_support:
+        return "low_support"
+    if refinement.inlier_ratio < min_ratio:
+        return "low_inlier_ratio"
+    if refinement.median_error > max_anchor_error:
+        return "high_median_error"
+    if refinement.area_score < 0.46:
+        return "low_area_score"
+    if refinement.center_drift_factor > 0.70:
+        return "large_center_drift"
+
+    residual = np.asarray(
+        [
+            _bbox_center(refinement.bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(refinement.bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    if not np.isfinite(residual).all():
+        return "bad_residual"
+
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+        return "large_shift"
+
+    local_global_area_score = _bbox_area_similarity(refinement.bbox, global_bbox)
+    if local_global_area_score < 0.30:
+        return "bad_local_global_area"
+    return None
+
+
+def _trusted_anchor_local_global_reject_reason(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot,
+    global_bbox: BBox,
+) -> str | None:
+    min_support = max(4, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
+    if slot.feature_support < min_support:
+        return "low_support"
+
+    feature_ratio = slot.feature_support / max(1, slot.feature_total)
+    if feature_ratio < 0.10:
+        return "low_feature_ratio"
+
+    local_global_area_score = _bbox_area_similarity(expected_item.bbox, global_bbox)
+    local_global_center_factor = _bbox_center_distance_factor(
+        expected_item.bbox,
+        global_bbox,
+    )
+    if local_global_area_score < 0.55:
+        return "bad_area"
+    if local_global_center_factor > 0.65:
+        return "large_center_drift"
+
+    residual = np.asarray(
+        [
+            _bbox_center(expected_item.bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(expected_item.bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    if not np.isfinite(residual).all():
+        return "bad_residual"
+
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+        return "large_shift"
+    return None
+
+
+
+
+def _trusted_anchor_weak_local_global_reject_reason(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot,
+    global_bbox: BBox,
+) -> str | None:
+    if not settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_HINT_ENABLED:
+        return "disabled"
+
+    min_support = max(
+        1,
+        int(settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_FEATURE_SUPPORT),
+    )
+    if slot.feature_support < min_support:
+        return "low_support"
+
+    feature_ratio = slot.feature_support / max(1, slot.feature_total)
+    if feature_ratio < settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_FEATURE_RATIO:
+        return "low_feature_ratio"
+
+    local_global_area_score = _bbox_area_similarity(expected_item.bbox, global_bbox)
+    local_global_center_factor = _bbox_center_distance_factor(
+        expected_item.bbox,
+        global_bbox,
+    )
+    if (
+        local_global_area_score
+        < settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MIN_AREA_SCORE
+    ):
+        return "bad_area"
+    if (
+        local_global_center_factor
+        > settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_CENTER_FACTOR
+    ):
+        return "large_center_drift"
+
+    residual = np.asarray(
+        [
+            _bbox_center(expected_item.bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(expected_item.bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    if not np.isfinite(residual).all():
+        return "bad_residual"
+
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_WEAK_SLOT_MAX_SHIFT_FACTOR:
+        return "large_shift"
+    return None
 
 
 def _trusted_anchor_from_translation_rescue(
@@ -2650,24 +4028,10 @@ def _trusted_anchor_from_translation_rescue(
     rescue: _MissingTranslationRescue,
     global_bbox: BBox,
 ) -> _TrustedAnchor | None:
-    max_anchor_error = float(settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR)
-    min_anchor_ratio = max(
-        settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_INLIER_RATIO,
-        settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO,
-    )
-
-    if rescue.inlier_count < settings.INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT:
-        return None
-    if rescue.inlier_ratio < min_anchor_ratio:
-        return None
-    if rescue.median_error > max_anchor_error:
-        return None
-    if rescue.shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+    if _trusted_anchor_translation_reject_reason(rescue) is not None:
         return None
 
     residual = np.asarray([rescue.shift_x, rescue.shift_y], dtype=np.float32)
-    if not np.isfinite(residual).all():
-        return None
 
     support_weight = float(rescue.inlier_count) / max(1.0, float(rescue.candidate_count))
     error_weight = 1.0 / max(1.0, float(rescue.median_error))
@@ -2693,19 +4057,7 @@ def _trusted_anchor_from_affine_refinement(
     refinement: _MissingPolygonRefinement,
     global_bbox: BBox,
 ) -> _TrustedAnchor | None:
-    max_anchor_error = float(settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR)
-    min_support = max(6, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
-    min_ratio = max(0.55, settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO)
-
-    if refinement.inlier_count < min_support:
-        return None
-    if refinement.inlier_ratio < min_ratio:
-        return None
-    if refinement.median_error > max_anchor_error:
-        return None
-    if refinement.area_score < 0.46:
-        return None
-    if refinement.center_drift_factor > 0.70:
+    if _trusted_anchor_affine_reject_reason(refinement, global_bbox) is not None:
         return None
 
     residual = np.asarray(
@@ -2715,16 +4067,8 @@ def _trusted_anchor_from_affine_refinement(
         ],
         dtype=np.float32,
     )
-    if not np.isfinite(residual).all():
-        return None
-
     shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
-    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
-        return None
-
     local_global_area_score = _bbox_area_similarity(refinement.bbox, global_bbox)
-    if local_global_area_score < 0.30:
-        return None
 
     support_weight = refinement.inlier_count / max(1.0, float(refinement.candidate_count))
     geometry_weight = refinement.area_score * max(0.20, local_global_area_score)
@@ -2751,22 +4095,19 @@ def _trusted_anchor_from_local_global_slot(
     slot: _ExpectedSlot,
     global_bbox: BBox,
 ) -> _TrustedAnchor | None:
-    min_support = max(4, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT)
-    if slot.feature_support < min_support:
+    if _trusted_anchor_local_global_reject_reason(
+        expected_item,
+        slot=slot,
+        global_bbox=global_bbox,
+    ) is not None:
         return None
 
     feature_ratio = slot.feature_support / max(1, slot.feature_total)
-    if feature_ratio < 0.10:
-        return None
-
     local_global_area_score = _bbox_area_similarity(expected_item.bbox, global_bbox)
     local_global_center_factor = _bbox_center_distance_factor(
         expected_item.bbox,
         global_bbox,
     )
-    if local_global_area_score < 0.55 or local_global_center_factor > 0.65:
-        return None
-
     residual = np.asarray(
         [
             _bbox_center(expected_item.bbox)[0] - _bbox_center(global_bbox)[0],
@@ -2774,12 +4115,7 @@ def _trusted_anchor_from_local_global_slot(
         ],
         dtype=np.float32,
     )
-    if not np.isfinite(residual).all():
-        return None
-
     shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
-    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
-        return None
 
     error_weight = 1.0 / max(
         1.0,
@@ -2801,11 +4137,277 @@ def _trusted_anchor_from_local_global_slot(
     )
 
 
+
+
+def _trusted_anchor_from_weak_local_global_slot(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot,
+    global_bbox: BBox,
+) -> _TrustedAnchor | None:
+    if _trusted_anchor_weak_local_global_reject_reason(
+        expected_item,
+        slot=slot,
+        global_bbox=global_bbox,
+    ) is not None:
+        return None
+
+    feature_ratio = slot.feature_support / max(1, slot.feature_total)
+    local_global_area_score = _bbox_area_similarity(expected_item.bbox, global_bbox)
+    local_global_center_factor = _bbox_center_distance_factor(
+        expected_item.bbox,
+        global_bbox,
+    )
+    residual = np.asarray(
+        [
+            _bbox_center(expected_item.bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(expected_item.bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    median_error = float(local_global_center_factor * _bbox_diag(global_bbox))
+
+    # This source is deliberately weak: it is never enough as a single anchor and
+    # is accepted only when several weak slot hints agree tightly in consensus.
+    support_weight = min(1.0, slot.feature_support / max(1.0, float(slot.feature_total)))
+    geometry_weight = max(0.02, local_global_area_score)
+    error_weight = 1.0 / max(1.0, median_error)
+
+    return _TrustedAnchor(
+        expected_index=expected_item.index,
+        source="weak_local_global_slot_hint",
+        residual=residual,
+        global_bbox=global_bbox,
+        local_bbox=expected_item.bbox,
+        weight=max(0.005, support_weight * geometry_weight * error_weight),
+        candidate_count=max(1, slot.feature_total),
+        inlier_count=slot.feature_support,
+        inlier_ratio=feature_ratio,
+        median_error=median_error,
+        shift_factor=shift_factor,
+    )
+
+
+
+
+def _trusted_anchor_from_matched_detection(
+    expected_item: _ProjectedExpected,
+    *,
+    detection_item: _DetectionCandidate,
+    match_iou: float,
+    projection_data: LocalProjectionData | None,
+) -> _TrustedAnchor | None:
+    if projection_data is None:
+        return None
+    if match_iou < max(0.55, IOU_MATCH_THRESHOLD):
+        return None
+
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    if global_projection is None:
+        return None
+    _, global_bbox = global_projection
+
+    local_bbox = detection_item.bbox
+    residual = np.asarray(
+        [
+            _bbox_center(local_bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(local_bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    if residual.shape != (2,) or not np.isfinite(residual).all():
+        return None
+
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+        return None
+
+    area_score = _bbox_area_similarity(local_bbox, global_bbox)
+    if area_score < 0.24:
+        return None
+
+    confidence = max(0.0, min(1.0, float(detection_item.detection.confidence or 0.0)))
+    quality = max(0.01, min(1.0, float(match_iou)))
+    return _TrustedAnchor(
+        expected_index=expected_item.index,
+        source="matched_detection",
+        residual=residual,
+        global_bbox=global_bbox,
+        local_bbox=local_bbox,
+        weight=max(0.01, quality * max(0.10, confidence) * max(0.10, area_score)),
+        candidate_count=1,
+        inlier_count=1,
+        inlier_ratio=quality,
+        median_error=max(0.0, (1.0 - quality) * _bbox_diag(global_bbox)),
+        shift_factor=shift_factor,
+    )
+
+
+def _trusted_anchor_from_resolved_projection(
+    expected_item: _ProjectedExpected,
+    *,
+    polygon: list[list[float]] | None,
+    bbox: BBox | None,
+    projection_data: LocalProjectionData | None,
+    debug: dict[str, Any] | None,
+) -> _TrustedAnchor | None:
+    if polygon is None or bbox is None or debug is None or projection_data is None:
+        return None
+
+    projection_name = str(
+        debug.get("missing_polygon_projection")
+        or debug.get("projection")
+        or ""
+    )
+    source_by_projection = {
+        "context_feature_affine_translation_rescue": "resolved_context_translation",
+        "context_feature_affine_scene_translation_rescue": "resolved_context_translation",
+        "expected_slot_context_translation_rescue": "resolved_context_translation",
+        "expected_slot_global_translation_rescue": "resolved_context_translation",
+        "expected_slot_scene_translation_rescue": "resolved_scene_translation",
+        "expected_slot_anchor_release": "resolved_anchor_release",
+        "context_feature_affine": "resolved_context_affine",
+        "context_feature_affine_edge_guarded": "resolved_context_affine",
+    }
+    source = source_by_projection.get(projection_name)
+    if source is None:
+        return None
+
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    if global_projection is None:
+        return None
+    _, global_bbox = global_projection
+
+    residual = np.asarray(
+        [
+            _bbox_center(bbox)[0] - _bbox_center(global_bbox)[0],
+            _bbox_center(bbox)[1] - _bbox_center(global_bbox)[1],
+        ],
+        dtype=np.float32,
+    )
+    if residual.shape != (2,) or not np.isfinite(residual).all():
+        return None
+
+    shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_SHIFT_FACTOR:
+        return None
+
+    area_score = _bbox_area_similarity(bbox, global_bbox)
+    if area_score < 0.24:
+        return None
+
+    candidate_count = _debug_int(debug.get("missing_polygon_candidate_count"), default=1)
+    inlier_count = _debug_int(debug.get("missing_polygon_inliers"), default=1)
+    inlier_ratio = _debug_float(debug.get("missing_polygon_inlier_ratio"), default=1.0)
+    median_error = _debug_float(debug.get("missing_polygon_median_error"), default=0.0)
+
+    if source == "resolved_context_affine":
+        if inlier_count < max(6, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT):
+            return None
+        if inlier_ratio < 0.55:
+            return None
+        if median_error > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR:
+            return None
+        if _debug_float(debug.get("missing_polygon_area_score"), default=1.0) < 0.46:
+            return None
+    elif source == "resolved_anchor_release":
+        if bool(debug.get("missing_polygon_anchor_single", False)):
+            return None
+        if inlier_count < 2:
+            return None
+        if inlier_ratio < 0.70:
+            return None
+        if (
+            _debug_float(debug.get("missing_polygon_anchor_dispersion"), default=0.0)
+            > max(0.08, settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_DISPERSION_FACTOR)
+        ):
+            return None
+    else:
+        if inlier_count < 3:
+            return None
+        if inlier_ratio < 0.48:
+            return None
+        if median_error > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR:
+            return None
+
+    support_weight = inlier_count / max(1.0, float(candidate_count))
+    error_weight = 1.0 / max(1.0, float(median_error))
+    return _TrustedAnchor(
+        expected_index=expected_item.index,
+        source=source,
+        residual=residual,
+        global_bbox=global_bbox,
+        local_bbox=bbox,
+        weight=max(0.01, support_weight * max(0.10, area_score) * error_weight),
+        candidate_count=max(1, candidate_count),
+        inlier_count=max(1, inlier_count),
+        inlier_ratio=max(0.0, min(1.0, float(inlier_ratio))),
+        median_error=max(0.0, float(median_error)),
+        shift_factor=shift_factor,
+    )
+
+
+def _append_or_replace_trusted_anchor(
+    anchors: list[_TrustedAnchor],
+    anchor: _TrustedAnchor | None,
+) -> None:
+    if anchor is None:
+        return
+    for index, existing in enumerate(list(anchors)):
+        if existing.expected_index != anchor.expected_index:
+            continue
+        if _trusted_anchor_source_weight(existing.source) >= _trusted_anchor_source_weight(anchor.source):
+            return
+        anchors[index] = anchor
+        return
+    anchors.append(anchor)
+
+
+def _debug_int(value: Any, *, default: int = 0) -> int:
+    try:
+        if value is None:
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _debug_float(value: Any, *, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        result = float(value)
+    except (TypeError, ValueError):
+        return default
+    return result if np.isfinite(result) else default
+
+
 def _trusted_anchor_source_weight(source: str) -> float:
+    if source == "matched_detection":
+        return 1.15
     if source == "translation_rescue":
         return 1.0
+    if source == "resolved_context_translation":
+        return 0.92
     if source == "context_feature_affine":
         return 0.78
+    if source == "resolved_anchor_release":
+        return 0.72
+    if source == "resolved_context_affine":
+        return 0.66
+    if source == "resolved_scene_translation":
+        return 0.58
+    if source == "local_global_slot_hint":
+        return 0.42
+    if source == "weak_local_global_slot_hint":
+        return 0.18
     return 0.42
 
 
@@ -2822,13 +4424,13 @@ def _anchor_release_allows_single_anchor(
         return False
 
     anchor, residual, _ = candidates[0]
-    if anchor.source == "local_global_slot_hint":
+    if anchor.source in {"local_global_slot_hint", "weak_local_global_slot_hint"}:
         return False
-    if anchor.inlier_count < max(6, settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT):
+    if anchor.inlier_count < settings.INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MIN_INLIERS:
         return False
-    if anchor.inlier_ratio < max(0.58, settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_INLIER_RATIO):
+    if anchor.inlier_ratio < settings.INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MIN_INLIER_RATIO:
         return False
-    if anchor.median_error > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_ANCHOR_ERROR:
+    if anchor.median_error > settings.INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_ANCHOR_ERROR:
         return False
 
     shift_factor = float(np.linalg.norm(residual) / max(1.0, _bbox_diag(global_bbox)))
@@ -3043,6 +4645,218 @@ def _try_missing_multi_consensus_rescue(
         shift_factor=float(shift_factor),
     )
 
+
+
+def _try_missing_hidden_cluster_consensus_rescue(
+    expected_item: _ProjectedExpected,
+    *,
+    projection_data: LocalProjectionData | None,
+    global_polygon: list[list[float]],
+    global_bbox: BBox,
+    fallback_bbox: BBox | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingTranslationRescue | None:
+    """Recover a no-anchor hidden object from a compact hidden-slot cluster.
+
+    Anchor release is still preferred.  This fallback is intentionally weaker
+    and more conservative: it only applies a translation-only correction when
+    multiple neighboring expected slots share the same local-vs-global residual,
+    and the current local slot agrees with that residual.  It never uses a
+    single object as evidence and it never deforms the polygon.
+    """
+
+    if not settings.INSPECTION_MISSING_HIDDEN_CLUSTER_CONSENSUS_ENABLED:
+        return None
+    if projection_data is None or projection_data.global_homography is None:
+        return None
+    if not all_expected or len(all_expected) <= 2:
+        return None
+    if fallback_bbox is None:
+        return None
+
+    min_candidates = max(
+        2,
+        int(settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_CANDIDATES),
+    )
+    min_inliers = max(
+        2,
+        int(settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_INLIERS),
+    )
+    max_shift_factor = min(
+        float(settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_SHIFT_FACTOR),
+        0.42,
+    )
+    max_residual_error = float(
+        settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_RESIDUAL_ERROR
+    )
+
+    current_diag = max(1.0, _bbox_diag(global_bbox))
+    current_global_center = np.asarray(_bbox_center(global_bbox), dtype=np.float32)
+    current_local_center = np.asarray(_bbox_center(fallback_bbox), dtype=np.float32)
+    current_residual = current_local_center - current_global_center
+    if not np.isfinite(current_residual).all():
+        return None
+    current_shift_factor = float(np.linalg.norm(current_residual) / current_diag)
+    if current_shift_factor > max_shift_factor:
+        return None
+
+    residuals: list[np.ndarray] = []
+    weights: list[float] = []
+    min_area_score = float(settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_AREA_SCORE)
+    max_center_factor = float(settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_CENTER_FACTOR)
+
+    for other in all_expected:
+        if other.index == expected_item.index:
+            continue
+
+        other_global = _missing_global_projection(
+            other,
+            projection_data=projection_data,
+        )
+        if other_global is None:
+            continue
+        _, other_global_bbox = other_global
+
+        area_score = _bbox_area_similarity(other.bbox, other_global_bbox)
+        if area_score < min_area_score:
+            continue
+
+        center_factor = _bbox_center_distance_factor(other.bbox, other_global_bbox)
+        if center_factor > max_center_factor:
+            continue
+
+        other_global_center = np.asarray(_bbox_center(other_global_bbox), dtype=np.float32)
+        other_local_center = np.asarray(_bbox_center(other.bbox), dtype=np.float32)
+        residual = other_local_center - other_global_center
+        if not np.isfinite(residual).all():
+            continue
+
+        other_shift_factor = float(
+            np.linalg.norm(residual) / max(1.0, _bbox_diag(other_global_bbox))
+        )
+        if other_shift_factor > max_shift_factor:
+            continue
+
+        distance = float(np.linalg.norm(other_global_center - current_global_center))
+        weight = 1.0 / max(1.0, distance)
+        weight *= max(0.05, area_score)
+        weight *= max(0.05, 1.0 - min(center_factor, 1.0) * 0.35)
+
+        residuals.append(residual.astype(np.float32))
+        weights.append(float(weight))
+    if len(residuals) < min_candidates:
+        return None
+
+    residual_array = np.asarray(residuals, dtype=np.float32)
+    weights_array = np.asarray(weights, dtype=np.float32)
+    if residual_array.ndim != 2 or residual_array.shape[1] != 2:
+        return None
+    if not np.isfinite(residual_array).all():
+        return None
+    if not np.isfinite(weights_array).all() or float(np.sum(weights_array)) <= 0.0:
+        return None
+
+    # Current local/global residual must participate in the same cluster.  It is
+    # not counted as an independent neighbor, but it prevents a distant cluster
+    # from dragging this target to a different group of objects.
+    cluster_seed = np.average(residual_array, axis=0, weights=weights_array).astype(np.float32)
+    if not np.isfinite(cluster_seed).all():
+        return None
+
+    residual_errors = np.linalg.norm(residual_array - cluster_seed[None, :], axis=1)
+    if not np.isfinite(residual_errors).all():
+        return None
+
+    inlier_mask = residual_errors <= max_residual_error
+    inlier_count = int(np.count_nonzero(inlier_mask))
+    candidate_count = int(len(residual_errors))
+    if inlier_count < min_inliers:
+        return None
+
+    inlier_ratio = inlier_count / max(1, candidate_count)
+    if inlier_ratio < settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_INLIER_RATIO:
+        return None
+
+    inlier_residuals = residual_array[inlier_mask]
+    median_shift = np.median(inlier_residuals, axis=0).astype(np.float32)
+    if not np.isfinite(median_shift).all():
+        return None
+
+    inlier_errors = np.linalg.norm(inlier_residuals - median_shift[None, :], axis=1)
+    if len(inlier_errors) == 0 or not np.isfinite(inlier_errors).all():
+        return None
+
+    median_error = float(np.median(inlier_errors))
+    if median_error > max_residual_error:
+        return None
+
+    current_error = float(np.linalg.norm(current_residual - median_shift))
+    if current_error > settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_CURRENT_ERROR:
+        return None
+
+    shift_x = float(median_shift[0])
+    shift_y = float(median_shift[1])
+    shift_factor = float(np.hypot(shift_x, shift_y) / current_diag)
+    if shift_factor > max_shift_factor:
+        return None
+
+    polygon = _translate_polygon(global_polygon, dx=shift_x, dy=shift_y)
+    if len(polygon) < 3:
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+
+    if projection_data.frame_size is not None and not _is_visible_in_frame(
+        bbox,
+        projection_data.frame_size,
+        min_visible_fraction=settings.INSPECTION_MISSING_ANCHOR_RELEASE_MIN_VISIBLE_FRACTION,
+    ):
+        return None
+
+    fallback_area_score = _bbox_area_similarity(bbox, fallback_bbox)
+    if (
+        fallback_area_score
+        < settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MIN_FALLBACK_AREA_SCORE
+    ):
+        return None
+
+    fallback_center_factor = _bbox_center_distance_factor(bbox, fallback_bbox)
+    if (
+        fallback_center_factor
+        > settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_FALLBACK_CENTER_FACTOR
+    ):
+        return None
+
+    # Do not let a cluster consensus draw through another expected object.  This
+    # is intentionally based on projected expected slots, because no YOLO object
+    # has confirmed these hidden candidates yet.
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=bbox,
+        all_expected=all_expected,
+        max_overlap=settings.INSPECTION_MISSING_HIDDEN_CLUSTER_MAX_OTHER_OVERLAP,
+    ):
+        return None
+
+    return _MissingTranslationRescue(
+        polygon=polygon,
+        bbox=bbox,
+        candidate_count=candidate_count,
+        inlier_count=inlier_count,
+        inlier_ratio=float(inlier_ratio),
+        median_error=float(max(median_error, current_error)),
+        shift_x=shift_x,
+        shift_y=shift_y,
+        shift_factor=shift_factor,
+        source_counts={
+            "hidden_cluster_consensus": inlier_count,
+            "hidden_cluster_candidates": candidate_count,
+        },
+        anchor_dispersion=float(median_error),
+        anchor_local_inlier_ratio=float(inlier_ratio),
+    )
 
 def _missing_global_projection(
     expected_item: _ProjectedExpected,
@@ -4386,6 +6200,7 @@ def _anchor_release_overlap_decision(
     all_expected: list[_ProjectedExpected] | None,
     trusted_anchors: list[_TrustedAnchor] | None,
     consensus: _AnchorReleaseConsensus,
+    inlier_anchors: list[_TrustedAnchor],
     single_anchor: bool,
     shift_factor: float,
 ) -> _AnchorOverlapDecision:
@@ -4503,6 +6318,25 @@ def _anchor_release_overlap_decision(
 
     if unresolved_count > 0:
         if single_anchor:
+            target_drift = float(np.linalg.norm(released_center - target_center)) / current_diag
+            if _anchor_release_allows_strict_single_overlap(
+                inlier_anchors,
+                consensus=consensus,
+                shift_factor=shift_factor,
+                unresolved_count=unresolved_count,
+                max_overlap=max_overlap,
+                max_resolved_overlap=max_resolved_overlap,
+                target_drift=target_drift,
+            ):
+                return _AnchorOverlapDecision(
+                    allowed=True,
+                    reason=None,
+                    overlap_count=overlap_count,
+                    unresolved_count=unresolved_count,
+                    strong_anchor_count=strong_anchor_count,
+                    max_overlap=max_overlap,
+                    max_resolved_overlap=max_resolved_overlap,
+                )
             return _AnchorOverlapDecision(
                 allowed=False,
                 reason="anchor_release_rejected_overlap_single_anchor_guard",
@@ -4589,6 +6423,54 @@ def _anchor_release_overlap_decision(
         max_overlap=max_overlap,
         max_resolved_overlap=max_resolved_overlap,
     )
+
+
+def _anchor_release_allows_strict_single_overlap(
+    inlier_anchors: list[_TrustedAnchor],
+    *,
+    consensus: _AnchorReleaseConsensus,
+    shift_factor: float,
+    unresolved_count: int,
+    max_overlap: float,
+    max_resolved_overlap: float,
+    target_drift: float,
+) -> bool:
+    """Allow a single-anchor release through unresolved overlap only in a narrow case.
+
+    V5 removed most false overlap rejects for multi-anchor consensus.  This helper
+    is intentionally stricter: a single anchor can pass only when it is a strong
+    already verified translation/affine anchor, the shift is small, no trusted
+    resolved object is touched, and ownership still belongs to the target slot.
+    """
+
+    if not settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_ENABLED:
+        return False
+    if len(inlier_anchors) != 1:
+        return False
+    if unresolved_count > settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_UNRESOLVED:
+        return False
+    if max_resolved_overlap > settings.INSPECTION_MISSING_ANCHOR_RELEASE_MAX_OTHER_OVERLAP:
+        return False
+    if not np.isfinite(max_overlap):
+        return False
+    if target_drift > settings.INSPECTION_MISSING_ANCHOR_RELEASE_SINGLE_MAX_LOCAL_CENTER_FACTOR:
+        return False
+
+    anchor = inlier_anchors[0]
+    if anchor.source not in {"translation_rescue", "context_feature_affine"}:
+        return False
+    if anchor.inlier_count < settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MIN_INLIERS:
+        return False
+    if anchor.inlier_ratio < settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MIN_INLIER_RATIO:
+        return False
+    if anchor.median_error > settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_ANCHOR_ERROR:
+        return False
+    if consensus.dispersion > settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_DISPERSION_FACTOR:
+        return False
+    if shift_factor > settings.INSPECTION_MISSING_ANCHOR_RELEASE_STRICT_SINGLE_OVERLAP_MAX_SHIFT_FACTOR:
+        return False
+
+    return True
 
 
 def _best_strong_anchor_by_expected_index(
