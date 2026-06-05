@@ -5,11 +5,12 @@ import html
 import json
 import math
 import random
+import shutil
 import sys
 import types
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 from uuid import uuid4
 
 import cv2
@@ -43,7 +44,7 @@ _ensure_optional_storage_import()
 
 from modules.yolo.inspection.domain.alignment import LocalProjectionData, project_polygon
 from modules.yolo.inspection.domain.matcher import match_segments
-from modules.yolo.inspection.domain.types import ExpectedSegment
+from modules.yolo.inspection.domain.types import ExpectedSegment, YoloDetection
 
 CanvasSize = tuple[int, int]
 Point = tuple[float, float]
@@ -194,6 +195,17 @@ class SyntheticObjectMetric:
     major_length_ratio: float | None
     closer_to_distractor: bool
     notes: list[str]
+    hidden_shadow_available: bool = False
+    hidden_shadow_projection: str | None = None
+    hidden_shadow_fallback_source: str | None = None
+    hidden_shadow_reason: str | None = None
+    hidden_shadow_iou: float | None = None
+    hidden_shadow_center_drift_px: float | None = None
+    hidden_shadow_area_ratio: float | None = None
+    hidden_shadow_closer_to_distractor: bool = False
+    hidden_shadow_dangerous: bool = False
+    hidden_shadow_would_pass: bool = False
+    hidden_shadow_notes: list[str] = field(default_factory=list)
     reason_code: str | None = None
     fallback_source: str | None = None
     fallback_reason: str | None = None
@@ -203,6 +215,72 @@ class SyntheticObjectMetric:
     fallback_local_global_center_factor: float | None = None
     fallback_slot_feature_support: int = 0
     fallback_slot_feature_total: int = 0
+    selective_hidden_release: bool = False
+    selective_hidden_release_source: str | None = None
+    selective_hidden_release_hidden_reason: str | None = None
+    selective_hidden_release_rejected: bool = False
+    selective_hidden_release_reject_reason: str | None = None
+    selective_hidden_release_slot_support: int = 0
+    selective_hidden_release_slot_total: int = 0
+    selective_hidden_release_slot_ratio: float | None = None
+    selective_hidden_release_reference_area_score: float | None = None
+    selective_hidden_release_center_factor: float | None = None
+    selective_hidden_release_max_other_overlap: float | None = None
+    projection_candidate_count: int = 0
+    projection_candidate_sources: list[str] = field(default_factory=list)
+    projection_candidate_selected: str | None = None
+    candidate_agreement_available_count: int = 0
+    candidate_agreement_comparison_count: int = 0
+    candidate_agreement_selected: str | None = None
+    candidate_agreement_count: int = 0
+    candidate_agreement_level: str | None = None
+    candidate_agreement_best_iou: float | None = None
+    candidate_agreement_best_area_score: float | None = None
+    candidate_agreement_min_center_factor: float | None = None
+    candidate_agreement_closest_source: str | None = None
+    candidate_confidence: str | None = None
+    candidate_recommended_action: str | None = None
+    candidate_oracle_available_count: int = 0
+    candidate_oracle_pass_count: int = 0
+    candidate_oracle_safe_pass_count: int = 0
+    candidate_oracle_dangerous_count: int = 0
+    candidate_oracle_selected_source: str | None = None
+    candidate_oracle_selected_would_pass: bool = False
+    candidate_oracle_best_source: str | None = None
+    candidate_oracle_best_iou: float | None = None
+    candidate_oracle_best_center_drift_px: float | None = None
+    candidate_oracle_best_area_ratio: float | None = None
+    candidate_oracle_best_would_pass: bool = False
+    candidate_oracle_best_dangerous: bool = False
+    candidate_oracle_has_safe_alternative: bool = False
+    candidate_oracle_safe_gain_source: str | None = None
+    candidate_oracle_failure_mode: str | None = None
+    candidate_oracle_sources: list[str] = field(default_factory=list)
+    crop_verification_attempted: bool = False
+    crop_verification_candidate_count: int = 0
+    crop_verification_source_count: int = 0
+    crop_verification_best_source: str | None = None
+    crop_verification_best_score: float | None = None
+    crop_verification_best_object_matches: int = 0
+    crop_verification_best_ref_containment: float | None = None
+    crop_verification_best_frame_containment: float | None = None
+    crop_verification_best_iou: float | None = None
+    crop_verification_best_center_drift_px: float | None = None
+    crop_verification_best_area_ratio: float | None = None
+    crop_verification_best_would_pass: bool = False
+    crop_verification_best_dangerous: bool = False
+    crop_verification_selected_score: float | None = None
+    crop_verification_selected_object_matches: int = 0
+    crop_verification_object_crop_candidate_available: bool = False
+    crop_verification_object_crop_candidate_source: str | None = None
+    crop_verification_object_crop_candidate_iou: float | None = None
+    crop_verification_object_crop_candidate_center_drift_px: float | None = None
+    crop_verification_object_crop_candidate_would_pass: bool = False
+    crop_verification_object_crop_candidate_dangerous: bool = False
+    crop_verification_object_crop_candidate_inliers: int = 0
+    crop_verification_object_crop_candidate_inlier_ratio: float | None = None
+    crop_verification_assessment: str | None = None
+    crop_verification_sources: list[str] = field(default_factory=list)
     global_translation_rescue_attempted: bool = False
     global_translation_rescue_accepted: bool = False
     global_translation_rescue_reject_reason: str | None = None
@@ -342,6 +420,17 @@ class _SyntheticMultiScene:
 def main() -> int:
     args = _parse_args()
     output_dir = Path(args.out).resolve()
+
+    if args.real_yolo_synthetic:
+        return _run_real_yolo_synthetic_pipeline(args=args, output_dir=output_dir)
+
+    summary = _run_lightglue_synthetic_suite(args=args, output_dir=output_dir)
+    if args.fail_on_fail and summary["failed"] > 0:
+        return 1
+    return 0
+
+
+def _run_lightglue_synthetic_suite(*, args: argparse.Namespace, output_dir: Path) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     images_dir = output_dir / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -381,7 +470,7 @@ def main() -> int:
 
     summary = _build_summary(results)
     _write_json(output_dir / "summary.json", summary)
-    _write_json(output_dir / "results.json", [asdict(result) for result in results])
+    _write_json(output_dir / "results.json", _serialize_results(results))
     _write_html_report(
         output_dir / "report.html",
         results=results,
@@ -396,17 +485,15 @@ def main() -> int:
     )
     print(f"report={output_dir / 'report.html'}")
     print(f"summary={output_dir / 'summary.json'}")
-
-    if args.fail_on_fail and summary["failed"] > 0:
-        return 1
-    return 0
+    return summary
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Synthetic visual stress test for context-ring missing polygon transfer. "
-            "It does not run YOLO; detections are intentionally empty."
+            "Runtime YOLO is not run; report-only detector fixtures estimate where "
+            "YOLO confirmation could help or create false-positive risk."
         )
     )
     parser.add_argument(
@@ -442,6 +529,39 @@ def _parse_args() -> argparse.Namespace:
         "--fail-on-fail",
         action="store_true",
         help="Return exit code 1 when at least one synthetic case fails.",
+    )
+    parser.add_argument(
+        "--real-yolo-synthetic",
+        action="store_true",
+        help=(
+            "Run the real synthetic YOLO-seg loop: first LightGlue baseline, then "
+            "export a synthetic YOLO dataset, train/load a real Ultralytics model, "
+            "run inference and feed real masks back into the inspection matcher."
+        ),
+    )
+    parser.add_argument(
+        "--real-yolo-model-path",
+        default=None,
+        help="Optional trained YOLO-seg .pt file. If omitted, the test trains a model first.",
+    )
+    parser.add_argument(
+        "--real-yolo-base-model",
+        default="yolov8n-seg.pt",
+        help="Base Ultralytics segmentation checkpoint used when training is needed.",
+    )
+    parser.add_argument("--real-yolo-train-cases", type=int, default=160)
+    parser.add_argument("--real-yolo-val-cases", type=int, default=40)
+    parser.add_argument("--real-yolo-test-cases", type=int, default=None)
+    parser.add_argument("--real-yolo-epochs", type=int, default=20)
+    parser.add_argument("--real-yolo-imgsz", type=int, default=640)
+    parser.add_argument("--real-yolo-batch", type=int, default=8)
+    parser.add_argument("--real-yolo-device", default="auto", help="auto, cpu, 0, 0,1, etc.")
+    parser.add_argument("--real-yolo-conf", type=float, default=0.25)
+    parser.add_argument("--real-yolo-iou", type=float, default=0.70)
+    parser.add_argument(
+        "--real-yolo-keep-training-dir",
+        action="store_true",
+        help="Keep previous YOLO training directory instead of deleting it before a new run.",
     )
     return parser.parse_args()
 
@@ -1138,6 +1258,13 @@ def _run_case(
     median_error = _float_or_none(debug.get("missing_polygon_median_error"))
     anchor_release_fields = _anchor_release_metric_fields(debug)
     fallback_fields = _fallback_metric_fields(debug, reason_code=reason_code)
+    hidden_shadow_fields = _hidden_shadow_metric_fields(
+        debug,
+        scene=scene,
+        ground_truth_polygon=scene.ground_truth_polygon,
+        distractor_polygons=scene.distractor_polygons,
+        support=support,
+    )
 
     notes = _case_notes(
         scene=scene,
@@ -1162,6 +1289,26 @@ def _run_case(
         unsafe_hidden=unsafe_hidden,
     )
     safety_passed = not dangerous_projection
+    candidate_oracle_fields = _candidate_oracle_metric_fields(
+        debug,
+        scene=scene,
+        current_projection=projection,
+        current_polygon=predicted_polygon,
+        ground_truth_polygon=scene.ground_truth_polygon,
+        distractor_polygons=scene.distractor_polygons,
+        support=support,
+        current_passed=passed,
+        current_dangerous=dangerous_projection,
+    )
+    crop_verification_fields = _object_crop_verification_metric_fields(
+        debug,
+        scene=scene,
+        current_projection=projection,
+        current_polygon=predicted_polygon,
+        ground_truth_polygon=scene.ground_truth_polygon,
+        distractor_polygons=scene.distractor_polygons,
+        support=support,
+    )
 
     image_path = images_dir / f"case_{index:03d}_{_safe_name(scene.scenario.name)}.png"
     panel = _render_case_panel(
@@ -1249,7 +1396,10 @@ def _run_case(
                     ),
                     closer_to_distractor=closer_to_distractor,
                     notes=notes,
+                    **hidden_shadow_fields,
                     **fallback_fields,
+                    **candidate_oracle_fields,
+                    **crop_verification_fields,
                     **anchor_release_fields,
                 )
             )
@@ -1351,6 +1501,13 @@ def _run_multi_case(
             median_errors.append(median_error)
         anchor_release_fields = _anchor_release_metric_fields(debug)
         fallback_fields = _fallback_metric_fields(debug, reason_code=reason_code)
+        hidden_shadow_fields = _hidden_shadow_metric_fields(
+            debug,
+            scene=_scene_proxy_for_object(scene, obj),
+            ground_truth_polygon=obj.ground_truth_polygon,
+            distractor_polygons=obj.distractor_polygons,
+            support=support,
+        )
 
         used_context_refinement = _projection_uses_context_refinement(projection)
         notes = _case_notes(
@@ -1373,6 +1530,27 @@ def _run_multi_case(
             area_ratio=area_ratio,
             closer_to_distractor=closer_to_distractor,
             unsafe_hidden=unsafe_hidden,
+        )
+        object_scene = _scene_proxy_for_object(scene, obj)
+        candidate_oracle_fields = _candidate_oracle_metric_fields(
+            debug,
+            scene=object_scene,
+            current_projection=projection,
+            current_polygon=predicted_polygon,
+            ground_truth_polygon=obj.ground_truth_polygon,
+            distractor_polygons=obj.distractor_polygons,
+            support=support,
+            current_passed=not notes,
+            current_dangerous=dangerous,
+        )
+        crop_verification_fields = _object_crop_verification_metric_fields(
+            debug,
+            scene=object_scene,
+            current_projection=projection,
+            current_polygon=predicted_polygon,
+            ground_truth_polygon=obj.ground_truth_polygon,
+            distractor_polygons=obj.distractor_polygons,
+            support=support,
         )
         metric = SyntheticObjectMetric(
             name=obj.name,
@@ -1399,7 +1577,10 @@ def _run_multi_case(
             ),
             closer_to_distractor=closer_to_distractor,
             notes=notes,
+            **hidden_shadow_fields,
             **fallback_fields,
+            **candidate_oracle_fields,
+            **crop_verification_fields,
             **anchor_release_fields,
         )
         object_metrics.append(metric)
@@ -1489,6 +1670,758 @@ def _is_dangerous_projection(
     if center_drift > 60.0:
         return True
     return area_ratio < 0.35 or area_ratio > 2.75
+
+
+def _debug_polygon_points(value: Any) -> PolygonPoints | None:
+    if not isinstance(value, list) or len(value) < 3:
+        return None
+    polygon: PolygonPoints = []
+    for point in value:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            return None
+        try:
+            polygon.append([float(point[0]), float(point[1])])
+        except (TypeError, ValueError):
+            return None
+    return polygon if len(polygon) >= 3 else None
+
+
+def _candidate_oracle_projection_name(source: str) -> str:
+    normalized = source
+    if normalized.startswith("current:"):
+        normalized = normalized.removeprefix("current:")
+    if normalized.startswith("selected:"):
+        normalized = normalized.removeprefix("selected:")
+    if normalized.startswith("hidden_shadow:"):
+        normalized = normalized.removeprefix("hidden_shadow:")
+    if normalized.startswith("selective_hidden_release:"):
+        release = normalized.removeprefix("selective_hidden_release:")
+        if release == "global_fallback":
+            return "expected_slot_global_fallback_hidden_release"
+        if release == "expected_slot_agreement":
+            return "expected_slot_agreement_hidden_release"
+        return release
+    mapping = {
+        "global_fallback": "expected_slot_global_fallback",
+        "context_translation_rescue": "expected_slot_context_translation_rescue",
+        "scene_translation_rescue": "expected_slot_scene_translation_rescue",
+        "anchor_release": "expected_slot_anchor_release",
+        "local_displacement": "expected_slot_local_displacement",
+    }
+    return mapping.get(normalized, normalized)
+
+
+def _polygon_from_debug_bbox(value: Any) -> PolygonPoints | None:
+    if not isinstance(value, dict):
+        return None
+    try:
+        x = float(value.get("x"))
+        y = float(value.get("y"))
+        width = float(value.get("w"))
+        height = float(value.get("h"))
+    except (TypeError, ValueError):
+        return None
+    if width <= 0.0 or height <= 0.0:
+        return None
+    return [
+        [x, y],
+        [x + width, y],
+        [x + width, y + height],
+        [x, y + height],
+    ]
+
+
+def _candidate_oracle_empty_fields(mode: str) -> dict[str, Any]:
+    return {
+        "candidate_oracle_available_count": 0,
+        "candidate_oracle_pass_count": 0,
+        "candidate_oracle_safe_pass_count": 0,
+        "candidate_oracle_dangerous_count": 0,
+        "candidate_oracle_selected_source": None,
+        "candidate_oracle_selected_would_pass": False,
+        "candidate_oracle_best_source": None,
+        "candidate_oracle_best_iou": None,
+        "candidate_oracle_best_center_drift_px": None,
+        "candidate_oracle_best_area_ratio": None,
+        "candidate_oracle_best_would_pass": False,
+        "candidate_oracle_best_dangerous": False,
+        "candidate_oracle_has_safe_alternative": False,
+        "candidate_oracle_safe_gain_source": None,
+        "candidate_oracle_failure_mode": mode,
+        "candidate_oracle_sources": [],
+    }
+
+
+def _candidate_oracle_metric_fields(
+    debug: dict[str, Any],
+    *,
+    scene: _SyntheticScene,
+    current_projection: str,
+    current_polygon: PolygonPoints | None,
+    ground_truth_polygon: PolygonPoints,
+    distractor_polygons: Sequence[PolygonPoints],
+    support: int,
+    current_passed: bool,
+    current_dangerous: bool,
+) -> dict[str, Any]:
+    """Evaluate already available candidates against synthetic ground truth.
+
+    This is report-only oracle logic.  It does not change matcher behavior and it
+    does not release hidden candidates.  The goal is to answer whether a failed
+    result had a safe candidate already available, or whether the current
+    LightGlue-only evidence simply has no good option.
+    """
+    candidate_rows: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, tuple[int, ...]]] = set()
+
+    def add_candidate(source: str, polygon: PolygonPoints | None, *, selected: bool = False) -> None:
+        if polygon is None or len(polygon) < 3:
+            return
+        key = (
+            source,
+            tuple(
+                int(round(coord * 10.0))
+                for point in polygon
+                for coord in (float(point[0]), float(point[1]))
+            ),
+        )
+        if key in seen_keys:
+            return
+        seen_keys.add(key)
+        projection = _candidate_oracle_projection_name(source)
+        iou = _polygon_iou(polygon, ground_truth_polygon)
+        center_drift = _polygon_center_distance(polygon, ground_truth_polygon)
+        area_ratio = _polygon_area_ratio(polygon, ground_truth_polygon)
+        axis_angle_error_deg, major_length_ratio = _polygon_axis_delta(
+            polygon,
+            ground_truth_polygon,
+        )
+        nearest_distractor_distance = _nearest_distractor_distance(
+            polygon,
+            distractor_polygons,
+        )
+        closer_to_distractor = (
+            nearest_distractor_distance is not None
+            and nearest_distractor_distance + 1.0 < center_drift
+        )
+        notes = _case_notes(
+            scene=scene,
+            status="missing",
+            iou=iou,
+            center_drift=center_drift,
+            area_ratio=area_ratio,
+            axis_angle_error_deg=axis_angle_error_deg,
+            major_length_ratio=major_length_ratio,
+            closer_to_distractor=closer_to_distractor,
+            support=support,
+            projection=projection,
+            used_context_refinement=_projection_uses_context_refinement(projection),
+            unsafe_hidden=False,
+        )
+        dangerous = _is_dangerous_projection(
+            predicted_polygon=polygon,
+            center_drift=center_drift,
+            area_ratio=area_ratio,
+            closer_to_distractor=closer_to_distractor,
+            unsafe_hidden=False,
+        )
+        candidate_rows.append(
+            {
+                "source": source,
+                "projection": projection,
+                "selected": selected,
+                "iou": float(iou),
+                "center_drift_px": float(center_drift),
+                "area_ratio": float(area_ratio),
+                "would_pass": not notes,
+                "dangerous": bool(dangerous),
+                "safe_pass": bool(not notes and not dangerous),
+            }
+        )
+
+    if current_polygon is not None and current_projection not in {"none", "unsafe_hidden"}:
+        add_candidate(f"current:{current_projection}", current_polygon, selected=True)
+
+    raw_registry = debug.get("missing_polygon_candidate_registry")
+    if isinstance(raw_registry, list):
+        for raw_item in raw_registry:
+            if not isinstance(raw_item, dict) or not bool(raw_item.get("available", True)):
+                continue
+            source = str(raw_item.get("name") or "candidate")
+            polygon = _debug_polygon_points(raw_item.get("polygon"))
+            if polygon is None:
+                polygon = _polygon_from_debug_bbox(raw_item.get("bbox"))
+            add_candidate(source, polygon, selected=bool(raw_item.get("selected")))
+
+    if bool(debug.get("missing_polygon_hidden_shadow_available")):
+        hidden_shadow_polygon = _debug_polygon_points(
+            debug.get("missing_polygon_hidden_shadow_polygon")
+        )
+        hidden_shadow_projection = str(
+            debug.get("missing_polygon_hidden_shadow_projection")
+            or "unsafe_hidden_shadow"
+        )
+        add_candidate(
+            f"hidden_shadow:{hidden_shadow_projection}",
+            hidden_shadow_polygon,
+        )
+
+    if not candidate_rows:
+        return _candidate_oracle_empty_fields(
+            "current_passed" if current_passed else "no_available_candidate"
+        )
+
+    selected_row = next(
+        (row for row in candidate_rows if bool(row.get("selected"))),
+        None,
+    )
+    pass_rows = [row for row in candidate_rows if bool(row["would_pass"])]
+    safe_rows = [row for row in candidate_rows if bool(row["safe_pass"])]
+    dangerous_rows = [row for row in candidate_rows if bool(row["dangerous"])]
+    best_pool = safe_rows or pass_rows or candidate_rows
+    best = max(
+        best_pool,
+        key=lambda row: (
+            1 if bool(row["safe_pass"]) else 0,
+            1 if bool(row["would_pass"]) else 0,
+            0 if bool(row["dangerous"]) else 1,
+            float(row["iou"]),
+            -float(row["center_drift_px"])
+            if math.isfinite(float(row["center_drift_px"]))
+            else -1e9,
+        ),
+    )
+    has_safe_alternative = bool(safe_rows)
+    best_is_safe = bool(best["safe_pass"])
+    selected_would_pass = bool(selected_row and selected_row["would_pass"])
+    safe_gain_source = str(best["source"]) if (not current_passed and best_is_safe) else None
+
+    if current_passed:
+        failure_mode = "current_passed"
+    elif has_safe_alternative:
+        failure_mode = "wrong_selection_has_safe_candidate"
+    elif current_dangerous or dangerous_rows:
+        failure_mode = "no_safe_candidate_dangerous_candidates"
+    else:
+        failure_mode = "no_safe_candidate"
+
+    return {
+        "candidate_oracle_available_count": len(candidate_rows),
+        "candidate_oracle_pass_count": len(pass_rows),
+        "candidate_oracle_safe_pass_count": len(safe_rows),
+        "candidate_oracle_dangerous_count": len(dangerous_rows),
+        "candidate_oracle_selected_source": (
+            str(selected_row["source"]) if selected_row is not None else None
+        ),
+        "candidate_oracle_selected_would_pass": selected_would_pass,
+        "candidate_oracle_best_source": str(best["source"]),
+        "candidate_oracle_best_iou": float(best["iou"]),
+        "candidate_oracle_best_center_drift_px": float(best["center_drift_px"]),
+        "candidate_oracle_best_area_ratio": float(best["area_ratio"]),
+        "candidate_oracle_best_would_pass": bool(best["would_pass"]),
+        "candidate_oracle_best_dangerous": bool(best["dangerous"]),
+        "candidate_oracle_has_safe_alternative": has_safe_alternative,
+        "candidate_oracle_safe_gain_source": safe_gain_source,
+        "candidate_oracle_failure_mode": failure_mode,
+        "candidate_oracle_sources": [str(row["source"]) for row in candidate_rows],
+    }
+
+
+
+def _candidate_polygon_rows_from_debug(
+    debug: dict[str, Any],
+    *,
+    current_projection: str,
+    current_polygon: PolygonPoints | None,
+) -> list[tuple[str, PolygonPoints, bool]]:
+    """Collect candidate polygons that already exist in matcher debug output."""
+    rows: list[tuple[str, PolygonPoints, bool]] = []
+    seen: set[tuple[str, tuple[int, ...]]] = set()
+
+    def add(source: str, polygon: PolygonPoints | None, *, selected: bool = False) -> None:
+        if polygon is None or len(polygon) < 3:
+            return
+        key = (
+            source,
+            tuple(
+                int(round(float(coord) * 10.0))
+                for point in polygon
+                for coord in (float(point[0]), float(point[1]))
+            ),
+        )
+        if key in seen:
+            return
+        seen.add(key)
+        rows.append((source, polygon, selected))
+
+    if current_polygon is not None and current_projection not in {"none", "unsafe_hidden"}:
+        add(f"current:{current_projection}", current_polygon, selected=True)
+
+    raw_registry = debug.get("missing_polygon_candidate_registry")
+    if isinstance(raw_registry, list):
+        for raw_item in raw_registry:
+            if not isinstance(raw_item, dict) or not bool(raw_item.get("available", True)):
+                continue
+            source = str(raw_item.get("name") or "candidate")
+            polygon = _debug_polygon_points(raw_item.get("polygon"))
+            if polygon is None:
+                polygon = _polygon_from_debug_bbox(raw_item.get("bbox"))
+            add(source, polygon, selected=bool(raw_item.get("selected")))
+
+    if bool(debug.get("missing_polygon_hidden_shadow_available")):
+        shadow_polygon = _debug_polygon_points(debug.get("missing_polygon_hidden_shadow_polygon"))
+        shadow_projection = str(
+            debug.get("missing_polygon_hidden_shadow_projection")
+            or "unsafe_hidden_shadow"
+        )
+        add(f"hidden_shadow:{shadow_projection}", shadow_polygon)
+
+    return rows
+
+
+def _points_inside_polygon_mask(points: np.ndarray, polygon: PolygonPoints | None) -> np.ndarray:
+    if points.size == 0:
+        return np.zeros((0,), dtype=bool)
+    if polygon is None or len(polygon) < 3:
+        return np.zeros((len(points),), dtype=bool)
+    polygon_np = np.asarray(polygon, dtype=np.float32)
+    return np.asarray(
+        [_point_inside_polygon((float(point[0]), float(point[1])), polygon_np) for point in points],
+        dtype=bool,
+    )
+
+
+def _transform_polygon_affine(
+    polygon: PolygonPoints,
+    matrix: np.ndarray,
+) -> PolygonPoints | None:
+    try:
+        affine = np.asarray(matrix, dtype=np.float32).reshape(2, 3)
+        points = np.asarray(polygon, dtype=np.float32)
+        ones = np.ones((len(points), 1), dtype=np.float32)
+        transformed = np.hstack([points, ones]) @ affine.T
+        return [[float(x), float(y)] for x, y in transformed]
+    except (TypeError, ValueError):
+        return None
+
+
+def _translate_polygon(
+    polygon: PolygonPoints,
+    shift: np.ndarray,
+) -> PolygonPoints | None:
+    try:
+        dx = float(shift[0])
+        dy = float(shift[1])
+    except (TypeError, ValueError, IndexError):
+        return None
+    return [[float(x) + dx, float(y) + dy] for x, y in polygon]
+
+
+def _object_crop_feature_candidate_rows(scene: _SyntheticScene) -> list[dict[str, Any]]:
+    """Build object-crop candidates from reference-object feature matches.
+
+    These candidates are shadow-only.  In this synthetic missing-object test a
+    strong object-crop match often means "the feature evidence points to a
+    distractor", not that the missing slot should be released.  The stats tell us
+    whether a future real-image object verifier can add evidence, or whether it
+    mainly adds risk.
+    """
+    ref_points = scene.reference_points
+    frame_points = scene.frame_points
+    if len(ref_points) == 0 or len(ref_points) != len(frame_points):
+        return []
+
+    ref_mask = _points_inside_polygon_mask(ref_points, scene.reference_polygon)
+    ref_obj = ref_points[ref_mask].astype(np.float32)
+    frame_obj = frame_points[ref_mask].astype(np.float32)
+    if len(ref_obj) == 0:
+        return []
+
+    rows: list[dict[str, Any]] = []
+
+    def add_row(source: str, polygon: PolygonPoints | None, *, inliers: int, ratio: float | None) -> None:
+        if polygon is None or len(polygon) < 3:
+            return
+        rows.append(
+            {
+                "source": source,
+                "polygon": polygon,
+                "inliers": int(max(0, inliers)),
+                "inlier_ratio": float(ratio) if ratio is not None and math.isfinite(float(ratio)) else None,
+            }
+        )
+
+    if len(ref_obj) >= 3:
+        try:
+            matrix, inlier_mask = cv2.estimateAffinePartial2D(
+                ref_obj,
+                frame_obj,
+                method=cv2.RANSAC,
+                ransacReprojThreshold=8.0,
+                maxIters=500,
+                confidence=0.98,
+            )
+        except cv2.error:
+            matrix, inlier_mask = None, None
+        if matrix is not None:
+            if inlier_mask is not None:
+                inliers = int(np.asarray(inlier_mask).reshape(-1).astype(bool).sum())
+            else:
+                inliers = len(ref_obj)
+            ratio = inliers / max(1, len(ref_obj))
+            add_row(
+                "object_crop_affine",
+                _transform_polygon_affine(scene.reference_polygon, matrix),
+                inliers=inliers,
+                ratio=ratio,
+            )
+
+    if len(ref_obj) >= 1:
+        shifts = frame_obj - ref_obj
+        median_shift = np.median(shifts, axis=0)
+        distances = np.linalg.norm(shifts - median_shift, axis=1)
+        inliers = int(np.sum(distances <= 10.0))
+        ratio = inliers / max(1, len(ref_obj))
+        add_row(
+            "object_crop_translation",
+            _translate_polygon(scene.reference_polygon, median_shift),
+            inliers=inliers,
+            ratio=ratio,
+        )
+
+    return rows
+
+
+def _object_crop_candidate_would_pass(
+    *,
+    iou: float,
+    center_drift: float,
+    area_ratio: float,
+    closer_to_distractor: bool,
+    weak_context: bool,
+) -> bool:
+    min_iou = 0.42 if weak_context else 0.55
+    max_drift = 38.0 if weak_context else 28.0
+    if not math.isfinite(iou) or not math.isfinite(center_drift):
+        return False
+    if iou < min_iou or center_drift > max_drift:
+        return False
+    if area_ratio < 0.55 or area_ratio > 1.75:
+        return False
+    if closer_to_distractor:
+        return False
+    return True
+
+
+def _object_crop_verification_empty_fields(assessment: str) -> dict[str, Any]:
+    return {
+        "crop_verification_attempted": False,
+        "crop_verification_candidate_count": 0,
+        "crop_verification_source_count": 0,
+        "crop_verification_best_source": None,
+        "crop_verification_best_score": None,
+        "crop_verification_best_object_matches": 0,
+        "crop_verification_best_ref_containment": None,
+        "crop_verification_best_frame_containment": None,
+        "crop_verification_best_iou": None,
+        "crop_verification_best_center_drift_px": None,
+        "crop_verification_best_area_ratio": None,
+        "crop_verification_best_would_pass": False,
+        "crop_verification_best_dangerous": False,
+        "crop_verification_selected_score": None,
+        "crop_verification_selected_object_matches": 0,
+        "crop_verification_object_crop_candidate_available": False,
+        "crop_verification_object_crop_candidate_source": None,
+        "crop_verification_object_crop_candidate_iou": None,
+        "crop_verification_object_crop_candidate_center_drift_px": None,
+        "crop_verification_object_crop_candidate_would_pass": False,
+        "crop_verification_object_crop_candidate_dangerous": False,
+        "crop_verification_object_crop_candidate_inliers": 0,
+        "crop_verification_object_crop_candidate_inlier_ratio": None,
+        "crop_verification_assessment": assessment,
+        "crop_verification_sources": [],
+    }
+
+
+def _object_crop_verification_metric_fields(
+    debug: dict[str, Any],
+    *,
+    scene: _SyntheticScene,
+    current_projection: str,
+    current_polygon: PolygonPoints | None,
+    ground_truth_polygon: PolygonPoints,
+    distractor_polygons: Sequence[PolygonPoints],
+    support: int,
+) -> dict[str, Any]:
+    ref_points = scene.reference_points
+    frame_points = scene.frame_points
+    if len(ref_points) == 0 or len(ref_points) != len(frame_points):
+        return _object_crop_verification_empty_fields("no_feature_pairs")
+
+    ref_object_mask = _points_inside_polygon_mask(ref_points, scene.reference_polygon)
+    ref_object_count = int(ref_object_mask.sum())
+    if ref_object_count <= 0:
+        return _object_crop_verification_empty_fields("no_reference_object_features")
+
+    candidate_rows: list[dict[str, Any]] = []
+    for source, polygon, selected in _candidate_polygon_rows_from_debug(
+        debug,
+        current_projection=current_projection,
+        current_polygon=current_polygon,
+    ):
+        candidate_rows.append(
+            {
+                "source": source,
+                "polygon": polygon,
+                "selected": selected,
+                "derived": False,
+                "inliers": 0,
+                "inlier_ratio": None,
+            }
+        )
+
+    for row in _object_crop_feature_candidate_rows(scene):
+        candidate_rows.append(
+            {
+                "source": str(row["source"]),
+                "polygon": row["polygon"],
+                "selected": False,
+                "derived": True,
+                "inliers": int(row.get("inliers") or 0),
+                "inlier_ratio": row.get("inlier_ratio"),
+            }
+        )
+
+    if not candidate_rows:
+        return _object_crop_verification_empty_fields("no_candidate")
+
+    weak_context = scene.scenario.weak_context or support < settings.INSPECTION_MISSING_POLYGON_MIN_FEATURE_SUPPORT
+    scored_rows: list[dict[str, Any]] = []
+    for row in candidate_rows:
+        polygon = row.get("polygon")
+        if not isinstance(polygon, list) or len(polygon) < 3:
+            continue
+        frame_mask = _points_inside_polygon_mask(frame_points, polygon)
+        frame_count = int(frame_mask.sum())
+        pair_matches = int(np.logical_and(ref_object_mask, frame_mask).sum())
+        ref_containment = pair_matches / max(1, ref_object_count)
+        frame_containment = pair_matches / max(1, frame_count)
+        volume = math.log1p(pair_matches) / math.log1p(max(2, ref_object_count))
+        object_like_score = math.sqrt(max(0.0, ref_containment) * max(0.0, frame_containment)) * volume
+        iou = _polygon_iou(polygon, ground_truth_polygon)
+        center_drift = _polygon_center_distance(polygon, ground_truth_polygon)
+        area_ratio = _polygon_area_ratio(polygon, ground_truth_polygon)
+        nearest_distractor_distance = _nearest_distractor_distance(polygon, distractor_polygons)
+        closer_to_distractor = (
+            nearest_distractor_distance is not None
+            and nearest_distractor_distance + 1.0 < center_drift
+        )
+        dangerous = _is_dangerous_projection(
+            predicted_polygon=polygon,
+            center_drift=center_drift,
+            area_ratio=area_ratio,
+            closer_to_distractor=closer_to_distractor,
+            unsafe_hidden=False,
+        )
+        would_pass = _object_crop_candidate_would_pass(
+            iou=iou,
+            center_drift=center_drift,
+            area_ratio=area_ratio,
+            closer_to_distractor=closer_to_distractor,
+            weak_context=weak_context,
+        )
+        scored_rows.append(
+            {
+                "source": str(row.get("source") or "candidate"),
+                "selected": bool(row.get("selected")),
+                "derived": bool(row.get("derived")),
+                "score": float(object_like_score),
+                "matches": pair_matches,
+                "ref_containment": float(ref_containment),
+                "frame_containment": float(frame_containment),
+                "iou": float(iou),
+                "center_drift_px": float(center_drift),
+                "area_ratio": float(area_ratio),
+                "would_pass": bool(would_pass),
+                "dangerous": bool(dangerous),
+                "inliers": int(row.get("inliers") or 0),
+                "inlier_ratio": row.get("inlier_ratio"),
+            }
+        )
+
+    if not scored_rows:
+        return _object_crop_verification_empty_fields("no_scored_candidate")
+
+    best = max(
+        scored_rows,
+        key=lambda row: (
+            float(row["score"]),
+            int(row["matches"]),
+            float(row["iou"]),
+            -float(row["center_drift_px"]) if math.isfinite(float(row["center_drift_px"])) else -1e9,
+        ),
+    )
+    selected = next((row for row in scored_rows if bool(row.get("selected"))), None)
+    derived_candidates = [row for row in scored_rows if bool(row.get("derived"))]
+    best_derived = max(
+        derived_candidates,
+        key=lambda row: (
+            1 if bool(row["would_pass"]) and not bool(row["dangerous"]) else 0,
+            float(row["iou"]),
+            float(row["score"]),
+        ),
+    ) if derived_candidates else None
+
+    if float(best["score"]) >= 0.38 and int(best["matches"]) >= 8:
+        assessment = "strong_object_like_candidate"
+    elif float(best["score"]) >= 0.16 and int(best["matches"]) >= 4:
+        assessment = "weak_object_like_candidate"
+    else:
+        assessment = "no_object_like_candidate"
+    if best_derived is not None:
+        if bool(best_derived["would_pass"]) and not bool(best_derived["dangerous"]):
+            assessment = f"{assessment}+object_crop_safe_candidate"
+        elif bool(best_derived["dangerous"]):
+            assessment = f"{assessment}+object_crop_dangerous_candidate"
+        else:
+            assessment = f"{assessment}+object_crop_unconfirmed_candidate"
+
+    return {
+        "crop_verification_attempted": True,
+        "crop_verification_candidate_count": len(scored_rows),
+        "crop_verification_source_count": len({str(row["source"]) for row in scored_rows}),
+        "crop_verification_best_source": str(best["source"]),
+        "crop_verification_best_score": float(best["score"]),
+        "crop_verification_best_object_matches": int(best["matches"]),
+        "crop_verification_best_ref_containment": float(best["ref_containment"]),
+        "crop_verification_best_frame_containment": float(best["frame_containment"]),
+        "crop_verification_best_iou": float(best["iou"]),
+        "crop_verification_best_center_drift_px": float(best["center_drift_px"]),
+        "crop_verification_best_area_ratio": float(best["area_ratio"]),
+        "crop_verification_best_would_pass": bool(best["would_pass"]),
+        "crop_verification_best_dangerous": bool(best["dangerous"]),
+        "crop_verification_selected_score": (
+            float(selected["score"]) if selected is not None else None
+        ),
+        "crop_verification_selected_object_matches": (
+            int(selected["matches"]) if selected is not None else 0
+        ),
+        "crop_verification_object_crop_candidate_available": best_derived is not None,
+        "crop_verification_object_crop_candidate_source": (
+            str(best_derived["source"]) if best_derived is not None else None
+        ),
+        "crop_verification_object_crop_candidate_iou": (
+            float(best_derived["iou"]) if best_derived is not None else None
+        ),
+        "crop_verification_object_crop_candidate_center_drift_px": (
+            float(best_derived["center_drift_px"]) if best_derived is not None else None
+        ),
+        "crop_verification_object_crop_candidate_would_pass": (
+            bool(best_derived["would_pass"]) if best_derived is not None else False
+        ),
+        "crop_verification_object_crop_candidate_dangerous": (
+            bool(best_derived["dangerous"]) if best_derived is not None else False
+        ),
+        "crop_verification_object_crop_candidate_inliers": (
+            int(best_derived["inliers"]) if best_derived is not None else 0
+        ),
+        "crop_verification_object_crop_candidate_inlier_ratio": (
+            float(best_derived["inlier_ratio"])
+            if best_derived is not None and best_derived.get("inlier_ratio") is not None
+            else None
+        ),
+        "crop_verification_assessment": assessment,
+        "crop_verification_sources": [str(row["source"]) for row in scored_rows],
+    }
+
+def _hidden_shadow_metric_fields(
+    debug: dict[str, Any],
+    *,
+    scene: _SyntheticScene,
+    ground_truth_polygon: PolygonPoints,
+    distractor_polygons: Sequence[PolygonPoints],
+    support: int,
+) -> dict[str, Any]:
+    available = bool(debug.get("missing_polygon_hidden_shadow_available"))
+    polygon = _debug_polygon_points(debug.get("missing_polygon_hidden_shadow_polygon"))
+    if not available or polygon is None:
+        return {
+            "hidden_shadow_available": False,
+            "hidden_shadow_projection": (
+                str(debug.get("missing_polygon_hidden_shadow_projection"))
+                if debug.get("missing_polygon_hidden_shadow_projection") is not None
+                else None
+            ),
+            "hidden_shadow_fallback_source": (
+                str(debug.get("missing_polygon_hidden_shadow_fallback_source"))
+                if debug.get("missing_polygon_hidden_shadow_fallback_source") is not None
+                else None
+            ),
+            "hidden_shadow_reason": (
+                str(debug.get("missing_polygon_hidden_shadow_reason"))
+                if debug.get("missing_polygon_hidden_shadow_reason") is not None
+                else None
+            ),
+        }
+
+    projection = str(debug.get("missing_polygon_hidden_shadow_projection") or "unsafe_hidden_shadow")
+    iou = _polygon_iou(polygon, ground_truth_polygon)
+    center_drift = _polygon_center_distance(polygon, ground_truth_polygon)
+    area_ratio = _polygon_area_ratio(polygon, ground_truth_polygon)
+    axis_angle_error_deg, major_length_ratio = _polygon_axis_delta(
+        polygon,
+        ground_truth_polygon,
+    )
+    nearest_distractor_distance = _nearest_distractor_distance(
+        polygon,
+        distractor_polygons,
+    )
+    closer_to_distractor = (
+        nearest_distractor_distance is not None
+        and nearest_distractor_distance + 1.0 < center_drift
+    )
+    dangerous = _is_dangerous_projection(
+        predicted_polygon=polygon,
+        center_drift=center_drift,
+        area_ratio=area_ratio,
+        closer_to_distractor=closer_to_distractor,
+        unsafe_hidden=False,
+    )
+    notes = _case_notes(
+        scene=scene,
+        status="missing",
+        iou=iou,
+        center_drift=center_drift,
+        area_ratio=area_ratio,
+        axis_angle_error_deg=axis_angle_error_deg,
+        major_length_ratio=major_length_ratio,
+        closer_to_distractor=closer_to_distractor,
+        support=support,
+        projection=projection,
+        used_context_refinement=_projection_uses_context_refinement(projection),
+        unsafe_hidden=False,
+    )
+    return {
+        "hidden_shadow_available": True,
+        "hidden_shadow_projection": projection,
+        "hidden_shadow_fallback_source": (
+            str(debug.get("missing_polygon_hidden_shadow_fallback_source"))
+            if debug.get("missing_polygon_hidden_shadow_fallback_source") is not None
+            else None
+        ),
+        "hidden_shadow_reason": (
+            str(debug.get("missing_polygon_hidden_shadow_reason"))
+            if debug.get("missing_polygon_hidden_shadow_reason") is not None
+            else None
+        ),
+        "hidden_shadow_iou": float(iou),
+        "hidden_shadow_center_drift_px": float(center_drift),
+        "hidden_shadow_area_ratio": float(area_ratio),
+        "hidden_shadow_closer_to_distractor": bool(closer_to_distractor),
+        "hidden_shadow_dangerous": bool(dangerous),
+        "hidden_shadow_would_pass": not notes,
+        "hidden_shadow_notes": notes,
+    }
 
 
 def _case_notes(
@@ -1641,7 +2574,12 @@ def _fallback_without_context_quality_ok(
     axis_angle_error_deg: float | None,
     major_length_ratio: float | None,
 ) -> bool:
-    if projection not in {"expected_slot", "expected_slot_global_fallback"}:
+    if projection not in {
+        "expected_slot",
+        "expected_slot_global_fallback",
+        "expected_slot_global_fallback_hidden_release",
+        "expected_slot_agreement_hidden_release",
+    }:
         return False
     if not math.isfinite(iou) or not math.isfinite(center_drift):
         return False
@@ -2472,65 +3410,758 @@ def _poly_label_point(polygon: PolygonPoints) -> tuple[int, int]:
     return int(round(float(center[0]))), int(round(float(center[1])))
 
 
+
+def _serialize_results(results: list[SyntheticResult]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for result in results:
+        item = asdict(result)
+        raw_metrics = item.get("object_metrics")
+        if isinstance(raw_metrics, list):
+            item["object_metrics"] = [
+                _enrich_object_metric(dict(metric))
+                for metric in raw_metrics
+                if isinstance(metric, dict)
+            ]
+        serialized.append(item)
+    return serialized
+
+
+def _enrich_object_metric(metric: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(metric)
+    enriched.update(_result_policy_metric_fields(enriched))
+    enriched.update(_yolo_synthetic_metric_fields(enriched))
+    enriched.update(_yolo_synthetic_fixture_metric_fields(enriched))
+    return enriched
+
+
+def _result_policy_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
+    diagnostic = _metric_diagnostic_class(metric)
+    projection = _metric_text(metric, "projection", "unknown")
+    hidden_reason = _metric_text(metric, "hidden_reason", "not_hidden")
+
+    if _metric_bool(metric, "passed"):
+        status = "accepted"
+        confidence = "high" if _metric_float(metric, "iou") >= 0.75 else "medium"
+        action = "render_ok_overlay"
+        user_label = "Контроль пройден"
+        reason = "geometry_checks_passed"
+    elif _metric_bool(metric, "dangerous_projection"):
+        status = "rejected_dangerous"
+        confidence = "high"
+        action = "hide_projection_mark_missing"
+        user_label = "Деталь не подтверждена"
+        reason = diagnostic
+    elif _metric_bool(metric, "unsafe_hidden"):
+        status = "hidden_for_safety"
+        confidence = "high"
+        action = "show_missing_with_safety_note"
+        user_label = "Деталь скрыта как небезопасная"
+        reason = hidden_reason
+    elif _metric_bool(metric, "hidden_shadow_would_pass") and not _metric_bool(
+        metric,
+        "hidden_shadow_dangerous",
+    ):
+        status = "reviewable_hidden_candidate"
+        confidence = "medium"
+        action = "show_manual_review_candidate"
+        user_label = "Нужна проверка кандидата"
+        reason = "hidden_shadow_safe_candidate"
+    elif _metric_bool(metric, "candidate_oracle_has_safe_alternative"):
+        status = "reviewable_alternative_candidate"
+        confidence = "medium"
+        action = "show_manual_review_candidate"
+        user_label = "Есть безопасная альтернатива"
+        reason = "candidate_oracle_safe_alternative"
+    elif projection == "none":
+        status = "missing_no_projection"
+        confidence = "low"
+        action = "show_missing_without_overlay"
+        user_label = "Деталь не найдена"
+        reason = _metric_text(metric, "none_reason", diagnostic)
+    else:
+        status = "rejected_geometry"
+        confidence = _result_policy_geometry_confidence(metric)
+        action = "show_missing_or_review_overlay"
+        user_label = "Деталь не подтверждена"
+        reason = diagnostic
+
+    return {
+        "result_policy_status": status,
+        "result_policy_confidence": confidence,
+        "result_policy_action": action,
+        "result_policy_user_label": user_label,
+        "result_policy_reason": reason,
+    }
+
+
+def _yolo_synthetic_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
+    projection = _metric_text(metric, "projection", "unknown")
+    diagnostic = _metric_diagnostic_class(metric)
+
+    if _metric_bool(metric, "passed"):
+        bucket = "geometry_baseline_ok"
+        expected_role = "not_required_for_this_case"
+    elif _metric_bool(metric, "dangerous_projection"):
+        bucket = "safety_guard_case"
+        expected_role = "confirm_before_release"
+    elif _metric_bool(metric, "unsafe_hidden"):
+        bucket = "detector_oracle_required"
+        expected_role = "confirm_object_presence_in_hidden_slot"
+    elif projection == "none":
+        bucket = "no_projection_detector_needed"
+        expected_role = "detect_object_when_geometry_has_no_polygon"
+    elif projection in {
+        "expected_slot",
+        "expected_slot_global_fallback",
+        "expected_slot_global_fallback_hidden_release",
+        "expected_slot_agreement_hidden_release",
+    }:
+        bucket = "slot_confirmation_needed"
+        expected_role = "confirm_class_inside_expected_slot"
+    elif _metric_bool(metric, "candidate_oracle_has_safe_alternative"):
+        bucket = "candidate_selection_needed"
+        expected_role = "choose_safe_candidate_among_geometry_options"
+    elif _metric_bool(metric, "crop_verification_object_crop_candidate_available"):
+        bucket = "object_crop_confirmation_needed"
+        expected_role = "verify_object_crop_candidate"
+    elif projection == "expected_slot_anchor_release":
+        bucket = "anchor_policy_validation"
+        expected_role = "audit_anchor_release_quality"
+    elif diagnostic.startswith("context_affine") or "translation_rescue" in projection:
+        bucket = "geometry_refinement_validation"
+        expected_role = "validate_refined_projection"
+    else:
+        bucket = "manual_review_bucket"
+        expected_role = "manual_review_or_real_yolo_test"
+
+    return {
+        "yolo_synthetic_test_bucket": bucket,
+        "yolo_synthetic_expected_role": expected_role,
+        "yolo_synthetic_fixture": "synthetic_geometry_only_empty_yolo_detections",
+        "yolo_synthetic_limitation": (
+            "This synthetic test does not train or run YOLO; it only maps where "
+            "a detector would be useful as an oracle/confirmation layer."
+        ),
+    }
+
+
+
+def _yolo_synthetic_fixture_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
+    oracle = _yolo_synthetic_fixture_outcome(metric, profile="oracle")
+    noisy = _yolo_synthetic_fixture_outcome(metric, profile="noisy")
+    false_positive = _yolo_synthetic_fixture_outcome(metric, profile="false_positive")
+    gt_perfect = _yolo_gt_detector_fixture_outcome(metric, profile="perfect")
+    gt_jitter = _yolo_gt_detector_fixture_outcome(metric, profile="jitter")
+    gt_false_positive = _yolo_gt_detector_fixture_outcome(metric, profile="false_positive")
+
+    return {
+        "yolo_fixture_oracle_status": oracle["status"],
+        "yolo_fixture_oracle_action": oracle["action"],
+        "yolo_fixture_oracle_candidate_source": oracle["candidate_source"],
+        "yolo_fixture_oracle_would_gain": oracle["would_gain"],
+        "yolo_fixture_oracle_would_pass": oracle["would_pass"],
+        "yolo_fixture_oracle_would_be_dangerous": oracle["would_be_dangerous"],
+        "yolo_fixture_oracle_reason": oracle["reason"],
+        "yolo_fixture_noisy_status": noisy["status"],
+        "yolo_fixture_noisy_action": noisy["action"],
+        "yolo_fixture_noisy_candidate_source": noisy["candidate_source"],
+        "yolo_fixture_noisy_would_gain": noisy["would_gain"],
+        "yolo_fixture_noisy_would_pass": noisy["would_pass"],
+        "yolo_fixture_noisy_would_be_dangerous": noisy["would_be_dangerous"],
+        "yolo_fixture_noisy_reason": noisy["reason"],
+        "yolo_fixture_false_positive_status": false_positive["status"],
+        "yolo_fixture_false_positive_action": false_positive["action"],
+        "yolo_fixture_false_positive_candidate_source": false_positive["candidate_source"],
+        "yolo_fixture_false_positive_would_gain": false_positive["would_gain"],
+        "yolo_fixture_false_positive_would_pass": false_positive["would_pass"],
+        "yolo_fixture_false_positive_would_be_dangerous": false_positive["would_be_dangerous"],
+        "yolo_fixture_false_positive_reason": false_positive["reason"],
+        "yolo_gt_perfect_status": gt_perfect["status"],
+        "yolo_gt_perfect_action": gt_perfect["action"],
+        "yolo_gt_perfect_candidate_source": gt_perfect["candidate_source"],
+        "yolo_gt_perfect_would_gain": gt_perfect["would_gain"],
+        "yolo_gt_perfect_would_pass": gt_perfect["would_pass"],
+        "yolo_gt_perfect_would_be_dangerous": gt_perfect["would_be_dangerous"],
+        "yolo_gt_perfect_reason": gt_perfect["reason"],
+        "yolo_gt_jitter_status": gt_jitter["status"],
+        "yolo_gt_jitter_action": gt_jitter["action"],
+        "yolo_gt_jitter_candidate_source": gt_jitter["candidate_source"],
+        "yolo_gt_jitter_would_gain": gt_jitter["would_gain"],
+        "yolo_gt_jitter_would_pass": gt_jitter["would_pass"],
+        "yolo_gt_jitter_would_be_dangerous": gt_jitter["would_be_dangerous"],
+        "yolo_gt_jitter_reason": gt_jitter["reason"],
+        "yolo_gt_false_positive_status": gt_false_positive["status"],
+        "yolo_gt_false_positive_action": gt_false_positive["action"],
+        "yolo_gt_false_positive_candidate_source": gt_false_positive["candidate_source"],
+        "yolo_gt_false_positive_would_gain": gt_false_positive["would_gain"],
+        "yolo_gt_false_positive_would_pass": gt_false_positive["would_pass"],
+        "yolo_gt_false_positive_would_be_dangerous": gt_false_positive["would_be_dangerous"],
+        "yolo_gt_false_positive_reason": gt_false_positive["reason"],
+    }
+
+
+def _yolo_synthetic_fixture_outcome(
+    metric: dict[str, Any],
+    *,
+    profile: str,
+) -> dict[str, Any]:
+    passed = _metric_bool(metric, "passed")
+    bucket = _metric_text(metric, "yolo_synthetic_test_bucket", "manual_review_bucket")
+    source = _yolo_synthetic_safe_candidate_source(metric)
+    has_safe_candidate = source is not None
+    has_risky_candidate = _yolo_synthetic_has_risky_candidate(metric)
+
+    if passed:
+        return _yolo_synthetic_fixture_result(
+            status="baseline_pass",
+            action="keep_current_result",
+            candidate_source="current_geometry",
+            would_gain=False,
+            would_pass=True,
+            would_be_dangerous=False,
+            reason="geometry_already_passed",
+        )
+
+    if profile == "oracle":
+        if has_safe_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="accepted_by_oracle",
+                action="would_rescue_failure",
+                candidate_source=source,
+                would_gain=True,
+                would_pass=True,
+                would_be_dangerous=False,
+                reason="perfect_detector_confirms_safe_candidate",
+            )
+        if has_risky_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="rejected_risky_candidate",
+                action="keep_current_policy",
+                candidate_source=_yolo_synthetic_risky_candidate_source(metric),
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="oracle_has_only_risky_candidate_guarded",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="no_detector_rescue",
+            action="keep_current_policy",
+            candidate_source="none",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=False,
+            reason=f"{bucket}_has_no_safe_candidate",
+        )
+
+    if profile == "noisy":
+        if not _yolo_synthetic_noisy_fixture_detects(metric):
+            return _yolo_synthetic_fixture_result(
+                status="detector_miss",
+                action="keep_current_policy",
+                candidate_source="none",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="deterministic_noisy_fixture_missed_candidate",
+            )
+        if has_safe_candidate and not has_risky_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="accepted_by_noisy_detector",
+                action="would_rescue_failure",
+                candidate_source=source,
+                would_gain=True,
+                would_pass=True,
+                would_be_dangerous=False,
+                reason="noisy_detector_confirms_clean_safe_candidate",
+            )
+        if has_safe_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="review_required_mixed_candidates",
+                action="show_manual_review_candidate",
+                candidate_source=source,
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="safe_candidate_exists_but_false_positive_risk_is_present",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="no_detector_rescue",
+            action="keep_current_policy",
+            candidate_source="none",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=False,
+            reason=f"{bucket}_has_no_confirmed_safe_candidate",
+        )
+
+    if profile == "false_positive":
+        if has_risky_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="dangerous_if_trusted",
+                action="must_reject_false_positive",
+                candidate_source=_yolo_synthetic_risky_candidate_source(metric),
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=True,
+                reason="false_positive_fixture_targets_distractor_or_bad_crop",
+            )
+        if has_safe_candidate:
+            return _yolo_synthetic_fixture_result(
+                status="guarded_safe_candidate",
+                action="would_need_normal_detector_thresholds",
+                candidate_source=source,
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="false_positive_fixture_did_not_find_dangerous_candidate",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="no_false_positive_candidate",
+            action="keep_current_policy",
+            candidate_source="none",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=False,
+            reason="no_risky_candidate_seen_in_existing_diagnostics",
+        )
+
+    return _yolo_synthetic_fixture_result(
+        status="unknown_profile",
+        action="keep_current_policy",
+        candidate_source="none",
+        would_gain=False,
+        would_pass=False,
+        would_be_dangerous=False,
+        reason=profile,
+    )
+
+
+def _yolo_synthetic_fixture_result(
+    *,
+    status: str,
+    action: str,
+    candidate_source: str | None,
+    would_gain: bool,
+    would_pass: bool,
+    would_be_dangerous: bool,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "action": action,
+        "candidate_source": candidate_source or "none",
+        "would_gain": bool(would_gain),
+        "would_pass": bool(would_pass),
+        "would_be_dangerous": bool(would_be_dangerous),
+        "reason": reason,
+    }
+
+
+def _yolo_synthetic_safe_candidate_source(metric: dict[str, Any]) -> str | None:
+    if _metric_bool(metric, "hidden_shadow_would_pass") and not _metric_bool(
+        metric,
+        "hidden_shadow_dangerous",
+    ):
+        return _metric_text(metric, "hidden_shadow_projection", "hidden_shadow")
+
+    if _metric_bool(metric, "candidate_oracle_has_safe_alternative"):
+        return _metric_text(
+            metric,
+            "candidate_oracle_safe_gain_source",
+            _metric_text(metric, "candidate_oracle_best_source", "candidate_oracle"),
+        )
+
+    if _metric_bool(metric, "candidate_oracle_best_would_pass") and not _metric_bool(
+        metric,
+        "candidate_oracle_best_dangerous",
+    ):
+        return _metric_text(metric, "candidate_oracle_best_source", "candidate_oracle")
+
+    if _metric_bool(metric, "crop_verification_object_crop_candidate_would_pass") and not _metric_bool(
+        metric,
+        "crop_verification_object_crop_candidate_dangerous",
+    ):
+        return _metric_text(
+            metric,
+            "crop_verification_object_crop_candidate_source",
+            "object_crop_candidate",
+        )
+
+    if _metric_bool(metric, "crop_verification_best_would_pass") and not _metric_bool(
+        metric,
+        "crop_verification_best_dangerous",
+    ):
+        return _metric_text(metric, "crop_verification_best_source", "crop_candidate")
+
+    return None
+
+
+def _yolo_synthetic_has_risky_candidate(metric: dict[str, Any]) -> bool:
+    return any(
+        (
+            _metric_bool(metric, "hidden_shadow_dangerous"),
+            _metric_bool(metric, "candidate_oracle_best_dangerous"),
+            _metric_bool(metric, "crop_verification_object_crop_candidate_dangerous"),
+            _metric_bool(metric, "crop_verification_best_dangerous"),
+        )
+    )
+
+
+def _yolo_synthetic_risky_candidate_source(metric: dict[str, Any]) -> str:
+    if _metric_bool(metric, "hidden_shadow_dangerous"):
+        return _metric_text(metric, "hidden_shadow_projection", "hidden_shadow")
+    if _metric_bool(metric, "candidate_oracle_best_dangerous"):
+        return _metric_text(metric, "candidate_oracle_best_source", "candidate_oracle")
+    if _metric_bool(metric, "crop_verification_object_crop_candidate_dangerous"):
+        return _metric_text(
+            metric,
+            "crop_verification_object_crop_candidate_source",
+            "object_crop_candidate",
+        )
+    if _metric_bool(metric, "crop_verification_best_dangerous"):
+        return _metric_text(metric, "crop_verification_best_source", "crop_candidate")
+    return "none"
+
+
+def _yolo_synthetic_noisy_fixture_detects(metric: dict[str, Any]) -> bool:
+    stable_key = "|".join(
+        [
+            _metric_text(metric, "case_name", _metric_text(metric, "name")),
+            _metric_text(metric, "name"),
+            _metric_text(metric, "projection"),
+            _metric_text(metric, "yolo_synthetic_test_bucket"),
+        ]
+    )
+    checksum = sum((index + 1) * ord(char) for index, char in enumerate(stable_key))
+    return checksum % 10 not in {0, 1}
+
+
+def _yolo_gt_detector_fixture_outcome(
+    metric: dict[str, Any],
+    *,
+    profile: str,
+) -> dict[str, Any]:
+    if _metric_bool(metric, "passed"):
+        return _yolo_synthetic_fixture_result(
+            status="baseline_pass",
+            action="keep_current_result",
+            candidate_source="current_geometry",
+            would_gain=False,
+            would_pass=True,
+            would_be_dangerous=False,
+            reason="geometry_already_passed",
+        )
+
+    bucket = _metric_text(metric, "yolo_synthetic_test_bucket", "manual_review_bucket")
+    has_reference_slot = _yolo_gt_detector_has_reference_slot(metric)
+    can_auto_release = _yolo_gt_detector_can_auto_release(metric)
+
+    if profile == "perfect":
+        if not has_reference_slot:
+            return _yolo_synthetic_fixture_result(
+                status="detector_only_manual_review",
+                action="show_detector_only_candidate",
+                candidate_source="gt_detector_mask",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason=f"{bucket}_has_no_reference_slot_for_automatic_release",
+            )
+        if can_auto_release:
+            return _yolo_synthetic_fixture_result(
+                status="accepted_by_gt_detector",
+                action="would_rescue_failure",
+                candidate_source="gt_detector_mask",
+                would_gain=True,
+                would_pass=True,
+                would_be_dangerous=False,
+                reason="perfect_gt_detector_supplies_independent_mask_inside_reference_slot",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="manual_review_gt_detector",
+            action="show_manual_review_candidate",
+            candidate_source="gt_detector_mask",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=False,
+            reason=f"{bucket}_requires_manual_review_even_with_detector_mask",
+        )
+
+    if profile == "jitter":
+        if not _yolo_gt_detector_jitter_detects(metric):
+            return _yolo_synthetic_fixture_result(
+                status="detector_miss",
+                action="keep_current_policy",
+                candidate_source="none",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="deterministic_jitter_fixture_missed_detection",
+            )
+        if not has_reference_slot:
+            return _yolo_synthetic_fixture_result(
+                status="detector_only_manual_review",
+                action="show_detector_only_candidate",
+                candidate_source="jittered_gt_detector_mask",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason=f"{bucket}_has_no_reference_slot_for_jittered_detector",
+            )
+        if can_auto_release and _yolo_gt_detector_jitter_passes(metric):
+            return _yolo_synthetic_fixture_result(
+                status="accepted_by_jittered_detector",
+                action="would_rescue_failure",
+                candidate_source="jittered_gt_detector_mask",
+                would_gain=True,
+                would_pass=True,
+                would_be_dangerous=False,
+                reason="jittered_gt_detector_stays_inside_reference_slot",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="rejected_jittered_detector",
+            action="keep_current_policy",
+            candidate_source="jittered_gt_detector_mask",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=False,
+            reason="jittered_gt_detector_not_confident_enough_for_auto_release",
+        )
+
+    if profile == "false_positive":
+        if not _yolo_gt_detector_false_positive_present(metric):
+            return _yolo_synthetic_fixture_result(
+                status="no_false_positive_candidate",
+                action="keep_current_policy",
+                candidate_source="none",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="no_distractor_candidate_in_synthetic_scene",
+            )
+        if _yolo_gt_detector_false_positive_rejected_by_guards(metric):
+            return _yolo_synthetic_fixture_result(
+                status="rejected_by_slot_guards",
+                action="keep_current_policy",
+                candidate_source="synthetic_distractor_detection",
+                would_gain=False,
+                would_pass=False,
+                would_be_dangerous=False,
+                reason="slot_or_manual_review_guards_reject_false_positive",
+            )
+        return _yolo_synthetic_fixture_result(
+            status="dangerous_if_auto_trusted",
+            action="must_require_slot_and_shape_guards",
+            candidate_source="synthetic_distractor_detection",
+            would_gain=False,
+            would_pass=False,
+            would_be_dangerous=True,
+            reason="false_positive_can_match_the_wrong_object_without_strict_guards",
+        )
+
+    return _yolo_synthetic_fixture_result(
+        status="unknown_profile",
+        action="keep_current_policy",
+        candidate_source="none",
+        would_gain=False,
+        would_pass=False,
+        would_be_dangerous=False,
+        reason=profile,
+    )
+
+
+def _yolo_gt_detector_has_reference_slot(metric: dict[str, Any]) -> bool:
+    projection = _metric_text(metric, "projection")
+    if projection == "none":
+        return False
+    if _metric_bool(metric, "unsafe_hidden"):
+        return True
+    return bool(projection)
+
+
+def _yolo_gt_detector_can_auto_release(metric: dict[str, Any]) -> bool:
+    bucket = _metric_text(metric, "yolo_synthetic_test_bucket", "manual_review_bucket")
+    if bucket == "no_projection_detector_needed":
+        return False
+    if bucket in {
+        "slot_confirmation_needed",
+        "object_crop_confirmation_needed",
+        "detector_oracle_required",
+        "candidate_selection_needed",
+        "anchor_policy_validation",
+        "geometry_refinement_validation",
+    }:
+        return True
+    if bucket == "manual_review_bucket":
+        return _result_policy_geometry_confidence(metric) != "very_low"
+    return False
+
+
+def _yolo_gt_detector_jitter_detects(metric: dict[str, Any]) -> bool:
+    return _stable_metric_checksum(metric, "gt-jitter-detect") % 10 not in {0, 1}
+
+
+def _yolo_gt_detector_jitter_passes(metric: dict[str, Any]) -> bool:
+    shape = _metric_text(metric, "object_shape")
+    checksum = _stable_metric_checksum(metric, "gt-jitter-quality")
+    quality_bucket = checksum % 100
+    if shape == "thin_fork":
+        return quality_bucket >= 28
+    if shape == "hook_like_part":
+        return quality_bucket >= 24
+    if shape == "concave_l_bracket":
+        return quality_bucket >= 20
+    return quality_bucket >= 16
+
+
+def _yolo_gt_detector_false_positive_present(metric: dict[str, Any]) -> bool:
+    if _yolo_synthetic_has_risky_candidate(metric):
+        return True
+    distance = _metric_float(metric, "nearest_distractor_distance_px", default=float("inf"))
+    if math.isfinite(distance) and distance <= 180.0:
+        return True
+    return _stable_metric_checksum(metric, "gt-false-positive") % 10 in {0, 1, 2}
+
+
+def _yolo_gt_detector_false_positive_rejected_by_guards(metric: dict[str, Any]) -> bool:
+    if _metric_bool(metric, "unsafe_hidden"):
+        return True
+    if _metric_text(metric, "projection") == "none":
+        return True
+    if _metric_bool(metric, "candidate_oracle_best_dangerous"):
+        return False
+    if _metric_bool(metric, "crop_verification_object_crop_candidate_dangerous"):
+        return False
+    iou = _metric_float(metric, "iou")
+    drift = _metric_float(metric, "center_drift_px", default=float("inf"))
+    support = max(
+        _metric_int(metric, "context_feature_support"),
+        _metric_int(metric, "fallback_slot_feature_support"),
+    )
+    if iou >= 0.42 or drift <= 12.0 or support >= 10:
+        return True
+    return False
+
+
+def _stable_metric_checksum(metric: dict[str, Any], salt: str) -> int:
+    stable_key = "|".join(
+        [
+            salt,
+            _metric_text(metric, "case_name", _metric_text(metric, "name")),
+            _metric_text(metric, "name"),
+            _metric_text(metric, "projection"),
+            _metric_text(metric, "object_shape"),
+            _metric_text(metric, "yolo_synthetic_test_bucket"),
+        ]
+    )
+    return sum((index + 1) * ord(char) for index, char in enumerate(stable_key))
+
+
+def _result_policy_geometry_confidence(metric: dict[str, Any]) -> str:
+    iou = _metric_float(metric, "iou")
+    drift = _metric_float(metric, "center_drift_px", default=float("inf"))
+    support = max(
+        _metric_int(metric, "context_feature_support"),
+        _metric_int(metric, "fallback_slot_feature_support"),
+    )
+
+    if iou >= 0.55 and drift <= 16.0 and support >= 4:
+        return "medium"
+    if iou >= 0.35 or support >= 8:
+        return "low"
+    return "very_low"
+
+
 def _object_metric_dicts(results: list[SyntheticResult]) -> list[dict[str, Any]]:
     metrics: list[dict[str, Any]] = []
     for result in results:
         if result.object_metrics:
-            metrics.extend(result.object_metrics)
+            for raw_metric in result.object_metrics:
+                metric = dict(raw_metric)
+                metric.setdefault("case_index", result.index)
+                metric.setdefault("case_name", result.name)
+                metric.setdefault("case_kind", result.scenario_kind)
+                metric.setdefault("case_projection", result.projection)
+                metric.setdefault("case_passed", result.passed)
+                metrics.append(_enrich_object_metric(metric))
             continue
 
-        metrics.append(
-            {
-                "name": result.name,
-                "object_shape": result.object_shape,
-                "status": result.status,
-                "projection": result.projection,
-                "passed": result.passed,
-                "safety_passed": result.safety_passed,
-                "dangerous_projection": result.dangerous_projection,
-                "unsafe_hidden": result.unsafe_hidden,
-                "hidden_reason": None,
-                "iou": result.iou,
-                "center_drift_px": result.center_drift_px,
-                "area_ratio": result.area_ratio,
-                "axis_angle_error_deg": result.axis_angle_error_deg,
-                "major_length_ratio": result.major_length_ratio,
-                "closer_to_distractor": result.closer_to_distractor,
-                "notes": result.notes,
-                "global_translation_rescue_attempted": False,
-                "global_translation_rescue_accepted": False,
-                "global_translation_rescue_reject_reason": None,
-                "global_translation_rescue_local_point_count": 0,
-                "global_translation_rescue_min_support": 0,
-                "global_translation_rescue_candidate_count": 0,
-                "global_translation_rescue_inlier_count": 0,
-                "global_translation_rescue_inlier_ratio": None,
-                "global_translation_rescue_median_error": None,
-                "global_translation_rescue_shift_factor": None,
-                "global_translation_rescue_context_spread": None,
-                "global_translation_rescue_search_containment": None,
-                "global_translation_rescue_local_area_score": None,
-                "global_translation_rescue_local_center_factor": None,
-                "global_translation_rescue_slot_feature_support": 0,
-                "global_translation_rescue_slot_feature_total": 0,
-                "anchor_release_runtime_trusted_anchor_count": 0,
-                "anchor_release_runtime_trusted_anchor_source_counts": {},
-                "anchor_release_runtime_anchor_before_current_count": 0,
-                "anchor_release_runtime_anchor_after_current_count": 0,
-                "anchor_release_runtime_processed_expected_count": 0,
-                "anchor_release_runtime_future_expected_count": 0,
-                "anchor_release_runtime_built_count": 0,
-                "anchor_release_runtime_source_counts": {},
-                "anchor_release_runtime_reject_counts": {},
-                "anchor_release_runtime_probe_counts": {},
-                "anchor_release_final_trusted_anchor_count": 0,
-                "anchor_release_final_trusted_anchor_source_counts": {},
-                "anchor_release_final_anchor_before_current_count": 0,
-                "anchor_release_final_anchor_after_current_count": 0,
-                "anchor_release_final_resolved_anchor_count": 0,
-                "anchor_release_final_resolved_anchor_source_counts": {},
-            }
-        )
+        fallback_metric = {
+            "name": result.name,
+            "object_shape": result.object_shape,
+            "status": result.status,
+            "projection": result.projection,
+            "passed": result.passed,
+            "safety_passed": result.safety_passed,
+            "dangerous_projection": result.dangerous_projection,
+            "unsafe_hidden": result.unsafe_hidden,
+            "hidden_reason": None,
+            "iou": result.iou,
+            "center_drift_px": result.center_drift_px,
+            "area_ratio": result.area_ratio,
+            "axis_angle_error_deg": result.axis_angle_error_deg,
+            "major_length_ratio": result.major_length_ratio,
+            "closer_to_distractor": result.closer_to_distractor,
+            "notes": result.notes,
+            "global_translation_rescue_attempted": False,
+            "global_translation_rescue_accepted": False,
+            "global_translation_rescue_reject_reason": None,
+            "global_translation_rescue_local_point_count": 0,
+            "global_translation_rescue_min_support": 0,
+            "global_translation_rescue_candidate_count": 0,
+            "global_translation_rescue_inlier_count": 0,
+            "global_translation_rescue_inlier_ratio": None,
+            "global_translation_rescue_median_error": None,
+            "global_translation_rescue_shift_factor": None,
+            "global_translation_rescue_context_spread": None,
+            "global_translation_rescue_search_containment": None,
+            "global_translation_rescue_local_area_score": None,
+            "global_translation_rescue_local_center_factor": None,
+            "global_translation_rescue_slot_feature_support": 0,
+            "global_translation_rescue_slot_feature_total": 0,
+            "anchor_release_runtime_trusted_anchor_count": 0,
+            "anchor_release_runtime_trusted_anchor_source_counts": {},
+            "anchor_release_runtime_anchor_before_current_count": 0,
+            "anchor_release_runtime_anchor_after_current_count": 0,
+            "anchor_release_runtime_processed_expected_count": 0,
+            "anchor_release_runtime_future_expected_count": 0,
+            "anchor_release_runtime_built_count": 0,
+            "anchor_release_runtime_source_counts": {},
+            "anchor_release_runtime_reject_counts": {},
+            "anchor_release_runtime_probe_counts": {},
+            "anchor_release_final_trusted_anchor_count": 0,
+            "anchor_release_final_trusted_anchor_source_counts": {},
+            "anchor_release_final_anchor_before_current_count": 0,
+            "anchor_release_final_anchor_after_current_count": 0,
+            "anchor_release_final_resolved_anchor_count": 0,
+            "anchor_release_final_resolved_anchor_source_counts": {},
+            "crop_verification_attempted": False,
+            "crop_verification_candidate_count": 0,
+            "crop_verification_source_count": 0,
+            "crop_verification_best_source": None,
+            "crop_verification_best_score": None,
+            "crop_verification_best_object_matches": 0,
+            "crop_verification_best_ref_containment": None,
+            "crop_verification_best_frame_containment": None,
+            "crop_verification_best_iou": None,
+            "crop_verification_best_center_drift_px": None,
+            "crop_verification_best_area_ratio": None,
+            "crop_verification_best_would_pass": False,
+            "crop_verification_best_dangerous": False,
+            "crop_verification_selected_score": None,
+            "crop_verification_selected_object_matches": 0,
+            "crop_verification_object_crop_candidate_available": False,
+            "crop_verification_object_crop_candidate_source": None,
+            "crop_verification_object_crop_candidate_iou": None,
+            "crop_verification_object_crop_candidate_center_drift_px": None,
+            "crop_verification_object_crop_candidate_would_pass": False,
+            "crop_verification_object_crop_candidate_dangerous": False,
+            "crop_verification_object_crop_candidate_inliers": 0,
+            "crop_verification_object_crop_candidate_inlier_ratio": None,
+            "crop_verification_assessment": None,
+            "crop_verification_sources": [],
+        }
+        metrics.append(_enrich_object_metric(fallback_metric))
     return metrics
 
 
@@ -3015,6 +4646,1300 @@ def _object_global_translation_rescue_diagnostics(
     return stats
 
 
+def _object_unsafe_hidden_shadow_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, Any]:
+    hidden_metrics = [metric for metric in metrics if bool(metric.get("unsafe_hidden"))]
+    shadow_metrics = [
+        metric for metric in hidden_metrics if bool(metric.get("hidden_shadow_available"))
+    ]
+    if not hidden_metrics:
+        return {
+            "total_hidden": 0,
+            "shadow_available": 0,
+            "would_pass": 0,
+            "would_fail": 0,
+            "would_be_dangerous": 0,
+            "safe_would_pass": 0,
+            "shadow_pass_rate": 0.0,
+            "shadow_dangerous_rate": 0.0,
+            "mean_iou": 0.0,
+            "mean_center_drift_px": 0.0,
+            "top_shadow_projection": "—",
+            "top_shadow_source": "—",
+            "top_hidden_reason": "—",
+            "top_shape": "—",
+            "by_projection": {},
+        }
+
+    def count_values(key: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for metric in shadow_metrics:
+            value = str(metric.get(key) or "—")
+            counts[value] = counts.get(value, 0) + 1
+        return counts
+
+    would_pass = sum(1 for metric in shadow_metrics if bool(metric.get("hidden_shadow_would_pass")))
+    would_be_dangerous = sum(
+        1 for metric in shadow_metrics if bool(metric.get("hidden_shadow_dangerous"))
+    )
+    safe_would_pass = sum(
+        1
+        for metric in shadow_metrics
+        if bool(metric.get("hidden_shadow_would_pass"))
+        and not bool(metric.get("hidden_shadow_dangerous"))
+    )
+
+    by_projection: dict[str, dict[str, Any]] = {}
+    projection_buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in shadow_metrics:
+        projection = str(metric.get("hidden_shadow_projection") or "—")
+        projection_buckets.setdefault(projection, []).append(metric)
+    for projection, bucket in sorted(
+        projection_buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        bucket_pass = sum(
+            1 for metric in bucket if bool(metric.get("hidden_shadow_would_pass"))
+        )
+        bucket_dangerous = sum(
+            1 for metric in bucket if bool(metric.get("hidden_shadow_dangerous"))
+        )
+        by_projection[projection] = {
+            "total": len(bucket),
+            "would_pass": bucket_pass,
+            "would_fail": len(bucket) - bucket_pass,
+            "would_be_dangerous": bucket_dangerous,
+            "safe_would_pass": sum(
+                1
+                for metric in bucket
+                if bool(metric.get("hidden_shadow_would_pass"))
+                and not bool(metric.get("hidden_shadow_dangerous"))
+            ),
+            "pass_rate": (bucket_pass / len(bucket) * 100.0) if bucket else 0.0,
+            "dangerous_rate": (bucket_dangerous / len(bucket) * 100.0) if bucket else 0.0,
+            "mean_iou": _mean_metric_value(bucket, "hidden_shadow_iou"),
+            "mean_center_drift_px": _mean_metric_value(
+                bucket,
+                "hidden_shadow_center_drift_px",
+            ),
+        }
+
+    return {
+        "total_hidden": len(hidden_metrics),
+        "shadow_available": len(shadow_metrics),
+        "would_pass": would_pass,
+        "would_fail": len(shadow_metrics) - would_pass,
+        "would_be_dangerous": would_be_dangerous,
+        "safe_would_pass": safe_would_pass,
+        "shadow_pass_rate": (would_pass / len(shadow_metrics) * 100.0) if shadow_metrics else 0.0,
+        "shadow_dangerous_rate": (
+            would_be_dangerous / len(shadow_metrics) * 100.0
+        ) if shadow_metrics else 0.0,
+        "mean_iou": _mean_metric_value(shadow_metrics, "hidden_shadow_iou"),
+        "mean_center_drift_px": _mean_metric_value(
+            shadow_metrics,
+            "hidden_shadow_center_drift_px",
+        ),
+        "top_shadow_projection": _top_bucket_name(count_values("hidden_shadow_projection")),
+        "top_shadow_source": _top_bucket_name(count_values("hidden_shadow_fallback_source")),
+        "top_hidden_reason": _top_bucket_name(count_values("hidden_shadow_reason")),
+        "top_shape": _top_bucket_name(count_values("object_shape")),
+        "by_projection": by_projection,
+    }
+
+
+def _metric_bool(metric: dict[str, Any], key: str) -> bool:
+    return bool(metric.get(key))
+
+
+def _metric_int(metric: dict[str, Any], key: str) -> int:
+    value = metric.get(key)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        return int(value)
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
+def _metric_float(metric: dict[str, Any], key: str, default: float = 0.0) -> float:
+    value = metric.get(key)
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        return float(value)
+    try:
+        numeric = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return float(default)
+    return numeric if math.isfinite(numeric) else float(default)
+
+
+def _metric_text(metric: dict[str, Any], key: str, default: str = "—") -> str:
+    value = metric.get(key)
+    if value is None or value == "":
+        return default
+    return str(value)
+
+
+def _metric_notes_text(metric: dict[str, Any]) -> str:
+    notes = metric.get("notes")
+    if isinstance(notes, list):
+        return " | ".join(str(note) for note in notes if note)
+    if notes is None:
+        return ""
+    return str(notes)
+
+
+def _metric_count_values(metrics: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for metric in metrics:
+        value = _metric_text(metric, key)
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+def _metric_iou_bucket(metric: dict[str, Any], *, key: str = "iou") -> str:
+    value = metric.get(key)
+    if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        return "not_projected"
+    iou = float(value)
+    if iou <= 0.0:
+        return "0.000"
+    if iou < 0.20:
+        return "0.000-0.199"
+    if iou < 0.42:
+        return "0.200-0.419"
+    if iou < 0.55:
+        return "0.420-0.549"
+    if iou < 0.75:
+        return "0.550-0.749"
+    return "0.750+"
+
+
+def _metric_drift_bucket(metric: dict[str, Any], *, key: str = "center_drift_px") -> str:
+    value = metric.get(key)
+    if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        return "not_projected"
+    drift = float(value)
+    if drift <= 3.0:
+        return "<=3px"
+    if drift <= 8.0:
+        return "3-8px"
+    if drift <= 16.0:
+        return "8-16px"
+    if drift <= 28.0:
+        return "16-28px"
+    if drift <= 40.0:
+        return "28-40px"
+    return ">40px"
+
+
+def _metric_support_bucket(metric: dict[str, Any]) -> str:
+    support = _metric_int(metric, "context_feature_support")
+    if support <= 0:
+        support = _metric_int(metric, "fallback_slot_feature_support")
+    if support <= 0:
+        return "0"
+    if support <= 3:
+        return "1-3"
+    if support <= 9:
+        return "4-9"
+    if support <= 24:
+        return "10-24"
+    return "25+"
+
+
+def _metric_area_bucket(metric: dict[str, Any], *, key: str = "area_ratio") -> str:
+    value = metric.get(key)
+    if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        return "not_projected"
+    ratio = float(value)
+    if ratio <= 0.0:
+        return "0.000"
+    if ratio < 0.50:
+        return "collapsed"
+    if ratio < 0.75:
+        return "shrink"
+    if ratio <= 1.35:
+        return "normal"
+    if ratio <= 2.00:
+        return "expanded"
+    return "exploded"
+
+
+def _metric_anchor_state(metric: dict[str, Any]) -> str:
+    if _metric_text(metric, "projection") == "expected_slot_anchor_release":
+        return "accepted"
+    if _metric_bool(metric, "anchor_release_attempted"):
+        return _metric_text(metric, "anchor_release_reject_reason", "attempted_unknown")
+    return "not_attempted"
+
+
+def _metric_global_translation_state(metric: dict[str, Any]) -> str:
+    if _metric_bool(metric, "global_translation_rescue_accepted"):
+        return "accepted"
+    if _metric_bool(metric, "global_translation_rescue_attempted"):
+        return _metric_text(
+            metric,
+            "global_translation_rescue_reject_reason",
+            "attempted_unknown",
+        )
+    return "not_attempted"
+
+
+def _metric_diagnostic_class(metric: dict[str, Any]) -> str:
+    if _metric_bool(metric, "passed"):
+        return "passed"
+    if _metric_bool(metric, "dangerous_projection"):
+        return "dangerous_current_projection"
+
+    projection = _metric_text(metric, "projection")
+    notes = _metric_notes_text(metric)
+    if _metric_bool(metric, "unsafe_hidden"):
+        if not _metric_bool(metric, "hidden_shadow_available"):
+            return "hidden_no_shadow_candidate"
+        if _metric_bool(metric, "hidden_shadow_dangerous"):
+            return "hidden_shadow_dangerous_candidate"
+        if _metric_bool(metric, "hidden_shadow_would_pass"):
+            return "hidden_shadow_safe_release_candidate"
+        return "hidden_shadow_bad_candidate"
+
+    if projection == "none":
+        reason = _metric_text(metric, "none_reason", "projection_failed")
+        return f"none_{reason}"
+    if projection == "expected_slot_global_fallback_hidden_release":
+        return "selective_hidden_global_fallback_release_geometry_fail"
+    if projection == "expected_slot_agreement_hidden_release":
+        return "selective_hidden_expected_slot_agreement_release_geometry_fail"
+    if projection == "expected_slot_global_fallback":
+        return "weak_global_fallback_geometry_fail"
+    if projection == "expected_slot":
+        return "raw_expected_slot_geometry_fail"
+    if projection == "expected_slot_anchor_release":
+        return "anchor_release_geometry_or_consensus_fail"
+    if projection == "context_feature_affine":
+        if "при слабом контексте refinement" in notes:
+            return "context_affine_weak_context_policy_fail"
+        return "context_affine_geometry_fail"
+    if projection in {
+        "context_feature_affine_translation_rescue",
+        "expected_slot_context_translation_rescue",
+        "expected_slot_scene_translation_rescue",
+    }:
+        return "translation_rescue_geometry_fail"
+    return "other_geometry_fail"
+
+
+def _metric_recommended_action(metric: dict[str, Any]) -> str:
+    diagnostic_class = _metric_diagnostic_class(metric)
+    if diagnostic_class == "hidden_shadow_safe_release_candidate":
+        projection = _metric_text(metric, "hidden_shadow_projection")
+        if projection == "expected_slot_global_fallback":
+            return "selective_release_hidden_global_fallback"
+        return "selective_release_hidden_with_extra_guards"
+    if diagnostic_class == "hidden_shadow_dangerous_candidate":
+        return "keep_hidden_needs_extra_evidence"
+    if diagnostic_class == "hidden_shadow_bad_candidate":
+        return "keep_hidden_shadow_is_wrong"
+    if diagnostic_class == "hidden_no_shadow_candidate":
+        return "collect_shadow_candidate_or_leave_hidden"
+    if diagnostic_class.startswith("none_"):
+        return "add_none_clipped_or_slot_shadow_diagnostics"
+    if diagnostic_class == "selective_hidden_global_fallback_release_geometry_fail":
+        return "tighten_selective_hidden_release_guards"
+    if diagnostic_class == "selective_hidden_expected_slot_agreement_release_geometry_fail":
+        return "tighten_candidate_agreement_release_guards"
+    if diagnostic_class == "weak_global_fallback_geometry_fail":
+        return "do_not_trust_raw_global_fallback_need_confirmation"
+    if diagnostic_class == "raw_expected_slot_geometry_fail":
+        return "raw_slot_too_crude_need_local_or_anchor_evidence"
+    if diagnostic_class == "context_affine_weak_context_policy_fail":
+        return "separate_policy_fail_from_geometry_or_demote_weak_affine"
+    if diagnostic_class == "context_affine_geometry_fail":
+        return "tighten_or_refine_context_affine_selection"
+    if diagnostic_class == "anchor_release_geometry_or_consensus_fail":
+        return "improve_anchor_consensus_or_overlap_arbitration"
+    if diagnostic_class == "dangerous_current_projection":
+        return "must_hide_or_require_external_confirmation"
+    return "inspect_case_manually"
+
+
+def _metric_recoverability(metric: dict[str, Any]) -> str:
+    if _metric_bool(metric, "passed"):
+        return "already_passed"
+    diagnostic_class = _metric_diagnostic_class(metric)
+    if diagnostic_class == "hidden_shadow_safe_release_candidate":
+        return "high_safe_gain"
+    if diagnostic_class == "hidden_shadow_dangerous_candidate":
+        return "high_risk"
+    if diagnostic_class in {
+        "selective_hidden_global_fallback_release_geometry_fail",
+        "selective_hidden_expected_slot_agreement_release_geometry_fail",
+    }:
+        return "medium_needs_better_selector"
+    if diagnostic_class in {"hidden_shadow_bad_candidate", "weak_global_fallback_geometry_fail"}:
+        return "low_without_new_evidence"
+    if diagnostic_class.startswith("none_"):
+        return "unknown_needs_shadow"
+    if diagnostic_class in {
+        "raw_expected_slot_geometry_fail",
+        "context_affine_geometry_fail",
+        "anchor_release_geometry_or_consensus_fail",
+    }:
+        return "medium_needs_better_selector"
+    return "manual_review"
+
+
+def _metric_diagnostic_row(metric: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "case_index": _metric_int(metric, "case_index"),
+        "case_kind": _metric_text(metric, "case_kind"),
+        "case_name": _metric_text(metric, "case_name", _metric_text(metric, "name")),
+        "object_name": _metric_text(metric, "name"),
+        "shape": _metric_text(metric, "object_shape"),
+        "projection": _metric_text(metric, "projection"),
+        "result_policy_status": _metric_text(metric, "result_policy_status"),
+        "result_policy_confidence": _metric_text(metric, "result_policy_confidence"),
+        "result_policy_action": _metric_text(metric, "result_policy_action"),
+        "result_policy_user_label": _metric_text(metric, "result_policy_user_label"),
+        "result_policy_reason": _metric_text(metric, "result_policy_reason"),
+        "yolo_synthetic_test_bucket": _metric_text(metric, "yolo_synthetic_test_bucket"),
+        "yolo_synthetic_expected_role": _metric_text(metric, "yolo_synthetic_expected_role"),
+        "yolo_synthetic_fixture": _metric_text(metric, "yolo_synthetic_fixture"),
+        "yolo_synthetic_limitation": _metric_text(metric, "yolo_synthetic_limitation"),
+        "yolo_fixture_oracle_status": _metric_text(metric, "yolo_fixture_oracle_status"),
+        "yolo_fixture_oracle_action": _metric_text(metric, "yolo_fixture_oracle_action"),
+        "yolo_fixture_oracle_would_gain": _metric_bool(metric, "yolo_fixture_oracle_would_gain"),
+        "yolo_fixture_oracle_reason": _metric_text(metric, "yolo_fixture_oracle_reason"),
+        "yolo_fixture_noisy_status": _metric_text(metric, "yolo_fixture_noisy_status"),
+        "yolo_fixture_noisy_action": _metric_text(metric, "yolo_fixture_noisy_action"),
+        "yolo_fixture_noisy_would_gain": _metric_bool(metric, "yolo_fixture_noisy_would_gain"),
+        "yolo_fixture_noisy_reason": _metric_text(metric, "yolo_fixture_noisy_reason"),
+        "yolo_fixture_false_positive_status": _metric_text(metric, "yolo_fixture_false_positive_status"),
+        "yolo_fixture_false_positive_action": _metric_text(metric, "yolo_fixture_false_positive_action"),
+        "yolo_fixture_false_positive_would_be_dangerous": _metric_bool(
+            metric,
+            "yolo_fixture_false_positive_would_be_dangerous",
+        ),
+        "yolo_fixture_false_positive_reason": _metric_text(
+            metric,
+            "yolo_fixture_false_positive_reason",
+        ),
+        "yolo_gt_perfect_status": _metric_text(metric, "yolo_gt_perfect_status"),
+        "yolo_gt_perfect_action": _metric_text(metric, "yolo_gt_perfect_action"),
+        "yolo_gt_perfect_would_gain": _metric_bool(metric, "yolo_gt_perfect_would_gain"),
+        "yolo_gt_perfect_reason": _metric_text(metric, "yolo_gt_perfect_reason"),
+        "yolo_gt_jitter_status": _metric_text(metric, "yolo_gt_jitter_status"),
+        "yolo_gt_jitter_action": _metric_text(metric, "yolo_gt_jitter_action"),
+        "yolo_gt_jitter_would_gain": _metric_bool(metric, "yolo_gt_jitter_would_gain"),
+        "yolo_gt_jitter_reason": _metric_text(metric, "yolo_gt_jitter_reason"),
+        "yolo_gt_false_positive_status": _metric_text(metric, "yolo_gt_false_positive_status"),
+        "yolo_gt_false_positive_action": _metric_text(metric, "yolo_gt_false_positive_action"),
+        "yolo_gt_false_positive_would_be_dangerous": _metric_bool(
+            metric,
+            "yolo_gt_false_positive_would_be_dangerous",
+        ),
+        "yolo_gt_false_positive_reason": _metric_text(
+            metric,
+            "yolo_gt_false_positive_reason",
+        ),
+        "diagnostic_class": _metric_diagnostic_class(metric),
+        "recoverability": _metric_recoverability(metric),
+        "recommended_action": _metric_recommended_action(metric),
+        "passed": _metric_bool(metric, "passed"),
+        "unsafe_hidden": _metric_bool(metric, "unsafe_hidden"),
+        "dangerous": _metric_bool(metric, "dangerous_projection"),
+        "iou": _metric_float(metric, "iou"),
+        "iou_bucket": _metric_iou_bucket(metric),
+        "center_drift_px": _metric_float(metric, "center_drift_px"),
+        "drift_bucket": _metric_drift_bucket(metric),
+        "area_ratio": _metric_float(metric, "area_ratio"),
+        "area_bucket": _metric_area_bucket(metric),
+        "support": max(
+            _metric_int(metric, "context_feature_support"),
+            _metric_int(metric, "fallback_slot_feature_support"),
+        ),
+        "support_total": max(
+            _metric_int(metric, "context_feature_total"),
+            _metric_int(metric, "fallback_slot_feature_total"),
+        ),
+        "support_bucket": _metric_support_bucket(metric),
+        "candidate_count": _metric_int(metric, "missing_candidate_count"),
+        "inliers": _metric_int(metric, "missing_inliers"),
+        "fallback_source": _metric_text(metric, "fallback_source"),
+        "fallback_reason": _metric_text(metric, "fallback_reason"),
+        "selective_hidden_release": _metric_bool(metric, "selective_hidden_release"),
+        "selective_hidden_release_source": _metric_text(metric, "selective_hidden_release_source"),
+        "selective_hidden_release_hidden_reason": _metric_text(metric, "selective_hidden_release_hidden_reason"),
+        "projection_candidate_count": _metric_int(metric, "projection_candidate_count"),
+        "projection_candidate_selected": _metric_text(metric, "projection_candidate_selected"),
+        "candidate_agreement_level": _metric_text(metric, "candidate_agreement_level"),
+        "candidate_agreement_count": _metric_int(metric, "candidate_agreement_count"),
+        "candidate_confidence": _metric_text(metric, "candidate_confidence"),
+        "candidate_recommended_action": _metric_text(metric, "candidate_recommended_action"),
+        "candidate_oracle_failure_mode": _metric_text(metric, "candidate_oracle_failure_mode"),
+        "candidate_oracle_best_source": _metric_text(metric, "candidate_oracle_best_source"),
+        "candidate_oracle_best_iou": _metric_float(metric, "candidate_oracle_best_iou"),
+        "candidate_oracle_best_drift_px": _metric_float(
+            metric,
+            "candidate_oracle_best_center_drift_px",
+        ),
+        "candidate_oracle_safe_gain_source": _metric_text(metric, "candidate_oracle_safe_gain_source"),
+        "candidate_oracle_has_safe_alternative": _metric_bool(
+            metric,
+            "candidate_oracle_has_safe_alternative",
+        ),
+        "crop_verification_assessment": _metric_text(metric, "crop_verification_assessment"),
+        "crop_verification_best_source": _metric_text(metric, "crop_verification_best_source"),
+        "crop_verification_best_score": _metric_float(metric, "crop_verification_best_score"),
+        "crop_verification_best_matches": _metric_int(metric, "crop_verification_best_object_matches"),
+        "crop_verification_object_crop_source": _metric_text(
+            metric,
+            "crop_verification_object_crop_candidate_source",
+        ),
+        "crop_verification_object_crop_iou": _metric_float(
+            metric,
+            "crop_verification_object_crop_candidate_iou",
+        ),
+        "crop_verification_object_crop_would_pass": _metric_bool(
+            metric,
+            "crop_verification_object_crop_candidate_would_pass",
+        ),
+        "crop_verification_object_crop_dangerous": _metric_bool(
+            metric,
+            "crop_verification_object_crop_candidate_dangerous",
+        ),
+        "hidden_reason": _metric_text(metric, "hidden_reason"),
+        "hidden_shadow_available": _metric_bool(metric, "hidden_shadow_available"),
+        "hidden_shadow_projection": _metric_text(metric, "hidden_shadow_projection"),
+        "hidden_shadow_iou": _metric_float(metric, "hidden_shadow_iou"),
+        "hidden_shadow_drift_px": _metric_float(
+            metric,
+            "hidden_shadow_center_drift_px",
+        ),
+        "hidden_shadow_would_pass": _metric_bool(metric, "hidden_shadow_would_pass"),
+        "hidden_shadow_dangerous": _metric_bool(metric, "hidden_shadow_dangerous"),
+        "global_translation_state": _metric_global_translation_state(metric),
+        "anchor_state": _metric_anchor_state(metric),
+        "none_reason": _metric_text(metric, "none_reason"),
+        "notes": _metric_notes_text(metric),
+    }
+
+
+
+def _object_result_policy_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        buckets.setdefault(_metric_text(metric, "result_policy_status"), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for bucket, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        action_counts = _metric_count_values(bucket_metrics, "result_policy_action")
+        label_counts = _metric_count_values(bucket_metrics, "result_policy_user_label")
+        reason_counts = _metric_count_values(bucket_metrics, "result_policy_reason")
+        projection_counts = _metric_count_values(bucket_metrics, "projection")
+        shape_counts = _metric_count_values(bucket_metrics, "object_shape")
+        confidence_counts = _metric_count_values(bucket_metrics, "result_policy_confidence")
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        stats[bucket] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": len(bucket_metrics) - passed,
+            "unsafe_hidden": sum(1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden")),
+            "dangerous": sum(1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")),
+            "top_confidence": _top_bucket_name(confidence_counts),
+            "top_action": _top_bucket_name(action_counts),
+            "top_user_label": _top_bucket_name(label_counts),
+            "top_reason": _top_bucket_name(reason_counts),
+            "top_projection": _top_bucket_name(projection_counts),
+            "top_shape": _top_bucket_name(shape_counts),
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+        }
+    return stats
+
+
+def _object_yolo_synthetic_feasibility_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        buckets.setdefault(_metric_text(metric, "yolo_synthetic_test_bucket"), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for bucket, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        role_counts = _metric_count_values(bucket_metrics, "yolo_synthetic_expected_role")
+        policy_counts = _metric_count_values(bucket_metrics, "result_policy_status")
+        projection_counts = _metric_count_values(bucket_metrics, "projection")
+        shape_counts = _metric_count_values(bucket_metrics, "object_shape")
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        stats[bucket] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": len(bucket_metrics) - passed,
+            "unsafe_hidden": sum(1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden")),
+            "dangerous": sum(1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")),
+            "top_expected_role": _top_bucket_name(role_counts),
+            "top_policy": _top_bucket_name(policy_counts),
+            "top_projection": _top_bucket_name(projection_counts),
+            "top_shape": _top_bucket_name(shape_counts),
+            "fixture": _metric_text(bucket_metrics[0], "yolo_synthetic_fixture"),
+            "limitation": _metric_text(bucket_metrics[0], "yolo_synthetic_limitation"),
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+        }
+    return stats
+
+
+def _group_metrics_by_key(
+    metrics: list[dict[str, Any]],
+    key: str,
+) -> dict[str, list[dict[str, Any]]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        buckets.setdefault(_metric_text(metric, key, "unknown"), []).append(metric)
+    return dict(
+        sorted(
+            buckets.items(),
+            key=lambda pair: len(pair[1]),
+            reverse=True,
+        )
+    )
+
+
+def _object_yolo_synthetic_fixture_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    return _object_detector_fixture_stats(
+        metrics,
+        profiles={
+            "oracle": "Perfect detector oracle",
+            "noisy": "Noisy detector fixture",
+            "false_positive": "False-positive stress fixture",
+        },
+        prefix_root="yolo_fixture",
+    )
+
+
+def _object_yolo_gt_detector_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    return _object_detector_fixture_stats(
+        metrics,
+        profiles={
+            "perfect": "Perfect GT detector mask",
+            "jitter": "Jittered GT detector mask",
+            "false_positive": "Synthetic distractor detector",
+        },
+        prefix_root="yolo_gt",
+    )
+
+
+def _object_detector_fixture_stats(
+    metrics: list[dict[str, Any]],
+    *,
+    profiles: dict[str, str],
+    prefix_root: str,
+) -> dict[str, dict[str, Any]]:
+    stats: dict[str, dict[str, Any]] = {}
+    failed_metrics = [metric for metric in metrics if not _metric_bool(metric, "passed")]
+    grouped_by_bucket = _group_metrics_by_key(metrics, "yolo_synthetic_test_bucket")
+    for profile, title in profiles.items():
+        prefix = f"{prefix_root}_{profile}"
+        status_counts = _metric_count_values(metrics, f"{prefix}_status")
+        action_counts = _metric_count_values(metrics, f"{prefix}_action")
+        reason_counts = _metric_count_values(metrics, f"{prefix}_reason")
+        source_counts = _metric_count_values(metrics, f"{prefix}_candidate_source")
+        gains = [metric for metric in failed_metrics if _metric_bool(metric, f"{prefix}_would_gain")]
+        dangerous = [
+            metric
+            for metric in metrics
+            if _metric_bool(metric, f"{prefix}_would_be_dangerous")
+        ]
+        by_bucket: dict[str, dict[str, Any]] = {}
+        for bucket, bucket_metrics in grouped_by_bucket.items():
+            bucket_failed = [metric for metric in bucket_metrics if not _metric_bool(metric, "passed")]
+            bucket_gains = [
+                metric
+                for metric in bucket_failed
+                if _metric_bool(metric, f"{prefix}_would_gain")
+            ]
+            bucket_dangerous = [
+                metric
+                for metric in bucket_metrics
+                if _metric_bool(metric, f"{prefix}_would_be_dangerous")
+            ]
+            bucket_status_counts = _metric_count_values(bucket_metrics, f"{prefix}_status")
+            bucket_reason_counts = _metric_count_values(bucket_metrics, f"{prefix}_reason")
+            bucket_source_counts = _metric_count_values(bucket_metrics, f"{prefix}_candidate_source")
+            by_bucket[bucket] = {
+                "total": len(bucket_metrics),
+                "baseline_failed": len(bucket_failed),
+                "would_rescue": len(bucket_gains),
+                "remaining_failed": len(bucket_failed) - len(bucket_gains),
+                "dangerous_if_trusted": len(bucket_dangerous),
+                "top_status": _top_bucket_name(bucket_status_counts),
+                "top_reason": _top_bucket_name(bucket_reason_counts),
+                "top_candidate_source": _top_bucket_name(bucket_source_counts),
+            }
+        stats[profile] = {
+            "title": title,
+            "total": len(metrics),
+            "baseline_failed": len(failed_metrics),
+            "would_rescue": len(gains),
+            "remaining_failed": len(failed_metrics) - len(gains),
+            "dangerous_if_trusted": len(dangerous),
+            "top_status": _top_bucket_name(status_counts),
+            "top_action": _top_bucket_name(action_counts),
+            "top_reason": _top_bucket_name(reason_counts),
+            "top_candidate_source": _top_bucket_name(source_counts),
+            "by_bucket": by_bucket,
+        }
+    return stats
+
+def _object_failure_microscope(
+    metrics: list[dict[str, Any]],
+    *,
+    max_rows: int = 160,
+) -> list[dict[str, Any]]:
+    rows = [_metric_diagnostic_row(metric) for metric in metrics if not _metric_bool(metric, "passed")]
+    rows.sort(
+        key=lambda row: (
+            row["recoverability"] != "high_safe_gain",
+            not row["dangerous"],
+            row["recoverability"],
+            -float(row["iou"]),
+            float(row["center_drift_px"]),
+            row["case_index"],
+        )
+    )
+    return rows[:max_rows]
+
+
+def _bucket_counter_as_top(counts: dict[str, int], *, limit: int = 5) -> list[str]:
+    return [
+        f"{name} ({count})"
+        for name, count in sorted(counts.items(), key=lambda item: item[1], reverse=True)[:limit]
+    ]
+
+
+def _object_deep_failure_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if _metric_bool(metric, "passed"):
+            continue
+        buckets.setdefault(_metric_diagnostic_class(metric), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for bucket, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        projection_counts = _metric_count_values(bucket_metrics, "projection")
+        shape_counts = _metric_count_values(bucket_metrics, "object_shape")
+        hidden_reason_counts = _metric_count_values(bucket_metrics, "hidden_reason")
+        action_counts: dict[str, int] = {}
+        iou_bucket_counts: dict[str, int] = {}
+        drift_bucket_counts: dict[str, int] = {}
+        support_bucket_counts: dict[str, int] = {}
+        for metric in bucket_metrics:
+            action = _metric_recommended_action(metric)
+            action_counts[action] = action_counts.get(action, 0) + 1
+            iou_bucket = _metric_iou_bucket(metric)
+            drift_bucket = _metric_drift_bucket(metric)
+            support_bucket = _metric_support_bucket(metric)
+            iou_bucket_counts[iou_bucket] = iou_bucket_counts.get(iou_bucket, 0) + 1
+            drift_bucket_counts[drift_bucket] = drift_bucket_counts.get(drift_bucket, 0) + 1
+            support_bucket_counts[support_bucket] = support_bucket_counts.get(support_bucket, 0) + 1
+        safe_gain = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "hidden_shadow_would_pass")
+            and not _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        danger_risk = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "dangerous_projection")
+            or _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        stats[bucket] = {
+            "total": len(bucket_metrics),
+            "safe_gain_candidates": safe_gain,
+            "danger_risk_candidates": danger_risk,
+            "top_projection": _top_bucket_name(projection_counts),
+            "top_shape": _top_bucket_name(shape_counts),
+            "top_hidden_reason": _top_bucket_name(hidden_reason_counts),
+            "top_action": _top_bucket_name(action_counts),
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+            "mean_support": float(
+                np.mean(
+                    [
+                        max(
+                            _metric_int(metric, "context_feature_support"),
+                            _metric_int(metric, "fallback_slot_feature_support"),
+                        )
+                        for metric in bucket_metrics
+                    ]
+                )
+            ) if bucket_metrics else 0.0,
+            "iou_buckets": dict(
+                sorted(iou_bucket_counts.items(), key=lambda item: item[1], reverse=True)
+            ),
+            "drift_buckets": dict(
+                sorted(drift_bucket_counts.items(), key=lambda item: item[1], reverse=True)
+            ),
+            "support_buckets": dict(
+                sorted(support_bucket_counts.items(), key=lambda item: item[1], reverse=True)
+            ),
+            "top_iou_buckets": _bucket_counter_as_top(iou_bucket_counts),
+            "top_drift_buckets": _bucket_counter_as_top(drift_bucket_counts),
+            "top_support_buckets": _bucket_counter_as_top(support_bucket_counts),
+        }
+    return stats
+
+
+def _object_recovery_opportunity_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if _metric_bool(metric, "passed"):
+            continue
+        buckets.setdefault(_metric_recoverability(metric), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for bucket, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        diagnostic_counts: dict[str, int] = {}
+        action_counts: dict[str, int] = {}
+        for metric in bucket_metrics:
+            diagnostic = _metric_diagnostic_class(metric)
+            diagnostic_counts[diagnostic] = diagnostic_counts.get(diagnostic, 0) + 1
+            action = _metric_recommended_action(metric)
+            action_counts[action] = action_counts.get(action, 0) + 1
+        safe_gain = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "hidden_shadow_would_pass")
+            and not _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        danger_risk = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "dangerous_projection")
+            or _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        stats[bucket] = {
+            "total": len(bucket_metrics),
+            "safe_gain_candidates": safe_gain,
+            "danger_risk_candidates": danger_risk,
+            "top_diagnostic": _top_bucket_name(diagnostic_counts),
+            "top_action": _top_bucket_name(action_counts),
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+        }
+    return stats
+
+
+def _object_method_coverage_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        buckets.setdefault(_metric_text(metric, "projection"), []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for projection, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        failed = len(bucket_metrics) - passed
+        hidden = sum(1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden"))
+        dangerous = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")
+        )
+        shadow_available = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "hidden_shadow_available")
+        )
+        shadow_safe_pass = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "hidden_shadow_would_pass")
+            and not _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        shadow_danger = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        global_attempted = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "global_translation_rescue_attempted")
+        )
+        anchor_attempted = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "anchor_release_attempted")
+        )
+        failure_class_counts: dict[str, int] = {}
+        global_reject_counts: dict[str, int] = {}
+        anchor_reject_counts: dict[str, int] = {}
+        fallback_source_counts: dict[str, int] = {}
+        for metric in bucket_metrics:
+            if not _metric_bool(metric, "passed"):
+                failure_class = _metric_diagnostic_class(metric)
+                failure_class_counts[failure_class] = failure_class_counts.get(failure_class, 0) + 1
+            global_state = _metric_global_translation_state(metric)
+            if global_state != "not_attempted":
+                global_reject_counts[global_state] = global_reject_counts.get(global_state, 0) + 1
+            anchor_state = _metric_anchor_state(metric)
+            if anchor_state != "not_attempted":
+                anchor_reject_counts[anchor_state] = anchor_reject_counts.get(anchor_state, 0) + 1
+            fallback_source = _metric_text(metric, "fallback_source")
+            if fallback_source != "—":
+                fallback_source_counts[fallback_source] = fallback_source_counts.get(fallback_source, 0) + 1
+        stats[projection] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": failed,
+            "pass_rate": (passed / len(bucket_metrics) * 100.0) if bucket_metrics else 0.0,
+            "hidden": hidden,
+            "dangerous": dangerous,
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+            "shadow_available": shadow_available,
+            "shadow_safe_pass": shadow_safe_pass,
+            "shadow_dangerous": shadow_danger,
+            "global_translation_attempted": global_attempted,
+            "anchor_release_attempted": anchor_attempted,
+            "top_failure_class": _top_bucket_name(failure_class_counts),
+            "top_global_translation_state": _top_bucket_name(global_reject_counts),
+            "top_anchor_state": _top_bucket_name(anchor_reject_counts),
+            "top_fallback_source": _top_bucket_name(fallback_source_counts),
+        }
+    return stats
+
+
+def _object_selective_hidden_release_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if _metric_bool(metric, "selective_hidden_release"):
+            reason = _metric_text(
+                metric,
+                "selective_hidden_release_hidden_reason",
+                "released_unknown_reason",
+            )
+            buckets.setdefault(reason, []).append(metric)
+        elif _metric_bool(metric, "selective_hidden_release_rejected"):
+            reason = _metric_text(
+                metric,
+                "selective_hidden_release_reject_reason",
+                "release_rejected_unknown_reason",
+            )
+            buckets.setdefault(f"rejected:{reason}", []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for reason, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        dangerous = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")
+        )
+        stats[reason] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": len(bucket_metrics) - passed,
+            "pass_rate": (passed / len(bucket_metrics) * 100.0) if bucket_metrics else 0.0,
+            "unsafe_hidden": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden")
+            ),
+            "dangerous": dangerous,
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+            "top_shape": _top_bucket_name(_metric_count_values(bucket_metrics, "object_shape")),
+            "top_projection": _top_bucket_name(_metric_count_values(bucket_metrics, "projection")),
+            "mean_slot_support": _mean_metric_value(
+                bucket_metrics,
+                "selective_hidden_release_slot_support",
+            ),
+            "mean_max_other_overlap": _mean_metric_value(
+                bucket_metrics,
+                "selective_hidden_release_max_other_overlap",
+            ),
+        }
+    return stats
+
+
+def _object_candidate_agreement_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        confidence = _metric_text(metric, "candidate_confidence")
+        level = _metric_text(metric, "candidate_agreement_level")
+        if confidence == "—" and level == "—":
+            continue
+        key = f"{confidence} / {level}"
+        buckets.setdefault(key, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for key, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        dangerous = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")
+        )
+        stats[key] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": len(bucket_metrics) - passed,
+            "pass_rate": (passed / len(bucket_metrics) * 100.0) if bucket_metrics else 0.0,
+            "unsafe_hidden": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden")
+            ),
+            "dangerous": dangerous,
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(
+                bucket_metrics,
+                "center_drift_px",
+            ),
+            "mean_agreement_count": _mean_metric_value(
+                bucket_metrics,
+                "candidate_agreement_count",
+            ),
+            "mean_best_iou": _mean_metric_value(
+                bucket_metrics,
+                "candidate_agreement_best_iou",
+            ),
+            "mean_min_center_factor": _mean_metric_value(
+                bucket_metrics,
+                "candidate_agreement_min_center_factor",
+            ),
+            "top_projection": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "projection")
+            ),
+            "top_action": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "candidate_recommended_action")
+            ),
+        }
+    return stats
+
+
+def _count_metric_diagnostic_classes(metrics: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for metric in metrics:
+        diagnostic = _metric_diagnostic_class(metric)
+        counts[diagnostic] = counts.get(diagnostic, 0) + 1
+    return counts
+
+
+def _object_candidate_oracle_stats(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        mode = _metric_text(metric, "candidate_oracle_failure_mode")
+        if mode in {"—", "current_passed"}:
+            continue
+        buckets.setdefault(mode, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for mode, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        stats[mode] = {
+            "total": len(bucket_metrics),
+            "safe_alternative_objects": sum(
+                1
+                for metric in bucket_metrics
+                if _metric_bool(metric, "candidate_oracle_has_safe_alternative")
+            ),
+            "dangerous_candidate_count": sum(
+                _metric_int(metric, "candidate_oracle_dangerous_count")
+                for metric in bucket_metrics
+            ),
+            "top_projection": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "projection")
+            ),
+            "top_failure_class": _top_bucket_name(
+                _count_metric_diagnostic_classes(bucket_metrics)
+            ),
+            "top_best_source": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "candidate_oracle_best_source")
+            ),
+            "top_safe_gain_source": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "candidate_oracle_safe_gain_source")
+            ),
+            "mean_available_candidates": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_available_count",
+            ),
+            "mean_safe_candidates": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_safe_pass_count",
+            ),
+            "mean_best_iou": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_best_iou",
+            ),
+            "mean_current_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_best_drift_px": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_best_center_drift_px",
+            ),
+            "mean_current_drift_px": _mean_metric_value(
+                bucket_metrics,
+                "center_drift_px",
+            ),
+        }
+    return stats
+
+
+def _object_candidate_oracle_matrix(
+    metrics: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if _metric_bool(metric, "passed"):
+            continue
+        best_source = _metric_text(metric, "candidate_oracle_best_source")
+        if best_source == "—":
+            best_source = "no_candidate"
+        key = f"{_metric_text(metric, 'projection')} -> {best_source}"
+        buckets.setdefault(key, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for key, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        stats[key] = {
+            "total": len(bucket_metrics),
+            "safe_alternative_objects": sum(
+                1
+                for metric in bucket_metrics
+                if _metric_bool(metric, "candidate_oracle_has_safe_alternative")
+            ),
+            "selected_would_pass": sum(
+                1
+                for metric in bucket_metrics
+                if _metric_bool(metric, "candidate_oracle_selected_would_pass")
+            ),
+            "dangerous_candidate_count": sum(
+                _metric_int(metric, "candidate_oracle_dangerous_count")
+                for metric in bucket_metrics
+            ),
+            "top_failure_class": _top_bucket_name(
+                _count_metric_diagnostic_classes(bucket_metrics)
+            ),
+            "top_shape": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "object_shape")
+            ),
+            "top_safe_gain_source": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "candidate_oracle_safe_gain_source")
+            ),
+            "mean_current_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_best_iou": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_best_iou",
+            ),
+            "mean_current_drift_px": _mean_metric_value(
+                bucket_metrics,
+                "center_drift_px",
+            ),
+            "mean_best_drift_px": _mean_metric_value(
+                bucket_metrics,
+                "candidate_oracle_best_center_drift_px",
+            ),
+        }
+    return stats
+
+
+
+def _object_crop_verification_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        key = _metric_text(metric, "crop_verification_assessment")
+        if key == "—":
+            key = "not_available"
+        buckets.setdefault(key, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for key, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        failed = [metric for metric in bucket_metrics if not _metric_bool(metric, "passed")]
+        stats[key] = {
+            "total": len(bucket_metrics),
+            "failed": len(failed),
+            "current_passed": len(bucket_metrics) - len(failed),
+            "hidden": sum(1 for metric in bucket_metrics if _metric_bool(metric, "unsafe_hidden")),
+            "dangerous_current": sum(1 for metric in bucket_metrics if _metric_bool(metric, "dangerous_projection")),
+            "object_crop_candidate_available": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_available")
+            ),
+            "object_crop_candidate_would_pass": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_would_pass")
+            ),
+            "object_crop_candidate_dangerous": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_dangerous")
+            ),
+            "best_would_pass": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_best_would_pass")
+            ),
+            "best_dangerous": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_best_dangerous")
+            ),
+            "top_projection": _top_bucket_name(_metric_count_values(bucket_metrics, "projection")),
+            "top_failure_class": _top_bucket_name(_count_metric_diagnostic_classes(failed)),
+            "top_best_source": _top_bucket_name(_metric_count_values(bucket_metrics, "crop_verification_best_source")),
+            "top_object_crop_source": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "crop_verification_object_crop_candidate_source")
+            ),
+            "mean_best_score": _mean_metric_value(bucket_metrics, "crop_verification_best_score"),
+            "mean_best_matches": _mean_metric_value(bucket_metrics, "crop_verification_best_object_matches"),
+            "mean_best_iou": _mean_metric_value(bucket_metrics, "crop_verification_best_iou"),
+            "mean_object_crop_iou": _mean_metric_value(
+                bucket_metrics,
+                "crop_verification_object_crop_candidate_iou",
+            ),
+        }
+    return stats
+
+
+def _object_crop_verification_matrix(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for metric in metrics:
+        if _metric_bool(metric, "passed"):
+            continue
+        assessment = _metric_text(metric, "crop_verification_assessment")
+        source = _metric_text(metric, "crop_verification_object_crop_candidate_source")
+        key = f"{_metric_text(metric, 'projection')} -> {assessment} / {source}"
+        buckets.setdefault(key, []).append(metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for key, bucket_metrics in sorted(
+        buckets.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        stats[key] = {
+            "total": len(bucket_metrics),
+            "object_crop_candidate_available": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_available")
+            ),
+            "object_crop_candidate_would_pass": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_would_pass")
+            ),
+            "object_crop_candidate_dangerous": sum(
+                1 for metric in bucket_metrics if _metric_bool(metric, "crop_verification_object_crop_candidate_dangerous")
+            ),
+            "top_failure_class": _top_bucket_name(_count_metric_diagnostic_classes(bucket_metrics)),
+            "top_shape": _top_bucket_name(_metric_count_values(bucket_metrics, "object_shape")),
+            "top_oracle_mode": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "candidate_oracle_failure_mode")
+            ),
+            "mean_current_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_best_score": _mean_metric_value(bucket_metrics, "crop_verification_best_score"),
+            "mean_best_matches": _mean_metric_value(bucket_metrics, "crop_verification_best_object_matches"),
+            "mean_object_crop_iou": _mean_metric_value(
+                bucket_metrics,
+                "crop_verification_object_crop_candidate_iou",
+            ),
+        }
+    return stats
+
+def _object_candidate_overlap_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    rows: dict[str, list[dict[str, Any]]] = {}
+
+    def add_row(kind: str, source: str, target: str, metric: dict[str, Any]) -> None:
+        key = f"{kind}: {source} -> {target}"
+        rows.setdefault(key, []).append(metric)
+
+    for metric in metrics:
+        projection = _metric_text(metric, "projection")
+        if _metric_bool(metric, "hidden_shadow_available"):
+            add_row(
+                "hidden_shadow",
+                projection,
+                _metric_text(metric, "hidden_shadow_projection"),
+                metric,
+            )
+        fallback_source = _metric_text(metric, "fallback_source")
+        if fallback_source != "—":
+            add_row("fallback_source", fallback_source, projection, metric)
+        global_state = _metric_global_translation_state(metric)
+        if global_state != "not_attempted":
+            add_row("global_translation", projection, global_state, metric)
+        anchor_state = _metric_anchor_state(metric)
+        if anchor_state != "not_attempted":
+            add_row("anchor_release", projection, anchor_state, metric)
+        if _metric_bool(metric, "selective_hidden_release"):
+            add_row(
+                "selective_hidden_release",
+                _metric_text(metric, "selective_hidden_release_source"),
+                projection,
+                metric,
+            )
+        selected_candidate = _metric_text(metric, "projection_candidate_selected")
+        if selected_candidate != "—":
+            add_row("candidate_registry_selected", selected_candidate, projection, metric)
+
+    stats: dict[str, dict[str, Any]] = {}
+    for key, bucket_metrics in sorted(
+        rows.items(),
+        key=lambda pair: len(pair[1]),
+        reverse=True,
+    ):
+        passed = sum(1 for metric in bucket_metrics if _metric_bool(metric, "passed"))
+        hidden_shadow_safe = sum(
+            1
+            for metric in bucket_metrics
+            if _metric_bool(metric, "hidden_shadow_would_pass")
+            and not _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        hidden_shadow_danger = sum(
+            1 for metric in bucket_metrics if _metric_bool(metric, "hidden_shadow_dangerous")
+        )
+        stats[key] = {
+            "total": len(bucket_metrics),
+            "passed": passed,
+            "failed": len(bucket_metrics) - passed,
+            "current_pass_rate": (passed / len(bucket_metrics) * 100.0) if bucket_metrics else 0.0,
+            "shadow_safe_gain": hidden_shadow_safe,
+            "shadow_danger_risk": hidden_shadow_danger,
+            "top_shape": _top_bucket_name(_metric_count_values(bucket_metrics, "object_shape")),
+            "top_hidden_reason": _top_bucket_name(
+                _metric_count_values(bucket_metrics, "hidden_reason")
+            ),
+            "mean_iou": _mean_metric_value(bucket_metrics, "iou"),
+            "mean_center_drift_px": _mean_metric_value(bucket_metrics, "center_drift_px"),
+        }
+    return stats
+
 def _mean_metric_value(metrics: list[dict[str, Any]], key: str) -> float:
     values = _finite_metric_values(metrics, key)
     return float(np.mean(values)) if values else 0.0
@@ -3115,6 +6040,38 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
         "object_global_translation_rescue_diagnostics": _object_global_translation_rescue_diagnostics(
             object_metrics
         ),
+        "object_unsafe_hidden_shadow_stats": _object_unsafe_hidden_shadow_stats(
+            object_metrics
+        ),
+        "object_deep_failure_stats": _object_deep_failure_stats(object_metrics),
+        "object_recovery_opportunity_stats": _object_recovery_opportunity_stats(
+            object_metrics
+        ),
+        "object_method_coverage_stats": _object_method_coverage_stats(object_metrics),
+        "object_selective_hidden_release_stats": _object_selective_hidden_release_stats(
+            object_metrics
+        ),
+        "object_candidate_agreement_stats": _object_candidate_agreement_stats(
+            object_metrics
+        ),
+        "object_candidate_oracle_stats": _object_candidate_oracle_stats(
+            object_metrics
+        ),
+        "object_candidate_oracle_matrix": _object_candidate_oracle_matrix(
+            object_metrics
+        ),
+        "object_crop_verification_stats": _object_crop_verification_stats(object_metrics),
+        "object_crop_verification_matrix": _object_crop_verification_matrix(object_metrics),
+        "object_candidate_overlap_stats": _object_candidate_overlap_stats(object_metrics),
+        "object_result_policy_stats": _object_result_policy_stats(object_metrics),
+        "object_yolo_synthetic_feasibility_stats": _object_yolo_synthetic_feasibility_stats(
+            object_metrics
+        ),
+        "object_yolo_synthetic_fixture_stats": _object_yolo_synthetic_fixture_stats(
+            object_metrics
+        ),
+        "object_yolo_gt_detector_stats": _object_yolo_gt_detector_stats(object_metrics),
+        "object_failure_microscope": _object_failure_microscope(object_metrics),
         "mean_iou": float(np.mean(ious)) if ious else 0.0,
         "min_iou": float(np.min(ious)) if ious else 0.0,
         "mean_center_drift_px": float(np.mean(drifts)) if drifts else 0.0,
@@ -3321,6 +6278,752 @@ def _html_global_translation_rescue_diagnostics_table(
     """
 
 
+def _html_unsafe_hidden_shadow_table(stats: dict[str, Any]) -> str:
+    if not stats or int(stats.get("total_hidden") or 0) <= 0:
+        return ""
+
+    rows = [
+        "<tr>"
+        "<td>overall</td>"
+        f"<td>{int(stats.get('total_hidden') or 0)}</td>"
+        f"<td>{int(stats.get('shadow_available') or 0)}</td>"
+        f"<td>{int(stats.get('would_pass') or 0)}</td>"
+        f"<td>{int(stats.get('safe_would_pass') or 0)}</td>"
+        f"<td>{int(stats.get('would_be_dangerous') or 0)}</td>"
+        f"<td>{float(stats.get('shadow_pass_rate') or 0.0):.1f}%</td>"
+        f"<td>{float(stats.get('shadow_dangerous_rate') or 0.0):.1f}%</td>"
+        f"<td>{float(stats.get('mean_iou') or 0.0):.3f}</td>"
+        f"<td>{float(stats.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+        f"<td>{html.escape(str(stats.get('top_shadow_projection') or '—'))}</td>"
+        f"<td>{html.escape(str(stats.get('top_hidden_reason') or '—'))}</td>"
+        "</tr>"
+    ]
+    by_projection = stats.get("by_projection")
+    if isinstance(by_projection, dict):
+        for projection, item in by_projection.items():
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                "<tr>"
+                f"<td>{html.escape(str(projection))}</td>"
+                f"<td>{int(item.get('total') or 0)}</td>"
+                f"<td>{int(item.get('total') or 0)}</td>"
+                f"<td>{int(item.get('would_pass') or 0)}</td>"
+                f"<td>{int(item.get('safe_would_pass') or 0)}</td>"
+                f"<td>{int(item.get('would_be_dangerous') or 0)}</td>"
+                f"<td>{float(item.get('pass_rate') or 0.0):.1f}%</td>"
+                f"<td>{float(item.get('dangerous_rate') or 0.0):.1f}%</td>"
+                f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+                f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+                "<td>—</td>"
+                "<td>—</td>"
+                "</tr>"
+            )
+
+    return f"""
+      <h2>Unsafe hidden shadow mode</h2>
+      <table>
+        <tr>
+          <th>bucket</th>
+          <th>hidden</th>
+          <th>shadow</th>
+          <th>would pass</th>
+          <th>safe pass</th>
+          <th>dangerous</th>
+          <th>pass rate</th>
+          <th>danger rate</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+          <th>top projection</th>
+          <th>top reason</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_deep_failure_stats_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('safe_gain_candidates') or 0)}</td>"
+            f"<td>{int(item.get('danger_risk_candidates') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_action') or '—'))}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{float(item.get('mean_support') or 0.0):.1f}</td>"
+            f"<td>{html.escape(', '.join(item.get('top_iou_buckets') or []))}</td>"
+            f"<td>{html.escape(', '.join(item.get('top_drift_buckets') or []))}</td>"
+            f"<td>{html.escape(', '.join(item.get('top_support_buckets') or []))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Deep failure diagnostics</h2>
+      <table>
+        <tr>
+          <th>failure class</th>
+          <th>objects</th>
+          <th>safe gain candidates</th>
+          <th>danger risk</th>
+          <th>top projection</th>
+          <th>top shape</th>
+          <th>top action</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+          <th>mean support</th>
+          <th>IoU buckets</th>
+          <th>drift buckets</th>
+          <th>support buckets</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_recovery_opportunity_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('safe_gain_candidates') or 0)}</td>"
+            f"<td>{int(item.get('danger_risk_candidates') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_diagnostic') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_action') or '—'))}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Recovery opportunity map</h2>
+      <table>
+        <tr>
+          <th>recoverability</th>
+          <th>objects</th>
+          <th>safe gain candidates</th>
+          <th>danger risk</th>
+          <th>top diagnostic</th>
+          <th>top action</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_method_coverage_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('passed') or 0)}</td>"
+            f"<td>{int(item.get('failed') or 0)}</td>"
+            f"<td>{float(item.get('pass_rate') or 0.0):.1f}%</td>"
+            f"<td>{int(item.get('hidden') or 0)}</td>"
+            f"<td>{int(item.get('dangerous') or 0)}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{int(item.get('shadow_available') or 0)}</td>"
+            f"<td>{int(item.get('shadow_safe_pass') or 0)}</td>"
+            f"<td>{int(item.get('shadow_dangerous') or 0)}</td>"
+            f"<td>{int(item.get('global_translation_attempted') or 0)}</td>"
+            f"<td>{int(item.get('anchor_release_attempted') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_failure_class') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_global_translation_state') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_anchor_state') or '—'))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Method coverage and overlap</h2>
+      <table>
+        <tr>
+          <th>method/projection</th>
+          <th>objects</th>
+          <th>passed</th>
+          <th>failed</th>
+          <th>pass rate</th>
+          <th>hidden</th>
+          <th>danger</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+          <th>shadow</th>
+          <th>shadow safe</th>
+          <th>shadow danger</th>
+          <th>global rescue tries</th>
+          <th>anchor tries</th>
+          <th>top failure</th>
+          <th>top global state</th>
+          <th>top anchor state</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_candidate_oracle_stats_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('safe_alternative_objects') or 0)}</td>"
+            f"<td>{int(item.get('dangerous_candidate_count') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_failure_class') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_best_source') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_safe_gain_source') or '—'))}</td>"
+            f"<td>{float(item.get('mean_available_candidates') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_safe_candidates') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_current_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_best_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_current_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{float(item.get('mean_best_drift_px') or 0.0):.1f}px</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Candidate oracle analysis</h2>
+      <table>
+        <tr>
+          <th>mode</th>
+          <th>objects</th>
+          <th>safe alternatives</th>
+          <th>danger candidates</th>
+          <th>top current</th>
+          <th>top failure</th>
+          <th>top best</th>
+          <th>top safe source</th>
+          <th>avg candidates</th>
+          <th>avg safe</th>
+          <th>current IoU</th>
+          <th>best IoU</th>
+          <th>current drift</th>
+          <th>best drift</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_candidate_oracle_matrix_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    )[:50]:
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('safe_alternative_objects') or 0)}</td>"
+            f"<td>{int(item.get('selected_would_pass') or 0)}</td>"
+            f"<td>{int(item.get('dangerous_candidate_count') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_failure_class') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_safe_gain_source') or '—'))}</td>"
+            f"<td>{float(item.get('mean_current_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_best_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_current_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{float(item.get('mean_best_drift_px') or 0.0):.1f}px</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Candidate oracle matrix</h2>
+      <table>
+        <tr>
+          <th>current → oracle best</th>
+          <th>objects</th>
+          <th>safe alternatives</th>
+          <th>selected would pass</th>
+          <th>danger candidates</th>
+          <th>top failure</th>
+          <th>top shape</th>
+          <th>top safe source</th>
+          <th>current IoU</th>
+          <th>best IoU</th>
+          <th>current drift</th>
+          <th>best drift</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_candidate_overlap_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in list(
+        sorted(
+            stats.items(),
+            key=lambda pair: int(pair[1].get("total", 0)),
+            reverse=True,
+        )
+    )[:64]:
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('passed') or 0)}</td>"
+            f"<td>{int(item.get('failed') or 0)}</td>"
+            f"<td>{float(item.get('current_pass_rate') or 0.0):.1f}%</td>"
+            f"<td>{int(item.get('shadow_safe_gain') or 0)}</td>"
+            f"<td>{int(item.get('shadow_danger_risk') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_hidden_reason') or '—'))}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Candidate overlap matrix</h2>
+      <table>
+        <tr>
+          <th>overlap</th>
+          <th>objects</th>
+          <th>passed</th>
+          <th>failed</th>
+          <th>current pass</th>
+          <th>shadow safe gain</th>
+          <th>shadow danger</th>
+          <th>top shape</th>
+          <th>top hidden reason</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+
+def _html_crop_verification_stats_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('failed') or 0)}</td>"
+            f"<td>{int(item.get('hidden') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_available') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_would_pass') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_dangerous') or 0)}</td>"
+            f"<td>{int(item.get('best_would_pass') or 0)}</td>"
+            f"<td>{int(item.get('best_dangerous') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_failure_class') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_best_source') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_object_crop_source') or '—'))}</td>"
+            f"<td>{float(item.get('mean_best_score') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_best_matches') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_object_crop_iou') or 0.0):.3f}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Object-crop verification shadow</h2>
+      <table>
+        <tr>
+          <th>assessment</th>
+          <th>objects</th>
+          <th>failed</th>
+          <th>hidden</th>
+          <th>object-crop candidates</th>
+          <th>object-crop would pass</th>
+          <th>object-crop dangerous</th>
+          <th>best would pass</th>
+          <th>best dangerous</th>
+          <th>top projection</th>
+          <th>top failure</th>
+          <th>top best source</th>
+          <th>top object-crop source</th>
+          <th>mean score</th>
+          <th>mean matches</th>
+          <th>object-crop IoU</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_crop_verification_matrix_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for name, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    )[:60]:
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(name))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_available') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_would_pass') or 0)}</td>"
+            f"<td>{int(item.get('object_crop_candidate_dangerous') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_failure_class') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_oracle_mode') or '—'))}</td>"
+            f"<td>{float(item.get('mean_current_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_best_score') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_best_matches') or 0.0):.1f}</td>"
+            f"<td>{float(item.get('mean_object_crop_iou') or 0.0):.3f}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Object-crop verification matrix</h2>
+      <table>
+        <tr>
+          <th>projection → crop assessment / crop source</th>
+          <th>objects</th>
+          <th>object-crop candidates</th>
+          <th>would pass</th>
+          <th>dangerous</th>
+          <th>top failure</th>
+          <th>top shape</th>
+          <th>top oracle mode</th>
+          <th>current IoU</th>
+          <th>best score</th>
+          <th>matches</th>
+          <th>object-crop IoU</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_result_policy_stats_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for status, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(status))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('passed') or 0)}</td>"
+            f"<td>{int(item.get('failed') or 0)}</td>"
+            f"<td>{int(item.get('unsafe_hidden') or 0)}</td>"
+            f"<td>{int(item.get('dangerous') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_confidence') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_action') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_user_label') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_reason') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Result policy / UI rendering status</h2>
+      <table>
+        <tr>
+          <th>policy</th>
+          <th>objects</th>
+          <th>passed</th>
+          <th>failed</th>
+          <th>hidden</th>
+          <th>dangerous</th>
+          <th>confidence</th>
+          <th>UI action</th>
+          <th>user label</th>
+          <th>top reason</th>
+          <th>top projection</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_yolo_synthetic_feasibility_table(stats: dict[str, dict[str, Any]]) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for bucket, item in sorted(
+        stats.items(),
+        key=lambda pair: int(pair[1].get("total", 0)),
+        reverse=True,
+    ):
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(bucket))}</td>"
+            f"<td>{int(item.get('total') or 0)}</td>"
+            f"<td>{int(item.get('failed') or 0)}</td>"
+            f"<td>{int(item.get('unsafe_hidden') or 0)}</td>"
+            f"<td>{int(item.get('dangerous') or 0)}</td>"
+            f"<td>{html.escape(str(item.get('top_expected_role') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_policy') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_projection') or '—'))}</td>"
+            f"<td>{html.escape(str(item.get('top_shape') or '—'))}</td>"
+            f"<td>{float(item.get('mean_iou') or 0.0):.3f}</td>"
+            f"<td>{float(item.get('mean_center_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{html.escape(str(item.get('limitation') or '—'))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>YOLO synthetic feasibility map</h2>
+      <table>
+        <tr>
+          <th>bucket</th>
+          <th>objects</th>
+          <th>failed</th>
+          <th>hidden</th>
+          <th>dangerous</th>
+          <th>expected YOLO role</th>
+          <th>top policy</th>
+          <th>top projection</th>
+          <th>top shape</th>
+          <th>mean IoU</th>
+          <th>mean drift</th>
+          <th>limitation</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_yolo_synthetic_fixture_table(stats: dict[str, dict[str, Any]]) -> str:
+    return _html_detector_fixture_table(
+        title="YOLO synthetic detector fixture",
+        stats=stats,
+    )
+
+
+def _html_yolo_gt_detector_table(stats: dict[str, dict[str, Any]]) -> str:
+    return _html_detector_fixture_table(
+        title="YOLO GT detector oracle",
+        stats=stats,
+    )
+
+
+def _html_detector_fixture_table(
+    *,
+    title: str,
+    stats: dict[str, dict[str, Any]],
+) -> str:
+    if not stats:
+        return ""
+    rows = []
+    for profile, item in stats.items():
+        by_bucket = item.get("by_bucket")
+        if not isinstance(by_bucket, dict):
+            by_bucket = {}
+        if not by_bucket:
+            rows.append(_html_detector_fixture_row(profile, "all", item))
+            continue
+        first = True
+        for bucket, bucket_item in sorted(
+            by_bucket.items(),
+            key=lambda pair: int(pair[1].get("baseline_failed", 0)),
+            reverse=True,
+        ):
+            if int(bucket_item.get("baseline_failed") or 0) == 0 and bucket != "geometry_baseline_ok":
+                continue
+            rows.append(
+                _html_detector_fixture_row(
+                    profile if first else "",
+                    bucket,
+                    bucket_item,
+                )
+            )
+            first = False
+    return f"""
+      <h2>{html.escape(title)}</h2>
+      <table>
+        <tr>
+          <th>profile</th>
+          <th>bucket</th>
+          <th>objects</th>
+          <th>baseline failed</th>
+          <th>would rescue</th>
+          <th>remaining failed</th>
+          <th>dangerous if trusted</th>
+          <th>top status</th>
+          <th>top candidate</th>
+          <th>top reason</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
+
+def _html_detector_fixture_row(
+    profile: str,
+    bucket: str,
+    item: dict[str, Any],
+) -> str:
+    return (
+        "<tr>"
+        f"<td>{html.escape(str(profile or '—'))}</td>"
+        f"<td>{html.escape(str(bucket))}</td>"
+        f"<td>{int(item.get('total') or 0)}</td>"
+        f"<td>{int(item.get('baseline_failed') or 0)}</td>"
+        f"<td>{int(item.get('would_rescue') or 0)}</td>"
+        f"<td>{int(item.get('remaining_failed') or 0)}</td>"
+        f"<td>{int(item.get('dangerous_if_trusted') or 0)}</td>"
+        f"<td>{html.escape(str(item.get('top_status') or '—'))}</td>"
+        f"<td>{html.escape(str(item.get('top_candidate_source') or '—'))}</td>"
+        f"<td>{html.escape(str(item.get('top_reason') or '—'))}</td>"
+        "</tr>"
+    )
+
+def _html_failure_microscope_table(rows_data: list[dict[str, Any]]) -> str:
+    if not rows_data:
+        return ""
+    rows = []
+    for row in rows_data[:120]:
+        rows.append(
+            "<tr>"
+            f"<td>#{int(row.get('case_index') or 0):03d}</td>"
+            f"<td>{html.escape(str(row.get('object_name') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('shape') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('projection') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('result_policy_status') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('result_policy_action') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('yolo_synthetic_test_bucket') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('yolo_fixture_oracle_status') or '—'))}</td>"
+            f"<td>{'yes' if row.get('yolo_fixture_oracle_would_gain') else 'no'}</td>"
+            f"<td>{html.escape(str(row.get('yolo_fixture_noisy_status') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('yolo_fixture_false_positive_status') or '—'))}</td>"
+            f"<td>{'yes' if row.get('yolo_fixture_false_positive_would_be_dangerous') else 'no'}</td>"
+            f"<td>{html.escape(str(row.get('yolo_gt_perfect_status') or '—'))}</td>"
+            f"<td>{'yes' if row.get('yolo_gt_perfect_would_gain') else 'no'}</td>"
+            f"<td>{html.escape(str(row.get('yolo_gt_jitter_status') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('yolo_gt_false_positive_status') or '—'))}</td>"
+            f"<td>{'yes' if row.get('yolo_gt_false_positive_would_be_dangerous') else 'no'}</td>"
+            f"<td>{html.escape(str(row.get('diagnostic_class') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('recoverability') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('recommended_action') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('candidate_oracle_failure_mode') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('candidate_oracle_best_source') or '—'))}</td>"
+            f"<td>{float(row.get('candidate_oracle_best_iou') or 0.0):.3f}</td>"
+            f"<td>{float(row.get('candidate_oracle_best_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{html.escape(str(row.get('candidate_oracle_safe_gain_source') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('crop_verification_assessment') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('crop_verification_best_source') or '—'))}</td>"
+            f"<td>{float(row.get('crop_verification_best_score') or 0.0):.3f}</td>"
+            f"<td>{int(row.get('crop_verification_best_matches') or 0)}</td>"
+            f"<td>{html.escape(str(row.get('crop_verification_object_crop_source') or '—'))}</td>"
+            f"<td>{float(row.get('crop_verification_object_crop_iou') or 0.0):.3f}</td>"
+            f"<td>{'yes' if row.get('crop_verification_object_crop_would_pass') else 'no'}</td>"
+            f"<td>{'yes' if row.get('crop_verification_object_crop_dangerous') else 'no'}</td>"
+            f"<td>{float(row.get('iou') or 0.0):.3f}</td>"
+            f"<td>{float(row.get('center_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{float(row.get('area_ratio') or 0.0):.2f}x</td>"
+            f"<td>{int(row.get('support') or 0)}/{int(row.get('support_total') or 0)}</td>"
+            f"<td>{html.escape(str(row.get('hidden_reason') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('hidden_shadow_projection') or '—'))}</td>"
+            f"<td>{float(row.get('hidden_shadow_iou') or 0.0):.3f}</td>"
+            f"<td>{float(row.get('hidden_shadow_drift_px') or 0.0):.1f}px</td>"
+            f"<td>{'yes' if row.get('hidden_shadow_would_pass') else 'no'}</td>"
+            f"<td>{'yes' if row.get('hidden_shadow_dangerous') else 'no'}</td>"
+            f"<td>{html.escape(str(row.get('global_translation_state') or '—'))}</td>"
+            f"<td>{html.escape(str(row.get('anchor_state') or '—'))}</td>"
+            "</tr>"
+        )
+    return f"""
+      <h2>Failure microscope</h2>
+      <table>
+        <tr>
+          <th>case</th>
+          <th>object</th>
+          <th>shape</th>
+          <th>projection</th>
+          <th>policy</th>
+          <th>UI action</th>
+          <th>YOLO synthetic bucket</th>
+          <th>oracle fixture</th>
+          <th>oracle gain</th>
+          <th>noisy fixture</th>
+          <th>false-positive fixture</th>
+          <th>FP dangerous</th>
+          <th>GT perfect</th>
+          <th>GT gain</th>
+          <th>GT jitter</th>
+          <th>GT false positive</th>
+          <th>GT FP danger</th>
+          <th>diagnostic class</th>
+          <th>recoverability</th>
+          <th>recommended action</th>
+          <th>oracle mode</th>
+          <th>oracle best</th>
+          <th>oracle IoU</th>
+          <th>oracle drift</th>
+          <th>safe source</th>
+          <th>crop assessment</th>
+          <th>crop best</th>
+          <th>crop score</th>
+          <th>crop matches</th>
+          <th>object-crop source</th>
+          <th>object-crop IoU</th>
+          <th>object-crop pass</th>
+          <th>object-crop danger</th>
+          <th>IoU</th>
+          <th>drift</th>
+          <th>area</th>
+          <th>support</th>
+          <th>hidden reason</th>
+          <th>shadow projection</th>
+          <th>shadow IoU</th>
+          <th>shadow drift</th>
+          <th>shadow pass</th>
+          <th>shadow danger</th>
+          <th>global rescue</th>
+          <th>anchor</th>
+        </tr>
+        {''.join(rows)}
+      </table>
+    """
+
 def _html_fallback_diagnostics_table(
     title: str,
     stats: dict[str, dict[str, Any]],
@@ -3454,6 +7157,22 @@ def _write_html_report(
       {_html_fallback_diagnostics_table('None projection diagnostics', summary.get('object_none_projection_stats', {}))}
       {_html_fallback_diagnostics_table('Global fallback diagnostics', summary.get('object_global_fallback_diagnostics', {}))}
       {_html_global_translation_rescue_diagnostics_table('Global translation rescue diagnostics', summary.get('object_global_translation_rescue_diagnostics', {}))}
+      {_html_unsafe_hidden_shadow_table(summary.get('object_unsafe_hidden_shadow_stats', {}))}
+      {_html_deep_failure_stats_table(summary.get('object_deep_failure_stats', {}))}
+      {_html_recovery_opportunity_table(summary.get('object_recovery_opportunity_stats', {}))}
+      {_html_method_coverage_table(summary.get('object_method_coverage_stats', {}))}
+      {_html_stats_table('Selective hidden release stats', summary.get('object_selective_hidden_release_stats', {}))}
+      {_html_stats_table('Candidate agreement scorer stats', summary.get('object_candidate_agreement_stats', {}))}
+      {_html_candidate_oracle_stats_table(summary.get('object_candidate_oracle_stats', {}))}
+      {_html_candidate_oracle_matrix_table(summary.get('object_candidate_oracle_matrix', {}))}
+      {_html_crop_verification_stats_table(summary.get('object_crop_verification_stats', {}))}
+      {_html_crop_verification_matrix_table(summary.get('object_crop_verification_matrix', {}))}
+      {_html_candidate_overlap_table(summary.get('object_candidate_overlap_stats', {}))}
+      {_html_result_policy_stats_table(summary.get('object_result_policy_stats', {}))}
+      {_html_yolo_synthetic_feasibility_table(summary.get('object_yolo_synthetic_feasibility_stats', {}))}
+      {_html_yolo_synthetic_fixture_table(summary.get('object_yolo_synthetic_fixture_stats', {}))}
+      {_html_yolo_gt_detector_table(summary.get('object_yolo_gt_detector_stats', {}))}
+      {_html_failure_microscope_table(summary.get('object_failure_microscope', []))}
       {''.join(cards)}
     </body>
     </html>
@@ -3696,6 +7415,121 @@ def _point_outside_polygon_margin(
 
 
 
+def _projection_candidate_registry_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
+    raw_registry = debug.get("missing_polygon_candidate_registry")
+    if not isinstance(raw_registry, list):
+        return {
+            "projection_candidate_count": 0,
+            "projection_candidate_sources": [],
+            "projection_candidate_selected": None,
+            "candidate_agreement_available_count": _int_debug(
+                debug.get("missing_polygon_candidate_agreement_available_count")
+            ),
+            "candidate_agreement_comparison_count": _int_debug(
+                debug.get("missing_polygon_candidate_agreement_comparison_count")
+            ),
+            "candidate_agreement_selected": (
+                str(debug.get("missing_polygon_candidate_agreement_selected"))
+                if debug.get("missing_polygon_candidate_agreement_selected") is not None
+                else None
+            ),
+            "candidate_agreement_count": _int_debug(
+                debug.get("missing_polygon_candidate_agreement_count")
+            ),
+            "candidate_agreement_level": (
+                str(debug.get("missing_polygon_candidate_agreement_level"))
+                if debug.get("missing_polygon_candidate_agreement_level") is not None
+                else None
+            ),
+            "candidate_agreement_best_iou": _float_or_none(
+                debug.get("missing_polygon_candidate_agreement_best_iou")
+            ),
+            "candidate_agreement_best_area_score": _float_or_none(
+                debug.get("missing_polygon_candidate_agreement_best_area_score")
+            ),
+            "candidate_agreement_min_center_factor": _float_or_none(
+                debug.get("missing_polygon_candidate_agreement_min_center_factor")
+            ),
+            "candidate_agreement_closest_source": (
+                str(debug.get("missing_polygon_candidate_agreement_closest_source"))
+                if debug.get("missing_polygon_candidate_agreement_closest_source") is not None
+                else None
+            ),
+            "candidate_confidence": (
+                str(debug.get("missing_polygon_candidate_confidence"))
+                if debug.get("missing_polygon_candidate_confidence") is not None
+                else None
+            ),
+            "candidate_recommended_action": (
+                str(debug.get("missing_polygon_candidate_recommended_action"))
+                if debug.get("missing_polygon_candidate_recommended_action") is not None
+                else None
+            ),
+        }
+
+    sources: list[str] = []
+    selected: str | None = None
+    for raw_item in raw_registry:
+        if not isinstance(raw_item, dict):
+            continue
+        name = raw_item.get("name")
+        if name is None:
+            continue
+        source = str(name)
+        sources.append(source)
+        if bool(raw_item.get("selected")):
+            selected = source
+
+    return {
+        "projection_candidate_count": len(sources),
+        "projection_candidate_sources": sources,
+        "projection_candidate_selected": selected,
+        "candidate_agreement_available_count": _int_debug(
+            debug.get("missing_polygon_candidate_agreement_available_count")
+        ),
+        "candidate_agreement_comparison_count": _int_debug(
+            debug.get("missing_polygon_candidate_agreement_comparison_count")
+        ),
+        "candidate_agreement_selected": (
+            str(debug.get("missing_polygon_candidate_agreement_selected"))
+            if debug.get("missing_polygon_candidate_agreement_selected") is not None
+            else None
+        ),
+        "candidate_agreement_count": _int_debug(
+            debug.get("missing_polygon_candidate_agreement_count")
+        ),
+        "candidate_agreement_level": (
+            str(debug.get("missing_polygon_candidate_agreement_level"))
+            if debug.get("missing_polygon_candidate_agreement_level") is not None
+            else None
+        ),
+        "candidate_agreement_best_iou": _float_or_none(
+            debug.get("missing_polygon_candidate_agreement_best_iou")
+        ),
+        "candidate_agreement_best_area_score": _float_or_none(
+            debug.get("missing_polygon_candidate_agreement_best_area_score")
+        ),
+        "candidate_agreement_min_center_factor": _float_or_none(
+            debug.get("missing_polygon_candidate_agreement_min_center_factor")
+        ),
+        "candidate_agreement_closest_source": (
+            str(debug.get("missing_polygon_candidate_agreement_closest_source"))
+            if debug.get("missing_polygon_candidate_agreement_closest_source") is not None
+            else None
+        ),
+        "candidate_confidence": (
+            str(debug.get("missing_polygon_candidate_confidence"))
+            if debug.get("missing_polygon_candidate_confidence") is not None
+            else None
+        ),
+        "candidate_recommended_action": (
+            str(debug.get("missing_polygon_candidate_recommended_action"))
+            if debug.get("missing_polygon_candidate_recommended_action") is not None
+            else None
+        ),
+    }
+
+
 def _fallback_metric_fields(
     debug: dict[str, Any],
     *,
@@ -3726,6 +7560,46 @@ def _fallback_metric_fields(
         "fallback_slot_feature_total": _int_debug(
             debug.get("missing_polygon_fallback_slot_feature_total")
         ),
+        "selective_hidden_release": bool(
+            debug.get("missing_polygon_selective_hidden_release")
+        ),
+        "selective_hidden_release_source": (
+            str(debug.get("missing_polygon_selective_hidden_release_source"))
+            if debug.get("missing_polygon_selective_hidden_release_source") is not None
+            else None
+        ),
+        "selective_hidden_release_hidden_reason": (
+            str(debug.get("missing_polygon_selective_hidden_release_hidden_reason"))
+            if debug.get("missing_polygon_selective_hidden_release_hidden_reason") is not None
+            else None
+        ),
+        "selective_hidden_release_rejected": bool(
+            debug.get("missing_polygon_selective_hidden_release_rejected")
+        ),
+        "selective_hidden_release_reject_reason": (
+            str(debug.get("missing_polygon_selective_hidden_release_reject_reason"))
+            if debug.get("missing_polygon_selective_hidden_release_reject_reason") is not None
+            else None
+        ),
+        "selective_hidden_release_slot_support": _int_debug(
+            debug.get("missing_polygon_selective_hidden_release_slot_support")
+        ),
+        "selective_hidden_release_slot_total": _int_debug(
+            debug.get("missing_polygon_selective_hidden_release_slot_total")
+        ),
+        "selective_hidden_release_slot_ratio": _float_or_none(
+            debug.get("missing_polygon_selective_hidden_release_slot_ratio")
+        ),
+        "selective_hidden_release_reference_area_score": _float_or_none(
+            debug.get("missing_polygon_selective_hidden_release_reference_area_score")
+        ),
+        "selective_hidden_release_center_factor": _float_or_none(
+            debug.get("missing_polygon_selective_hidden_release_center_factor")
+        ),
+        "selective_hidden_release_max_other_overlap": _float_or_none(
+            debug.get("missing_polygon_selective_hidden_release_max_other_overlap")
+        ),
+        **_projection_candidate_registry_metric_fields(debug),
         "global_translation_rescue_attempted": bool(
             debug.get("missing_polygon_global_translation_rescue_attempted")
         ),
@@ -3887,6 +7761,832 @@ def _anchor_release_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
         ),
     }
 
+
+
+def _run_real_yolo_synthetic_pipeline(*, args: argparse.Namespace, output_dir: Path) -> int:
+    """Train/load a real YOLO-seg model and evaluate it on synthetic inspection scenes.
+
+    The older report-only YOLO fixtures answer only a theoretical question.  This
+    path is intentionally heavier: it exports real images/labels, trains or loads
+    Ultralytics YOLO-seg, runs real inference, and then sends the produced masks
+    through the same matcher guards used by inspection.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    baseline_dir = output_dir / "lightglue_baseline"
+    baseline_summary = _run_lightglue_synthetic_suite(args=args, output_dir=baseline_dir)
+
+    dataset_dir = output_dir / "real_yolo_synthetic_dataset"
+    dataset_summary = _export_real_yolo_synthetic_dataset(
+        dataset_dir=dataset_dir,
+        train_cases=args.real_yolo_train_cases,
+        val_cases=args.real_yolo_val_cases,
+        test_cases=args.real_yolo_test_cases or args.cases,
+        seed=args.seed,
+        profile=args.profile,
+        multi_object_cases=args.multi_object_cases,
+    )
+
+    if args.real_yolo_model_path:
+        model_path = Path(args.real_yolo_model_path).expanduser().resolve()
+        if not model_path.exists():
+            raise FileNotFoundError(f"YOLO model not found: {model_path}")
+        train_result = {"source": "provided", "model_path": str(model_path)}
+    else:
+        train_result = _train_real_yolo_synthetic_model(
+            dataset_yaml=dataset_dir / "data.yaml",
+            project_dir=output_dir / "real_yolo_train",
+            base_model=args.real_yolo_base_model,
+            epochs=args.real_yolo_epochs,
+            imgsz=args.real_yolo_imgsz,
+            batch=args.real_yolo_batch,
+            device=args.real_yolo_device,
+            keep_training_dir=args.real_yolo_keep_training_dir,
+        )
+        model_path = Path(str(train_result["model_path"]))
+
+    evaluation = _evaluate_real_yolo_synthetic_model(
+        model_path=model_path,
+        output_dir=output_dir / "real_yolo_eval",
+        seed=args.seed,
+        profile=args.profile,
+        test_cases=args.real_yolo_test_cases or args.cases,
+        multi_object_cases=args.multi_object_cases,
+        conf=args.real_yolo_conf,
+        iou=args.real_yolo_iou,
+        imgsz=args.real_yolo_imgsz,
+        device=args.real_yolo_device,
+    )
+
+    comparison = {
+        "mode": "real_yolo_synthetic_e2e",
+        "baseline_lightglue": baseline_summary,
+        "dataset": dataset_summary,
+        "training": train_result,
+        "real_yolo": evaluation,
+        "decision_hint": _real_yolo_decision_hint(evaluation),
+    }
+    _write_json(output_dir / "real_yolo_synthetic_summary.json", comparison)
+
+    print("real_yolo_synthetic_e2e finished")
+    print(f"baseline={baseline_dir / 'summary.json'}")
+    print(f"dataset={dataset_dir}")
+    print(f"model={model_path}")
+    print(f"eval={output_dir / 'real_yolo_eval' / 'summary.json'}")
+    print(f"summary={output_dir / 'real_yolo_synthetic_summary.json'}")
+
+    if args.fail_on_fail and evaluation["combined"]["dangerous_expected_matches"] > 0:
+        return 1
+    return 0
+
+
+def _export_real_yolo_synthetic_dataset(
+    *,
+    dataset_dir: Path,
+    train_cases: int,
+    val_cases: int,
+    test_cases: int,
+    seed: int,
+    profile: str,
+    multi_object_cases: int | None,
+) -> dict[str, Any]:
+    if dataset_dir.exists():
+        shutil.rmtree(dataset_dir)
+    for split in ("train", "val", "test"):
+        (dataset_dir / "images" / split).mkdir(parents=True, exist_ok=True)
+        (dataset_dir / "labels" / split).mkdir(parents=True, exist_ok=True)
+
+    split_specs = {
+        "train": (max(1, int(train_cases)), seed + 120000, "brutal"),
+        "val": (max(1, int(val_cases)), seed + 220000, "brutal"),
+        "test": (max(1, int(test_cases)), seed, profile),
+    }
+    summary: dict[str, Any] = {
+        "path": str(dataset_dir),
+        "classes": list(_OBJECT_SHAPE_NAMES),
+        "splits": {},
+    }
+
+    for split, (case_count, split_seed, split_profile) in split_specs.items():
+        scenes = _real_yolo_synthetic_scenes(
+            total=case_count,
+            seed=split_seed,
+            profile=split_profile,
+            multi_object_cases=(
+                _real_yolo_default_dataset_multi_cases(case_count, split)
+                if split != "test"
+                else _resolve_multi_object_cases(
+                    requested=multi_object_cases,
+                    profile=profile,
+                    base_count=case_count,
+                )
+            ),
+        )
+        split_summary = _write_real_yolo_dataset_split(
+            dataset_dir=dataset_dir,
+            split=split,
+            scenes=scenes,
+            include_missing_negatives=True,
+        )
+        summary["splits"][split] = split_summary
+
+    _write_real_yolo_data_yaml(dataset_dir)
+    _write_json(dataset_dir / "dataset_summary.json", summary)
+    return summary
+
+
+def _real_yolo_default_dataset_multi_cases(case_count: int, split: str) -> int:
+    if split == "train":
+        return max(8, int(case_count * 0.45))
+    if split == "val":
+        return max(4, int(case_count * 0.35))
+    return 0
+
+
+def _real_yolo_synthetic_scenes(
+    *,
+    total: int,
+    seed: int,
+    profile: str,
+    multi_object_cases: int,
+) -> list[_SyntheticScene | _SyntheticMultiScene]:
+    scenarios = _build_scenarios(total=total, seed=seed, profile=profile)
+    scenes: list[_SyntheticScene | _SyntheticMultiScene] = [
+        _build_scene(scenario) for scenario in scenarios
+    ]
+    if multi_object_cases > 0:
+        multi_scenarios = _build_multi_scenarios(
+            total=multi_object_cases,
+            seed=seed,
+            profile=profile,
+        )
+        scenes.extend(_build_multi_scene(scenario) for scenario in multi_scenarios)
+    return scenes
+
+
+def _write_real_yolo_dataset_split(
+    *,
+    dataset_dir: Path,
+    split: str,
+    scenes: Sequence[_SyntheticScene | _SyntheticMultiScene],
+    include_missing_negatives: bool,
+) -> dict[str, Any]:
+    image_dir = dataset_dir / "images" / split
+    label_dir = dataset_dir / "labels" / split
+    image_count = 0
+    object_label_count = 0
+    distractor_label_count = 0
+    empty_label_count = 0
+
+    for index, scene in enumerate(scenes, start=1):
+        present_image = _real_yolo_present_target_image(scene)
+        present_labels, present_distractors = _real_yolo_scene_labels(
+            scene,
+            include_expected=True,
+            include_distractors=True,
+        )
+        image_name = f"{split}_{index:05d}_present.png"
+        cv2.imwrite(str(image_dir / image_name), present_image)
+        _write_yolo_seg_label_file(label_dir / image_name.replace(".png", ".txt"), present_labels)
+        image_count += 1
+        object_label_count += len(present_labels) - present_distractors
+        distractor_label_count += present_distractors
+
+        if include_missing_negatives:
+            missing_labels, missing_distractors = _real_yolo_scene_labels(
+                scene,
+                include_expected=False,
+                include_distractors=True,
+            )
+            missing_name = f"{split}_{index:05d}_missing_negative.png"
+            cv2.imwrite(str(image_dir / missing_name), scene.target_image)
+            _write_yolo_seg_label_file(label_dir / missing_name.replace(".png", ".txt"), missing_labels)
+            image_count += 1
+            distractor_label_count += missing_distractors
+            if not missing_labels:
+                empty_label_count += 1
+
+    return {
+        "scenes": len(scenes),
+        "images": image_count,
+        "expected_object_labels": object_label_count,
+        "distractor_labels": distractor_label_count,
+        "empty_label_files": empty_label_count,
+    }
+
+
+def _write_real_yolo_data_yaml(dataset_dir: Path) -> None:
+    names_lines = "\n".join(
+        f"  {index}: {name}" for index, name in enumerate(_OBJECT_SHAPE_NAMES)
+    )
+    content = (
+        f"path: {dataset_dir}\n"
+        "train: images/train\n"
+        "val: images/val\n"
+        "test: images/test\n"
+        f"names:\n{names_lines}\n"
+    )
+    (dataset_dir / "data.yaml").write_text(content, encoding="utf-8")
+
+
+def _write_yolo_seg_label_file(path: Path, labels: Sequence[tuple[str, PolygonPoints]]) -> None:
+    lines: list[str] = []
+    width, height = _CANVAS_SIZE
+    for class_name, polygon in labels:
+        class_id = _real_yolo_class_id(class_name)
+        normalized = _normalize_yolo_polygon(polygon, width=width, height=height)
+        if len(normalized) < 6:
+            continue
+        lines.append(f"{class_id} " + " ".join(f"{value:.6f}" for value in normalized))
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def _real_yolo_class_id(class_name: str) -> int:
+    try:
+        return list(_OBJECT_SHAPE_NAMES).index(class_name)
+    except ValueError:
+        return list(_OBJECT_SHAPE_NAMES).index(_DEFAULT_OBJECT_SHAPE)
+
+
+def _normalize_yolo_polygon(
+    polygon: PolygonPoints,
+    *,
+    width: int,
+    height: int,
+) -> list[float]:
+    shape = _safe_shape(polygon)
+    if shape is None or shape.area < 4.0:
+        return []
+    values: list[float] = []
+    for x, y in polygon:
+        nx = min(max(float(x) / float(width), 0.0), 1.0)
+        ny = min(max(float(y) / float(height), 0.0), 1.0)
+        values.extend([nx, ny])
+    return values
+
+
+def _real_yolo_scene_labels(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+    *,
+    include_expected: bool,
+    include_distractors: bool,
+) -> tuple[list[tuple[str, PolygonPoints]], int]:
+    labels: list[tuple[str, PolygonPoints]] = []
+    distractor_count = 0
+    if isinstance(scene, _SyntheticScene):
+        if include_expected:
+            labels.append((scene.scenario.object_shape, scene.ground_truth_polygon))
+        if include_distractors:
+            for polygon in scene.distractor_polygons:
+                labels.append((scene.scenario.object_shape, polygon))
+                distractor_count += 1
+        return labels, distractor_count
+
+    for obj in scene.objects:
+        if include_expected:
+            labels.append((obj.object_shape, obj.ground_truth_polygon))
+        if include_distractors:
+            for polygon in obj.distractor_polygons:
+                labels.append((obj.object_shape, polygon))
+                distractor_count += 1
+    return labels, distractor_count
+
+
+def _real_yolo_present_target_image(scene: _SyntheticScene | _SyntheticMultiScene) -> np.ndarray:
+    width, height = _CANVAS_SIZE
+    image = _base_scene(width=width, height=height)
+    homography = scene.true_homography
+    _draw_stable_context(image, homography=homography)
+
+    if isinstance(scene, _SyntheticScene):
+        for polygon in scene.distractor_polygons:
+            _draw_polygon(image, polygon, (42, 130, 230), fill=True, alpha=0.68)
+            _draw_polygon(image, polygon, _DISTRACTOR_COLOR, thickness=2)
+        _draw_polygon(image, scene.ground_truth_polygon, (70, 120, 235), fill=True, alpha=0.78)
+        _draw_polygon(image, scene.ground_truth_polygon, (20, 40, 160), thickness=2)
+        if scene.scenario.occluder:
+            occluder_poly = project_polygon(
+                [[266.0, 156.0], [430.0, 180.0], [408.0, 264.0], [252.0, 238.0]],
+                homography,
+            )
+            _draw_polygon(image, occluder_poly, (90, 92, 100), fill=True, alpha=0.88)
+            _draw_polygon(image, occluder_poly, (180, 180, 190), thickness=2)
+        return image
+
+    for obj in scene.objects:
+        for polygon in obj.distractor_polygons:
+            _draw_polygon(image, polygon, (42, 130, 230), fill=True, alpha=0.60)
+            _draw_polygon(image, polygon, _DISTRACTOR_COLOR, thickness=2)
+    for obj in scene.objects:
+        color = _object_color(obj.index)
+        _draw_polygon(image, obj.ground_truth_polygon, color, fill=True, alpha=0.76)
+        _draw_polygon(image, obj.ground_truth_polygon, (20, 40, 160), thickness=2)
+    if scene.scenario.occluder:
+        occluder_poly = project_polygon(
+            [[160.0, 140.0], [560.0, 170.0], [532.0, 344.0], [135.0, 312.0]],
+            homography,
+        )
+        _draw_polygon(image, occluder_poly, (88, 90, 98), fill=True, alpha=0.72)
+        _draw_polygon(image, occluder_poly, (180, 180, 190), thickness=2)
+    return image
+
+
+def _train_real_yolo_synthetic_model(
+    *,
+    dataset_yaml: Path,
+    project_dir: Path,
+    base_model: str,
+    epochs: int,
+    imgsz: int,
+    batch: int,
+    device: str,
+    keep_training_dir: bool,
+) -> dict[str, Any]:
+    try:
+        from ultralytics import YOLO
+    except Exception as exc:  # pragma: no cover - depends on local env
+        raise RuntimeError(
+            "Ultralytics is required for --real-yolo-synthetic. Install with: "
+            "python -m pip install ultralytics"
+        ) from exc
+
+    if project_dir.exists() and not keep_training_dir:
+        shutil.rmtree(project_dir)
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    model = YOLO(base_model)
+    train_kwargs: dict[str, Any] = {
+        "data": str(dataset_yaml),
+        "epochs": int(epochs),
+        "imgsz": int(imgsz),
+        "batch": int(batch),
+        "project": str(project_dir),
+        "name": "synthetic_yolo_seg",
+        "exist_ok": True,
+        "task": "segment",
+        "verbose": True,
+    }
+    device_arg = _real_yolo_device_arg(device)
+    if device_arg is not None:
+        train_kwargs["device"] = device_arg
+    model.train(**train_kwargs)
+
+    best_path = project_dir / "synthetic_yolo_seg" / "weights" / "best.pt"
+    last_path = project_dir / "synthetic_yolo_seg" / "weights" / "last.pt"
+    model_path = best_path if best_path.exists() else last_path
+    if not model_path.exists():
+        raise FileNotFoundError("Ultralytics training finished but no best.pt/last.pt was found")
+    return {
+        "source": "trained",
+        "base_model": base_model,
+        "epochs": int(epochs),
+        "imgsz": int(imgsz),
+        "batch": int(batch),
+        "device": device,
+        "model_path": str(model_path),
+    }
+
+
+def _real_yolo_device_arg(device: str) -> str | None:
+    normalized = str(device or "auto").strip().lower()
+    if normalized in {"", "auto", "none"}:
+        return None
+    return str(device)
+
+
+def _evaluate_real_yolo_synthetic_model(
+    *,
+    model_path: Path,
+    output_dir: Path,
+    seed: int,
+    profile: str,
+    test_cases: int,
+    multi_object_cases: int | None,
+    conf: float,
+    iou: float,
+    imgsz: int,
+    device: str,
+) -> dict[str, Any]:
+    try:
+        from ultralytics import YOLO
+    except Exception as exc:  # pragma: no cover - depends on local env
+        raise RuntimeError("Ultralytics is required for real YOLO evaluation") from exc
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    images_dir = output_dir / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    scenes = _real_yolo_synthetic_scenes(
+        total=test_cases,
+        seed=seed,
+        profile=profile,
+        multi_object_cases=_resolve_multi_object_cases(
+            requested=multi_object_cases,
+            profile=profile,
+            base_count=max(1, int(test_cases)),
+        ),
+    )
+    model = YOLO(str(model_path))
+    names = _real_yolo_model_names(model)
+
+    present_rows: list[dict[str, Any]] = []
+    missing_rows: list[dict[str, Any]] = []
+    for index, scene in enumerate(scenes, start=1):
+        present_image = _real_yolo_present_target_image(scene)
+        present_path = images_dir / f"case_{index:04d}_present.png"
+        cv2.imwrite(str(present_path), present_image)
+        present_detections = _predict_real_yolo_detections(
+            model=model,
+            image_path=present_path,
+            names=names,
+            conf=conf,
+            iou=iou,
+            imgsz=imgsz,
+            device=device,
+        )
+        present_rows.extend(
+            _evaluate_real_yolo_scene(
+                scene=scene,
+                detections=present_detections,
+                target_image=present_image,
+                case_index=index,
+                variant="present",
+            )
+        )
+
+        missing_path = images_dir / f"case_{index:04d}_missing.png"
+        cv2.imwrite(str(missing_path), scene.target_image)
+        missing_detections = _predict_real_yolo_detections(
+            model=model,
+            image_path=missing_path,
+            names=names,
+            conf=conf,
+            iou=iou,
+            imgsz=imgsz,
+            device=device,
+        )
+        missing_rows.extend(
+            _evaluate_real_yolo_scene(
+                scene=scene,
+                detections=missing_detections,
+                target_image=scene.target_image,
+                case_index=index,
+                variant="missing",
+            )
+        )
+
+    present_summary = _summarize_real_yolo_eval_rows(present_rows, variant="present")
+    missing_summary = _summarize_real_yolo_eval_rows(missing_rows, variant="missing")
+    combined = {
+        "total_expected_objects": present_summary["total_expected_objects"] + missing_summary["total_expected_objects"],
+        "dangerous_expected_matches": present_summary["dangerous_expected_matches"] + missing_summary["dangerous_expected_matches"],
+        "accepted_expected_matches": present_summary["accepted_expected_matches"] + missing_summary["accepted_expected_matches"],
+        "missing_expected_objects": present_summary["missing_expected_objects"] + missing_summary["missing_expected_objects"],
+    }
+    summary = {
+        "model_path": str(model_path),
+        "classes": names,
+        "conf": float(conf),
+        "iou": float(iou),
+        "imgsz": int(imgsz),
+        "present": present_summary,
+        "missing": missing_summary,
+        "combined": combined,
+    }
+    _write_json(output_dir / "summary.json", summary)
+    _write_json(output_dir / "present_results.json", present_rows)
+    _write_json(output_dir / "missing_results.json", missing_rows)
+    _write_real_yolo_eval_html(output_dir / "report.html", summary, present_rows, missing_rows)
+    return summary
+
+
+def _real_yolo_model_names(model: Any) -> list[str]:
+    raw_names = getattr(model, "names", None)
+    if isinstance(raw_names, dict):
+        return [str(raw_names[index]) for index in sorted(raw_names)]
+    if isinstance(raw_names, (list, tuple)):
+        return [str(item) for item in raw_names]
+    return list(_OBJECT_SHAPE_NAMES)
+
+
+def _predict_real_yolo_detections(
+    *,
+    model: Any,
+    image_path: Path,
+    names: Sequence[str],
+    conf: float,
+    iou: float,
+    imgsz: int,
+    device: str,
+) -> list[YoloDetection]:
+    kwargs: dict[str, Any] = {
+        "source": str(image_path),
+        "conf": float(conf),
+        "iou": float(iou),
+        "imgsz": int(imgsz),
+        "verbose": False,
+    }
+    device_arg = _real_yolo_device_arg(device)
+    if device_arg is not None:
+        kwargs["device"] = device_arg
+    results = model.predict(**kwargs)
+    if not results:
+        return []
+    result = results[0]
+    boxes = getattr(result, "boxes", None)
+    if boxes is None or boxes.cls is None:
+        return []
+
+    mask_polygons: list[PolygonPoints | None] = []
+    masks = getattr(result, "masks", None)
+    if masks is not None and getattr(masks, "xy", None) is not None:
+        for xy in masks.xy:
+            points = np.asarray(xy, dtype=np.float32).reshape(-1, 2)
+            mask_polygons.append([[float(x), float(y)] for x, y in points.tolist()] if len(points) >= 3 else None)
+
+    detections: list[YoloDetection] = []
+    cls_values = boxes.cls.detach().cpu().numpy().astype(int).tolist()
+    conf_values = boxes.conf.detach().cpu().numpy().tolist()
+    xyxy_values = boxes.xyxy.detach().cpu().numpy().tolist()
+    for index, (class_id, confidence, xyxy) in enumerate(zip(cls_values, conf_values, xyxy_values, strict=False)):
+        x1, y1, x2, y2 = [float(value) for value in xyxy]
+        polygon = mask_polygons[index] if index < len(mask_polygons) else None
+        class_key = names[class_id] if 0 <= class_id < len(names) else str(class_id)
+        detections.append(
+            YoloDetection(
+                class_key=class_key,
+                confidence=float(confidence),
+                bbox={"x": x1, "y": y1, "w": max(0.0, x2 - x1), "h": max(0.0, y2 - y1)},
+                polygon=polygon,
+            )
+        )
+    return detections
+
+
+def _evaluate_real_yolo_scene(
+    *,
+    scene: _SyntheticScene | _SyntheticMultiScene,
+    detections: list[YoloDetection],
+    target_image: np.ndarray,
+    case_index: int,
+    variant: str,
+) -> list[dict[str, Any]]:
+    expected, annotation_to_object = _real_yolo_expected_segments(scene)
+    projection_data = LocalProjectionData(
+        global_homography=scene.approximate_homography,
+        reference_points=scene.reference_points,
+        frame_points=scene.frame_points,
+        frame_size=_CANVAS_SIZE,
+        frame=target_image,
+    )
+    matches = match_segments(
+        expected,
+        detections,
+        scene.approximate_homography,
+        frame_size=_CANVAS_SIZE,
+        projection_data=projection_data,
+    )
+    rows: list[dict[str, Any]] = []
+    for expected_item in expected:
+        obj = annotation_to_object[expected_item.annotation_id]
+        match = next(
+            (
+                item for item in matches
+                if item.annotation_id == expected_item.annotation_id
+                and item.segment_class_id == expected_item.segment_class_id
+            ),
+            None,
+        )
+        detected_polygon = match.detected_polygon if match is not None else None
+        expected_polygon = match.expected_polygon if match is not None else None
+        display_polygon = detected_polygon if detected_polygon is not None else expected_polygon
+        iou = _polygon_iou(display_polygon, obj["ground_truth_polygon"])
+        center_drift = _polygon_center_distance(display_polygon, obj["ground_truth_polygon"])
+        area_ratio = _polygon_area_ratio(display_polygon, obj["ground_truth_polygon"])
+        nearest_distractor = _nearest_distractor_distance(display_polygon, obj["distractor_polygons"])
+        closer_to_distractor = (
+            nearest_distractor is not None
+            and math.isfinite(center_drift)
+            and nearest_distractor + 1.0 < center_drift
+        )
+        status = match.status if match is not None else "none"
+        expected_ok = status == "ok"
+        if variant == "present":
+            passed = expected_ok and _real_yolo_present_match_ok(
+                object_shape=obj["object_shape"],
+                iou=iou,
+                center_drift=center_drift,
+                area_ratio=area_ratio,
+            )
+            dangerous = expected_ok and not passed and _is_dangerous_projection(
+                predicted_polygon=display_polygon,
+                center_drift=center_drift,
+                area_ratio=area_ratio,
+                closer_to_distractor=closer_to_distractor,
+                unsafe_hidden=False,
+            )
+        else:
+            passed = not expected_ok
+            dangerous = expected_ok
+
+        rows.append(
+            {
+                "case_index": case_index,
+                "variant": variant,
+                "name": obj["name"],
+                "object_shape": obj["object_shape"],
+                "class_key": expected_item.class_key,
+                "status": status,
+                "passed": bool(passed),
+                "dangerous_expected_match": bool(dangerous),
+                "confidence": match.confidence if match is not None else None,
+                "iou": float(iou),
+                "center_drift_px": float(center_drift),
+                "area_ratio": float(area_ratio),
+                "closer_to_distractor": bool(closer_to_distractor),
+                "detected_class_in_zone": match.detected_class_in_zone if match is not None else None,
+                "debug_reason_code": (
+                    match.debug.get("reason_code")
+                    if match is not None and isinstance(match.debug, dict)
+                    else None
+                ),
+            }
+        )
+    extra_count = sum(1 for item in matches if item.annotation_id is None and item.status in {"extra", "unmatched"})
+    if rows:
+        rows[0]["case_extra_or_unmatched_detections"] = extra_count
+        rows[0]["case_total_yolo_detections"] = len(detections)
+    return rows
+
+
+def _real_yolo_expected_segments(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+) -> tuple[list[ExpectedSegment], dict[Any, dict[str, Any]]]:
+    expected: list[ExpectedSegment] = []
+    mapping: dict[Any, dict[str, Any]] = {}
+    if isinstance(scene, _SyntheticScene):
+        annotation_id = uuid4()
+        segment_class_id = uuid4()
+        expected.append(
+            ExpectedSegment(
+                annotation_id=annotation_id,
+                segment_class_id=segment_class_id,
+                class_key=scene.scenario.object_shape,
+                name=scene.scenario.object_shape,
+                hue=0,
+                reference_polygon=scene.reference_polygon,
+            )
+        )
+        mapping[annotation_id] = {
+            "name": scene.scenario.name,
+            "object_shape": scene.scenario.object_shape,
+            "ground_truth_polygon": scene.ground_truth_polygon,
+            "distractor_polygons": scene.distractor_polygons,
+        }
+        return expected, mapping
+
+    for obj in scene.objects:
+        annotation_id = uuid4()
+        segment_class_id = uuid4()
+        expected.append(
+            ExpectedSegment(
+                annotation_id=annotation_id,
+                segment_class_id=segment_class_id,
+                class_key=obj.object_shape,
+                name=obj.name,
+                hue=(obj.index * 47) % 360,
+                reference_polygon=obj.reference_polygon,
+            )
+        )
+        mapping[annotation_id] = {
+            "name": obj.name,
+            "object_shape": obj.object_shape,
+            "ground_truth_polygon": obj.ground_truth_polygon,
+            "distractor_polygons": obj.distractor_polygons,
+        }
+    return expected, mapping
+
+
+def _real_yolo_present_match_ok(
+    *,
+    object_shape: str,
+    iou: float,
+    center_drift: float,
+    area_ratio: float,
+) -> bool:
+    # Thin and hook-like shapes lose IoU faster from small mask shifts, so keep a
+    # shape-aware center guard instead of a single strict IoU threshold.
+    iou_floor = 0.36 if object_shape in {"thin_fork", "hook_like_part"} else 0.42
+    return (
+        iou >= iou_floor
+        and center_drift <= 28.0
+        and 0.40 <= area_ratio <= 2.20
+    )
+
+
+def _summarize_real_yolo_eval_rows(rows: Sequence[dict[str, Any]], *, variant: str) -> dict[str, Any]:
+    total = len(rows)
+    passed = sum(1 for row in rows if row.get("passed"))
+    dangerous = sum(1 for row in rows if row.get("dangerous_expected_match"))
+    accepted = sum(1 for row in rows if row.get("status") == "ok")
+    missing = sum(1 for row in rows if row.get("status") != "ok")
+    by_shape: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        shape = str(row.get("object_shape") or "unknown")
+        bucket = by_shape.setdefault(shape, {"total": 0, "passed": 0, "dangerous": 0, "accepted": 0})
+        bucket["total"] += 1
+        bucket["passed"] += int(bool(row.get("passed")))
+        bucket["dangerous"] += int(bool(row.get("dangerous_expected_match")))
+        bucket["accepted"] += int(row.get("status") == "ok")
+    for bucket in by_shape.values():
+        bucket["pass_rate"] = (bucket["passed"] / bucket["total"] * 100.0) if bucket["total"] else 0.0
+    return {
+        "variant": variant,
+        "total_expected_objects": total,
+        "passed": passed,
+        "failed": total - passed,
+        "pass_rate": (passed / total * 100.0) if total else 0.0,
+        "accepted_expected_matches": accepted,
+        "missing_expected_objects": missing,
+        "dangerous_expected_matches": dangerous,
+        "dangerous_rate": (dangerous / total * 100.0) if total else 0.0,
+        "mean_iou": float(np.mean([row["iou"] for row in rows if math.isfinite(float(row["iou"]))])) if rows else 0.0,
+        "mean_center_drift_px": float(np.mean([row["center_drift_px"] for row in rows if math.isfinite(float(row["center_drift_px"]))])) if rows else 0.0,
+        "by_shape": by_shape,
+    }
+
+
+def _real_yolo_decision_hint(evaluation: dict[str, Any]) -> str:
+    present = evaluation.get("present", {})
+    missing = evaluation.get("missing", {})
+    missing_danger = int(missing.get("dangerous_expected_matches") or 0)
+    present_pass = float(present.get("pass_rate") or 0.0)
+    if missing_danger > 0:
+        return "do_not_release_yolo_auto_accept: real YOLO produced false expected matches on missing scenes"
+    if present_pass < 70.0:
+        return "keep_as_experiment: real YOLO is safe on missing scenes but misses too many present objects"
+    return "candidate_for_guarded_runtime_integration: continue with slot guards and real project data"
+
+
+def _write_real_yolo_eval_html(
+    path: Path,
+    summary: dict[str, Any],
+    present_rows: Sequence[dict[str, Any]],
+    missing_rows: Sequence[dict[str, Any]],
+) -> None:
+    def rows_html(rows: Sequence[dict[str, Any]], limit: int = 80) -> str:
+        lines = []
+        for row in rows[:limit]:
+            danger = "YES" if row.get("dangerous_expected_match") else "no"
+            lines.append(
+                "<tr>"
+                f"<td>{html.escape(str(row.get('case_index')))}</td>"
+                f"<td>{html.escape(str(row.get('variant')))}</td>"
+                f"<td>{html.escape(str(row.get('name')))}</td>"
+                f"<td>{html.escape(str(row.get('object_shape')))}</td>"
+                f"<td>{html.escape(str(row.get('status')))}</td>"
+                f"<td>{'PASS' if row.get('passed') else 'FAIL'}</td>"
+                f"<td>{danger}</td>"
+                f"<td>{float(row.get('iou') or 0.0):.3f}</td>"
+                f"<td>{float(row.get('center_drift_px') or 0.0):.1f}</td>"
+                f"<td>{html.escape(str(row.get('confidence')))}</td>"
+                "</tr>"
+            )
+        return "\n".join(lines)
+
+    present = summary["present"]
+    missing = summary["missing"]
+    content = f"""<!doctype html>
+<html lang=\"ru\">
+<head>
+  <meta charset=\"utf-8\">
+  <title>Real YOLO synthetic inspection test</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; }}
+    table {{ border-collapse: collapse; width: 100%; margin: 16px 0 28px; }}
+    th, td {{ border: 1px solid #333; padding: 8px 10px; text-align: left; }}
+    th {{ background: #242424; }}
+    .metric {{ display: inline-block; min-width: 180px; margin: 8px; padding: 12px; background: #202020; border-radius: 10px; }}
+    .metric b {{ display: block; font-size: 24px; margin-top: 4px; }}
+  </style>
+</head>
+<body>
+  <h1>Real YOLO synthetic inspection test</h1>
+  <p>Это не oracle и не proxy: модель YOLO-seg реально обучается/загружается, делает inference, а её маски проходят через matcher и slot guards.</p>
+  <div class=\"metric\">Present pass rate<b>{present['pass_rate']:.1f}%</b></div>
+  <div class=\"metric\">Present dangerous<b>{present['dangerous_expected_matches']}</b></div>
+  <div class=\"metric\">Missing pass rate<b>{missing['pass_rate']:.1f}%</b></div>
+  <div class=\"metric\">Missing dangerous<b>{missing['dangerous_expected_matches']}</b></div>
+  <h2>Summary</h2>
+  <pre>{html.escape(json.dumps(summary, ensure_ascii=False, indent=2))}</pre>
+  <h2>Present object rows</h2>
+  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>status</th><th>result</th><th>danger</th><th>IoU</th><th>drift</th><th>conf</th></tr>{rows_html(present_rows)}</table>
+  <h2>Missing negative rows</h2>
+  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>status</th><th>result</th><th>danger</th><th>IoU</th><th>drift</th><th>conf</th></tr>{rows_html(missing_rows)}</table>
+</body>
+</html>
+"""
+    path.write_text(content, encoding="utf-8")
 
 
 def _dict_int_debug(value: Any) -> dict[str, int]:

@@ -169,6 +169,133 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
     )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_ENABLED: bool = True
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SUPPORT: int = Field(
+        default=6,
+        ge=3,
+        le=96,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_NEAREST_POINTS: int = Field(
+        default=8,
+        ge=3,
+        le=32,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_RESIDUAL_ERROR: float = Field(
+        default=10.0,
+        ge=0.5,
+        le=60.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_SHIFT_FACTOR: float = Field(
+        default=0.58,
+        ge=0.05,
+        le=2.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SPREAD: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_QUADRANTS: int = Field(
+        default=2,
+        ge=1,
+        le=4,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SEARCH_CONTAINMENT: float = Field(
+        default=0.10,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_LOCAL_AREA_SCORE: float = Field(
+        default=0.26,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_LOCAL_CENTER_FACTOR: float = Field(
+        default=1.08,
+        ge=0.05,
+        le=4.0,
+    )
+    INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_OTHER_OVERLAP: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_UNSAFE_HIDDEN_SHADOW_ENABLED: bool = True
+    INSPECTION_MISSING_CANDIDATE_REGISTRY_DEBUG_ENABLED: bool = True
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_RELEASE_ENABLED: bool = True
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_RELEASE_ENABLED: bool = True
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_SUPPORT: int = Field(
+        default=10,
+        ge=0,
+        le=128,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_SUPPORT_RATIO: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_REFERENCE_AREA_SCORE: float = Field(
+        default=0.12,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MAX_OTHER_OVERLAP: float = Field(
+        default=0.72,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_VISIBLE_FRACTION: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MAX_CENTER_FACTOR: float = Field(
+        default=4.20,
+        ge=0.1,
+        le=8.0,
+    )
+    INSPECTION_MISSING_CANDIDATE_AGREEMENT_SCORER_ENABLED: bool = True
+    INSPECTION_MISSING_CANDIDATE_AGREEMENT_MIN_IOU: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_CANDIDATE_AGREEMENT_MIN_AREA_SCORE: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_CANDIDATE_AGREEMENT_MAX_CENTER_FACTOR: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=4.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_RELEASE_ENABLED: bool = True
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_CENTER_FACTOR: float = Field(
+        default=0.15,
+        ge=0.0,
+        le=4.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MAX_CENTER_FACTOR: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=4.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_AREA_SCORE: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MAX_OTHER_OVERLAP: float = Field(
+        default=1.01,
+        ge=0.0,
+        le=1.5,
+    )
+    INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_VISIBLE_FRACTION: float = Field(
+        default=0.08,
+        ge=0.0,
+        le=1.0,
+    )
     INSPECTION_MISSING_RESCUE_TRANSLATION_ENABLED: bool = True
     INSPECTION_MISSING_RESCUE_TRANSLATION_MIN_SUPPORT: int = Field(
         default=6,

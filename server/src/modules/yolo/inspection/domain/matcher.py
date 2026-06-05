@@ -125,6 +125,27 @@ class _MissingTranslationRescue:
 
 
 @dataclass(slots=True)
+class _MissingLocalDisplacement:
+    polygon: list[list[float]]
+    bbox: BBox
+    local_point_count: int
+    kept_point_count: int
+    nearest_count: int
+    reference_spread: float
+    quadrant_count: int
+    residual_median_error: float
+    residual_max_error: float
+    mean_vertex_shift: float
+    max_vertex_shift: float
+    max_vertex_shift_factor: float
+    containment: float
+    area_score: float
+    center_drift_factor: float
+    axis_angle_delta: float | None
+    major_length_ratio: float | None
+
+
+@dataclass(slots=True)
 class _TrustedAnchor:
     expected_index: int
     source: str
@@ -846,8 +867,8 @@ def _bbox_from_detection(
     return None
 
 
-def _bbox_from_polygon(polygon: list[list[float]]) -> BBox | None:
-    if len(polygon) < 3:
+def _bbox_from_polygon(polygon: list[list[float]] | None) -> BBox | None:
+    if polygon is None or len(polygon) < 3:
         return None
 
     xs = [float(point[0]) for point in polygon]
@@ -1751,6 +1772,632 @@ def _merge_unsafe_missing_projection_debug(
     }
 
 
+def _polygon_debug_payload(polygon: list[list[float]] | None) -> list[list[float]] | None:
+    if polygon is None or len(polygon) < 3:
+        return None
+    return [[_round_debug(point[0]), _round_debug(point[1])] for point in polygon]
+
+
+def _unsafe_hidden_shadow_debug(
+    debug: dict[str, Any],
+    *,
+    polygon: list[list[float]] | None,
+    bbox: BBox | None,
+    hidden_reason: str,
+    fallback_source: str,
+    context_rescue_used: bool,
+) -> dict[str, Any]:
+    if not settings.INSPECTION_MISSING_UNSAFE_HIDDEN_SHADOW_ENABLED:
+        return {}
+
+    payload: dict[str, Any] = {
+        "missing_polygon_hidden_shadow_enabled": True,
+        "missing_polygon_hidden_shadow_available": polygon is not None and bbox is not None,
+        "missing_polygon_hidden_shadow_reason": hidden_reason,
+        "missing_polygon_hidden_shadow_fallback_source": fallback_source,
+        "missing_polygon_hidden_shadow_context_rescue_used": bool(context_rescue_used),
+        "missing_polygon_hidden_shadow_projection": (
+            _missing_debug_projection_name(debug) or fallback_source or "expected_slot"
+        ),
+        "missing_polygon_hidden_shadow_projection_safety": str(
+            debug.get("missing_polygon_projection_safety") or ""
+        ),
+    }
+    if polygon is not None and bbox is not None:
+        payload.update(
+            {
+                "missing_polygon_hidden_shadow_polygon": _polygon_debug_payload(polygon),
+                "missing_polygon_hidden_shadow_bbox": _bbox_debug(bbox),
+            }
+        )
+    return payload
+
+
+def _max_overlap_with_other_expected(
+    expected_item: _ProjectedExpected,
+    *,
+    bbox: BBox,
+    all_expected: list[_ProjectedExpected] | None,
+) -> float:
+    if not all_expected or len(all_expected) <= 1:
+        return 0.0
+
+    max_overlap = 0.0
+    for other in all_expected:
+        if other.index == expected_item.index:
+            continue
+        overlap = max(
+            _bbox_iou(bbox, other.bbox),
+            _bbox_containment(bbox, other.bbox),
+            _bbox_containment(other.bbox, bbox),
+        )
+        max_overlap = max(max_overlap, float(overlap))
+    return float(max_overlap)
+
+
+def _reference_area_score_for_expected(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    bbox: BBox,
+) -> float | None:
+    reference_bbox = slot.reference_bbox if slot is not None else None
+    if reference_bbox is None:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return None
+    return _bbox_area_similarity(bbox, reference_bbox)
+
+
+def _round_optional_debug(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return _round_debug(value)
+
+
+def _append_missing_projection_candidate(
+    debug: dict[str, Any],
+    *,
+    name: str,
+    expected_item: _ProjectedExpected,
+    polygon: list[list[float]] | None,
+    bbox: BBox | None,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None,
+    selected: bool = False,
+    hidden_release: bool = False,
+    reason: str | None = None,
+) -> None:
+    if not settings.INSPECTION_MISSING_CANDIDATE_REGISTRY_DEBUG_ENABLED:
+        return
+
+    registry = debug.setdefault("missing_polygon_candidate_registry", [])
+    if not isinstance(registry, list) or len(registry) >= 16:
+        return
+
+    available = polygon is not None and bbox is not None and len(polygon) >= 3
+    item: dict[str, Any] = {
+        "name": name,
+        "available": bool(available),
+        "selected": bool(selected),
+        "hidden_release": bool(hidden_release),
+    }
+    if reason:
+        item["reason"] = reason
+
+    if not available or bbox is None:
+        registry.append(item)
+        return
+
+    reference_area_score = _reference_area_score_for_expected(
+        expected_item,
+        slot=slot,
+        bbox=bbox,
+    )
+    visible = True
+    if projection_data is not None and projection_data.frame_size is not None:
+        visible = _is_visible_in_frame(
+            bbox,
+            projection_data.frame_size,
+            min_visible_fraction=0.01,
+        )
+
+    item.update(
+        {
+            "bbox": _bbox_debug(bbox),
+            "area_score_vs_expected_slot": _round_debug(
+                _bbox_area_similarity(bbox, expected_item.bbox)
+            ),
+            "center_factor_vs_expected_slot": _round_debug(
+                _bbox_center_distance_factor(bbox, expected_item.bbox)
+            ),
+            "reference_area_score": _round_optional_debug(reference_area_score),
+            "max_other_expected_overlap": _round_debug(
+                _max_overlap_with_other_expected(
+                    expected_item,
+                    bbox=bbox,
+                    all_expected=all_expected,
+                )
+            ),
+            "visible_in_frame": bool(visible),
+        }
+    )
+    registry.append(item)
+
+
+def _try_selective_hidden_global_fallback_release(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None,
+    fallback_polygon: list[list[float]] | None,
+    fallback_bbox: BBox | None,
+    hidden_reason: str,
+    fallback_source: str,
+    debug: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_RELEASE_ENABLED:
+        return None
+    if not settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_RELEASE_ENABLED:
+        return None
+    if hidden_reason != "rich_context_but_no_safe_transform":
+        return None
+    if fallback_source != "global_fallback":
+        return None
+    if fallback_polygon is None or fallback_bbox is None or len(fallback_polygon) < 3:
+        return None
+    if _missing_debug_projection_name(debug) != "expected_slot_global_fallback":
+        return None
+
+    slot_support = int(slot.feature_support) if slot is not None else 0
+    slot_total = int(slot.feature_total) if slot is not None else 0
+    min_support = max(
+        0,
+        int(settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_SUPPORT),
+    )
+    if slot_support < min_support:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "too_few_slot_features",
+            "missing_polygon_selective_hidden_release_slot_support": slot_support,
+            "missing_polygon_selective_hidden_release_slot_total": slot_total,
+        }
+
+    support_ratio = slot_support / max(1, slot_total)
+    if (
+        slot_total > 0
+        and support_ratio
+        < settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_SUPPORT_RATIO
+    ):
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "low_slot_feature_ratio",
+            "missing_polygon_selective_hidden_release_slot_support": slot_support,
+            "missing_polygon_selective_hidden_release_slot_total": slot_total,
+            "missing_polygon_selective_hidden_release_slot_ratio": _round_debug(
+                support_ratio
+            ),
+        }
+
+    reference_area_score = _reference_area_score_for_expected(
+        expected_item,
+        slot=slot,
+        bbox=fallback_bbox,
+    )
+    min_reference_area_score = float(
+        settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_REFERENCE_AREA_SCORE
+    )
+    if reference_area_score is not None and reference_area_score < min_reference_area_score:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "bad_reference_area_score",
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                reference_area_score
+            ),
+        }
+
+    local_center_factor = _bbox_center_distance_factor(fallback_bbox, expected_item.bbox)
+    if (
+        local_center_factor
+        > settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MAX_CENTER_FACTOR
+    ):
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "large_local_global_center_shift",
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                local_center_factor
+            ),
+        }
+
+    max_overlap = _max_overlap_with_other_expected(
+        expected_item,
+        bbox=fallback_bbox,
+        all_expected=all_expected,
+    )
+    if (
+        max_overlap
+        > settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MAX_OTHER_OVERLAP
+    ):
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "overlaps_other_expected",
+            "missing_polygon_selective_hidden_release_max_other_overlap": _round_debug(
+                max_overlap
+            ),
+        }
+
+    visible = True
+    if projection_data is not None and projection_data.frame_size is not None:
+        visible = _is_visible_in_frame(
+            fallback_bbox,
+            projection_data.frame_size,
+            min_visible_fraction=float(
+                settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_GLOBAL_FALLBACK_MIN_VISIBLE_FRACTION
+            ),
+        )
+    if not visible:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "outside_frame",
+        }
+
+    return {
+        "missing_polygon_selective_hidden_release": True,
+        "missing_polygon_selective_hidden_release_source": "global_fallback",
+        "missing_polygon_selective_hidden_release_hidden_reason": hidden_reason,
+        "missing_polygon_selective_hidden_release_slot_support": slot_support,
+        "missing_polygon_selective_hidden_release_slot_total": slot_total,
+        "missing_polygon_selective_hidden_release_slot_ratio": _round_debug(
+            support_ratio
+        ),
+        "missing_polygon_selective_hidden_release_reference_area_score": _round_optional_debug(
+            reference_area_score
+        ),
+        "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+            local_center_factor
+        ),
+        "missing_polygon_selective_hidden_release_max_other_overlap": _round_debug(
+            max_overlap
+        ),
+    }
+
+
+def _candidate_base_name(name: str | None) -> str:
+    if not name:
+        return ""
+    result = str(name)
+    if result.startswith("selected:"):
+        result = result.removeprefix("selected:")
+    if result.startswith("selective_hidden_release:"):
+        result = result.removeprefix("selective_hidden_release:")
+    return result
+
+
+def _candidate_debug_bbox(item: dict[str, Any]) -> BBox | None:
+    raw = item.get("bbox")
+    if not isinstance(raw, dict):
+        return None
+    try:
+        x = float(raw.get("x"))
+        y = float(raw.get("y"))
+        w = float(raw.get("w"))
+        h = float(raw.get("h"))
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite([x, y, w, h]).all() or w <= 0.0 or h <= 0.0:
+        return None
+    return (x, y, x + w, y + h)
+
+
+def _candidate_agrees_with_selected(
+    selected_bbox: BBox,
+    other_bbox: BBox,
+) -> tuple[bool, float, float, float]:
+    iou = _bbox_iou(selected_bbox, other_bbox)
+    area_score = _bbox_area_similarity(selected_bbox, other_bbox)
+    center_factor = _bbox_center_distance_factor(other_bbox, selected_bbox)
+    agrees = bool(
+        iou >= settings.INSPECTION_MISSING_CANDIDATE_AGREEMENT_MIN_IOU
+        or (
+            area_score >= settings.INSPECTION_MISSING_CANDIDATE_AGREEMENT_MIN_AREA_SCORE
+            and center_factor
+            <= settings.INSPECTION_MISSING_CANDIDATE_AGREEMENT_MAX_CENTER_FACTOR
+        )
+    )
+    return agrees, iou, area_score, center_factor
+
+
+def _finalize_missing_candidate_agreement_debug(
+    debug: dict[str, Any],
+    *,
+    final_projection: str | None = None,
+) -> dict[str, Any]:
+    if not settings.INSPECTION_MISSING_CANDIDATE_AGREEMENT_SCORER_ENABLED:
+        return debug
+
+    raw_registry = debug.get("missing_polygon_candidate_registry")
+    if not isinstance(raw_registry, list):
+        debug.update(
+            {
+                "missing_polygon_candidate_agreement_enabled": True,
+                "missing_polygon_candidate_agreement_available_count": 0,
+                "missing_polygon_candidate_agreement_level": "no_registry",
+                "missing_polygon_candidate_confidence": "unknown",
+            }
+        )
+        return debug
+
+    candidates: list[tuple[dict[str, Any], BBox]] = []
+    selected_item: dict[str, Any] | None = None
+    selected_bbox: BBox | None = None
+    for raw_item in raw_registry:
+        if not isinstance(raw_item, dict):
+            continue
+        bbox = _candidate_debug_bbox(raw_item)
+        if bbox is None:
+            continue
+        candidates.append((raw_item, bbox))
+        if bool(raw_item.get("selected")):
+            selected_item = raw_item
+            selected_bbox = bbox
+
+    projection = final_projection or _missing_debug_projection_name(debug)
+    if selected_item is None and candidates:
+        selected_item, selected_bbox = candidates[-1]
+
+    if selected_item is None or selected_bbox is None:
+        debug.update(
+            {
+                "missing_polygon_candidate_agreement_enabled": True,
+                "missing_polygon_candidate_agreement_available_count": len(candidates),
+                "missing_polygon_candidate_agreement_level": "no_selected_candidate",
+                "missing_polygon_candidate_confidence": "unknown",
+            }
+        )
+        return debug
+
+    selected_name = str(selected_item.get("name") or "")
+    selected_base = _candidate_base_name(selected_name)
+    comparisons = 0
+    agreement_count = 0
+    best_iou = 0.0
+    best_area_score = 0.0
+    min_center_factor: float | None = None
+    closest_source: str | None = None
+    agreeing_sources: list[str] = []
+
+    for item, bbox in candidates:
+        other_name = str(item.get("name") or "")
+        other_base = _candidate_base_name(other_name)
+        if item is selected_item or other_base == selected_base:
+            continue
+        comparisons += 1
+        agrees, iou, area_score, center_factor = _candidate_agrees_with_selected(
+            selected_bbox,
+            bbox,
+        )
+        if iou > best_iou:
+            best_iou = iou
+        if area_score > best_area_score:
+            best_area_score = area_score
+        if min_center_factor is None or center_factor < min_center_factor:
+            min_center_factor = center_factor
+            closest_source = other_name
+        if agrees:
+            agreement_count += 1
+            agreeing_sources.append(other_name)
+
+    if comparisons <= 0:
+        agreement_level = "isolated"
+    elif agreement_count >= 2:
+        agreement_level = "strong"
+    elif agreement_count == 1:
+        agreement_level = "weak"
+    else:
+        agreement_level = "conflict"
+
+    trusted_projection = projection in {
+        "context_feature_affine_translation_rescue",
+        "expected_slot_context_translation_rescue",
+        "expected_slot_scene_translation_rescue",
+        "expected_slot_anchor_release",
+        "expected_slot_local_displacement",
+    }
+    guarded_projection = projection in {
+        "expected_slot",
+        "expected_slot_global_fallback",
+        "expected_slot_global_fallback_hidden_release",
+        "expected_slot_agreement_hidden_release",
+    }
+    if trusted_projection:
+        confidence = "trusted_method"
+        recommended_action = "render_confident_expected_zone"
+    elif projection == "unsafe_hidden":
+        confidence = "hidden"
+        recommended_action = "keep_hidden_or_require_more_evidence"
+    elif projection == "none":
+        confidence = "failed"
+        recommended_action = "no_projection_available"
+    elif guarded_projection and agreement_level in {"weak", "strong"}:
+        confidence = "guarded_unconfirmed"
+        recommended_action = "render_as_unconfirmed_expected_zone"
+    elif guarded_projection:
+        confidence = "weak_unconfirmed"
+        recommended_action = "prefer_uncertain_or_hidden_in_ui"
+    else:
+        confidence = "unknown"
+        recommended_action = "inspect_candidate_manually"
+
+    debug.update(
+        {
+            "missing_polygon_candidate_agreement_enabled": True,
+            "missing_polygon_candidate_agreement_available_count": len(candidates),
+            "missing_polygon_candidate_agreement_comparison_count": comparisons,
+            "missing_polygon_candidate_agreement_selected": selected_name,
+            "missing_polygon_candidate_agreement_selected_base": selected_base,
+            "missing_polygon_candidate_agreement_count": agreement_count,
+            "missing_polygon_candidate_agreement_level": agreement_level,
+            "missing_polygon_candidate_agreement_best_iou": _round_debug(best_iou),
+            "missing_polygon_candidate_agreement_best_area_score": _round_debug(
+                best_area_score
+            ),
+            "missing_polygon_candidate_agreement_min_center_factor": _round_optional_debug(
+                min_center_factor
+            ),
+            "missing_polygon_candidate_agreement_closest_source": closest_source,
+            "missing_polygon_candidate_agreement_sources": agreeing_sources[:8],
+            "missing_polygon_candidate_confidence": confidence,
+            "missing_polygon_candidate_recommended_action": recommended_action,
+        }
+    )
+    return debug
+
+
+def _try_selective_hidden_expected_slot_agreement_release(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None,
+    fallback_polygon: list[list[float]] | None,
+    fallback_bbox: BBox | None,
+    global_bbox: BBox | None,
+    hidden_reason: str,
+    fallback_source: str,
+    debug: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_RELEASE_ENABLED:
+        return None
+    if (
+        not settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_RELEASE_ENABLED
+    ):
+        return None
+    if hidden_reason != "multi_expected_slot_without_global_consensus":
+        return None
+    if fallback_source != "expected_slot":
+        return None
+    if fallback_polygon is None or fallback_bbox is None or len(fallback_polygon) < 3:
+        return None
+    if global_bbox is None:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_no_global_candidate",
+        }
+
+    area_score = _bbox_area_similarity(fallback_bbox, global_bbox)
+    center_factor = _bbox_center_distance_factor(global_bbox, fallback_bbox)
+    min_center = float(
+        settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_CENTER_FACTOR
+    )
+    max_center = float(
+        settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MAX_CENTER_FACTOR
+    )
+    min_area = float(
+        settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_AREA_SCORE
+    )
+    if center_factor < min_center:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_shift_too_small",
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                center_factor
+            ),
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                area_score
+            ),
+        }
+    if center_factor > max_center:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_shift_too_large",
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                center_factor
+            ),
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                area_score
+            ),
+        }
+    if area_score < min_area:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_bad_area_score",
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                center_factor
+            ),
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                area_score
+            ),
+        }
+
+    max_overlap = _max_overlap_with_other_expected(
+        expected_item,
+        bbox=fallback_bbox,
+        all_expected=all_expected,
+    )
+    if (
+        max_overlap
+        > settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MAX_OTHER_OVERLAP
+    ):
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_overlaps_other_expected",
+            "missing_polygon_selective_hidden_release_max_other_overlap": _round_debug(
+                max_overlap
+            ),
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                center_factor
+            ),
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                area_score
+            ),
+        }
+
+    visible = True
+    if projection_data is not None and projection_data.frame_size is not None:
+        visible = _is_visible_in_frame(
+            fallback_bbox,
+            projection_data.frame_size,
+            min_visible_fraction=float(
+                settings.INSPECTION_MISSING_SELECTIVE_HIDDEN_EXPECTED_SLOT_AGREEMENT_MIN_VISIBLE_FRACTION
+            ),
+        )
+    if not visible:
+        return {
+            "missing_polygon_selective_hidden_release_rejected": True,
+            "missing_polygon_selective_hidden_release_reject_reason": "agreement_outside_frame",
+            "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+                center_factor
+            ),
+            "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+                area_score
+            ),
+        }
+
+    slot_support = int(slot.feature_support) if slot is not None else 0
+    slot_total = int(slot.feature_total) if slot is not None else 0
+    return {
+        "missing_polygon_selective_hidden_release": True,
+        "missing_polygon_selective_hidden_release_source": "expected_slot_agreement",
+        "missing_polygon_selective_hidden_release_hidden_reason": hidden_reason,
+        "missing_polygon_selective_hidden_release_slot_support": slot_support,
+        "missing_polygon_selective_hidden_release_slot_total": slot_total,
+        "missing_polygon_selective_hidden_release_slot_ratio": _round_debug(
+            slot_support / max(1, slot_total)
+        ),
+        "missing_polygon_selective_hidden_release_reference_area_score": _round_debug(
+            area_score
+        ),
+        "missing_polygon_selective_hidden_release_center_factor": _round_debug(
+            center_factor
+        ),
+        "missing_polygon_selective_hidden_release_max_other_overlap": _round_debug(
+            max_overlap
+        ),
+    }
+
+
 def _resolve_missing_fallback_projection(
     expected_item: _ProjectedExpected,
     *,
@@ -1766,6 +2413,18 @@ def _resolve_missing_fallback_projection(
     debug: dict[str, Any] = {}
     context_rescue_used = False
     fallback_source = "expected_slot"
+    global_candidate_bbox: BBox | None = None
+
+    _append_missing_projection_candidate(
+        debug,
+        name="expected_slot",
+        expected_item=expected_item,
+        polygon=fallback_polygon,
+        bbox=fallback_bbox,
+        slot=slot,
+        projection_data=projection_data,
+        all_expected=all_expected,
+    )
 
     fallback_diagnostics_enabled = bool(
         settings.INSPECTION_MISSING_FALLBACK_DIAGNOSTICS_ENABLED
@@ -1804,6 +2463,17 @@ def _resolve_missing_fallback_projection(
             )
     else:
         global_polygon, global_bbox = global_projection
+        global_candidate_bbox = global_bbox
+        _append_missing_projection_candidate(
+            debug,
+            name="global_fallback",
+            expected_item=expected_item,
+            polygon=global_polygon,
+            bbox=global_bbox,
+            slot=slot,
+            projection_data=projection_data,
+            all_expected=all_expected,
+        )
         local_global_area_score = _bbox_area_similarity(
             expected_item.bbox,
             global_bbox,
@@ -2128,59 +2798,87 @@ def _resolve_missing_fallback_projection(
                                         }
                                     )
                                 else:
-                                    demote_global_fallback = _missing_global_fallback_should_demote(
-                                        local_global_area_score=local_global_area_score,
-                                        local_global_center_factor=local_global_center_factor,
+                                    local_displacement = _try_missing_local_displacement_field(
+                                        expected_item,
                                         slot=slot,
+                                        projection_data=projection_data,
+                                        all_expected=all_expected,
                                     )
-                                    if demote_global_fallback:
+                                    if local_displacement is not None:
+                                        fallback_polygon = local_displacement.polygon
+                                        fallback_bbox = local_displacement.bbox
+                                        context_rescue_used = True
+                                        fallback_source = "local_displacement"
+                                        debug = _merge_missing_local_displacement_debug(
+                                            debug,
+                                            local_displacement,
+                                        )
                                         debug.update(
                                             {
-                                                "projection": "expected_slot",
-                                                "missing_polygon_projection": "expected_slot",
-                                                "missing_polygon_projection_safety": "global_fallback_demoted",
+                                                "missing_polygon_fallback_source": "local_displacement",
+                                                "missing_polygon_fallback_reason": "sparse_local_displacement",
                                                 "missing_polygon_local_global_area_score": _round_debug(
                                                     local_global_area_score
                                                 ),
                                                 "missing_polygon_local_global_center_factor": _round_debug(
                                                     local_global_center_factor
-                                                ),
-                                                "missing_polygon_fallback_source": "expected_slot",
-                                                "missing_polygon_fallback_reason": "global_fallback_demoted_extreme_geometry",
-                                                "missing_polygon_global_fallback_demoted": True,
-                                                "note": (
-                                                    "Adaptive local projection disagreed with the global "
-                                                    "alignment, but the global fallback was an extreme "
-                                                    "outlier with weak slot evidence. The matcher kept the "
-                                                    "conservative expected slot instead of drawing the unstable "
-                                                    "global polygon."
                                                 ),
                                             }
                                         )
                                     else:
-                                        fallback_polygon = global_polygon
-                                        fallback_bbox = global_bbox
-                                        fallback_source = "global_fallback"
-                                        debug.update(
-                                            {
-                                                "projection": "expected_slot_global_fallback",
-                                                "missing_polygon_projection": "expected_slot_global_fallback",
-                                                "missing_polygon_projection_safety": "global_fallback",
-                                                "missing_polygon_local_global_area_score": _round_debug(
-                                                    local_global_area_score
-                                                ),
-                                                "missing_polygon_local_global_center_factor": _round_debug(
-                                                    local_global_center_factor
-                                                ),
-                                                "missing_polygon_fallback_source": "global_fallback",
-                                                "missing_polygon_fallback_reason": "local_global_disagrees",
-                                                "note": (
-                                                    "Adaptive local projection disagreed with the global "
-                                                    "alignment, so missing expected zone was rendered from "
-                                                    "global alignment instead of local object-near matches."
-                                                ),
-                                            }
+                                        demote_global_fallback = _missing_global_fallback_should_demote(
+                                            local_global_area_score=local_global_area_score,
+                                            local_global_center_factor=local_global_center_factor,
+                                            slot=slot,
                                         )
+                                        if demote_global_fallback:
+                                            debug.update(
+                                                {
+                                                    "projection": "expected_slot",
+                                                    "missing_polygon_projection": "expected_slot",
+                                                    "missing_polygon_projection_safety": "global_fallback_demoted",
+                                                    "missing_polygon_local_global_area_score": _round_debug(
+                                                        local_global_area_score
+                                                    ),
+                                                    "missing_polygon_local_global_center_factor": _round_debug(
+                                                        local_global_center_factor
+                                                    ),
+                                                    "missing_polygon_fallback_source": "expected_slot",
+                                                    "missing_polygon_fallback_reason": "global_fallback_demoted_extreme_geometry",
+                                                    "missing_polygon_global_fallback_demoted": True,
+                                                    "note": (
+                                                        "Adaptive local projection disagreed with the global "
+                                                        "alignment, but the global fallback was an extreme "
+                                                        "outlier with weak slot evidence. The matcher kept the "
+                                                        "conservative expected slot instead of drawing the unstable "
+                                                        "global polygon."
+                                                    ),
+                                                }
+                                            )
+                                        else:
+                                            fallback_polygon = global_polygon
+                                            fallback_bbox = global_bbox
+                                            fallback_source = "global_fallback"
+                                            debug.update(
+                                                {
+                                                    "projection": "expected_slot_global_fallback",
+                                                    "missing_polygon_projection": "expected_slot_global_fallback",
+                                                    "missing_polygon_projection_safety": "global_fallback",
+                                                    "missing_polygon_local_global_area_score": _round_debug(
+                                                        local_global_area_score
+                                                    ),
+                                                    "missing_polygon_local_global_center_factor": _round_debug(
+                                                        local_global_center_factor
+                                                    ),
+                                                    "missing_polygon_fallback_source": "global_fallback",
+                                                    "missing_polygon_fallback_reason": "local_global_disagrees",
+                                                    "note": (
+                                                        "Adaptive local projection disagreed with the global "
+                                                        "alignment, so missing expected zone was rendered from "
+                                                        "global alignment instead of local object-near matches."
+                                                    ),
+                                                }
+                                            )
 
 
     if (
@@ -2235,10 +2933,61 @@ def _resolve_missing_fallback_projection(
             debug["missing_polygon_fallback_reason"] = "local_global_disagrees"
         elif fallback_source == "global_fallback_translation_rescue":
             debug["missing_polygon_fallback_reason"] = "global_fallback_translation_rescue"
+        elif fallback_source == "local_displacement":
+            debug["missing_polygon_fallback_reason"] = "sparse_local_displacement"
         elif fallback_source == "hidden_cluster_consensus":
             debug["missing_polygon_fallback_reason"] = "hidden_cluster_consensus"
         elif fallback_source == "multi_consensus_rescue":
             debug["missing_polygon_fallback_reason"] = "multi_consensus_rescue"
+
+    preliminary_hidden_reason = _missing_fallback_projection_unsafe_reason(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        fallback_bbox=fallback_bbox,
+        context_rescue_used=context_rescue_used,
+        fallback_source=fallback_source,
+        all_expected=all_expected,
+    )
+    if (
+        preliminary_hidden_reason is not None
+        and fallback_source == "expected_slot"
+        and not context_rescue_used
+    ):
+        local_displacement = _try_missing_local_displacement_field(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            all_expected=all_expected,
+        )
+        if local_displacement is not None:
+            fallback_polygon = local_displacement.polygon
+            fallback_bbox = local_displacement.bbox
+            context_rescue_used = True
+            fallback_source = "local_displacement"
+            debug = _merge_missing_local_displacement_debug(
+                debug,
+                local_displacement,
+            )
+            debug.update(
+                {
+                    "missing_polygon_fallback_source": "local_displacement",
+                    "missing_polygon_fallback_reason": "sparse_local_displacement",
+                    "missing_polygon_hidden_prevented_reason": preliminary_hidden_reason,
+                }
+            )
+
+    _append_missing_projection_candidate(
+        debug,
+        name=f"selected:{fallback_source}",
+        expected_item=expected_item,
+        polygon=fallback_polygon,
+        bbox=fallback_bbox,
+        slot=slot,
+        projection_data=projection_data,
+        all_expected=all_expected,
+        selected=True,
+    )
 
     hidden_reason = _missing_fallback_projection_unsafe_reason(
         expected_item,
@@ -2250,16 +2999,146 @@ def _resolve_missing_fallback_projection(
         all_expected=all_expected,
     )
     if hidden_reason is not None:
+        selective_release_debug = _try_selective_hidden_global_fallback_release(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            all_expected=all_expected,
+            fallback_polygon=fallback_polygon,
+            fallback_bbox=fallback_bbox,
+            hidden_reason=hidden_reason,
+            fallback_source=fallback_source,
+            debug=debug,
+        )
+        if (
+            selective_release_debug is not None
+            and selective_release_debug.get("missing_polygon_selective_hidden_release")
+        ):
+            _append_missing_projection_candidate(
+                debug,
+                name="selective_hidden_release:global_fallback",
+                expected_item=expected_item,
+                polygon=fallback_polygon,
+                bbox=fallback_bbox,
+                slot=slot,
+                projection_data=projection_data,
+                all_expected=all_expected,
+                selected=True,
+                hidden_release=True,
+                reason=hidden_reason,
+            )
+            release_debug = _finalize_missing_candidate_agreement_debug(
+                {
+                    **debug,
+                    **selective_release_debug,
+                    "projection": "expected_slot_global_fallback_hidden_release",
+                    "missing_polygon_projection": "expected_slot_global_fallback_hidden_release",
+                    "missing_polygon_projection_safety": "selective_hidden_global_fallback_release",
+                    "missing_polygon_fallback_source": "global_fallback",
+                    "missing_polygon_fallback_reason": "selective_hidden_global_fallback_release",
+                    "reason_code": "feature_slot_unconfirmed_without_yolo",
+                    "note": (
+                        "The raw global fallback would normally be hidden after a rich-context "
+                        "failure, but the candidate passed the selective hidden-release guards. "
+                        "It is rendered as a guarded expected-zone candidate, not as YOLO-confirmed "
+                        "object evidence."
+                    ),
+                },
+                final_projection="expected_slot_global_fallback_hidden_release",
+            )
+            return _MissingFallbackProjection(
+                polygon=fallback_polygon,
+                bbox=fallback_bbox,
+                hidden=False,
+                debug=release_debug,
+            )
+
+        expected_slot_agreement_debug = _try_selective_hidden_expected_slot_agreement_release(
+            expected_item,
+            slot=slot,
+            projection_data=projection_data,
+            all_expected=all_expected,
+            fallback_polygon=fallback_polygon,
+            fallback_bbox=fallback_bbox,
+            global_bbox=global_candidate_bbox,
+            hidden_reason=hidden_reason,
+            fallback_source=fallback_source,
+            debug=debug,
+        )
+        if (
+            expected_slot_agreement_debug is not None
+            and expected_slot_agreement_debug.get("missing_polygon_selective_hidden_release")
+        ):
+            _append_missing_projection_candidate(
+                debug,
+                name="selective_hidden_release:expected_slot_agreement",
+                expected_item=expected_item,
+                polygon=fallback_polygon,
+                bbox=fallback_bbox,
+                slot=slot,
+                projection_data=projection_data,
+                all_expected=all_expected,
+                selected=True,
+                hidden_release=True,
+                reason=hidden_reason,
+            )
+            release_debug = _finalize_missing_candidate_agreement_debug(
+                {
+                    **debug,
+                    **expected_slot_agreement_debug,
+                    "projection": "expected_slot_agreement_hidden_release",
+                    "missing_polygon_projection": "expected_slot_agreement_hidden_release",
+                    "missing_polygon_projection_safety": "selective_hidden_expected_slot_agreement_release",
+                    "missing_polygon_fallback_source": "expected_slot",
+                    "missing_polygon_fallback_reason": "selective_hidden_expected_slot_agreement_release",
+                    "reason_code": "feature_slot_unconfirmed_without_yolo",
+                    "note": (
+                        "The conservative expected slot would normally be hidden in a multi-object "
+                        "scene without trusted anchors, but global alignment agreed with it by a "
+                        "small, bounded offset. It is rendered as an unconfirmed expected-zone "
+                        "candidate rather than object evidence."
+                    ),
+                },
+                final_projection="expected_slot_agreement_hidden_release",
+            )
+            return _MissingFallbackProjection(
+                polygon=fallback_polygon,
+                bbox=fallback_bbox,
+                hidden=False,
+                debug=release_debug,
+            )
+
+        hidden_debug = {
+            **debug,
+            **_unsafe_hidden_shadow_debug(
+                debug,
+                polygon=fallback_polygon,
+                bbox=fallback_bbox,
+                hidden_reason=hidden_reason,
+                fallback_source=fallback_source,
+                context_rescue_used=context_rescue_used,
+            ),
+            "missing_polygon_hidden_reason": hidden_reason,
+        }
+        if selective_release_debug is not None:
+            hidden_debug.update(selective_release_debug)
+        if expected_slot_agreement_debug is not None:
+            hidden_debug.update(expected_slot_agreement_debug)
+        hidden_debug = _finalize_missing_candidate_agreement_debug(
+            hidden_debug,
+            final_projection="unsafe_hidden",
+        )
         return _MissingFallbackProjection(
             polygon=None,
             bbox=None,
             hidden=True,
-            debug={
-                **debug,
-                "missing_polygon_hidden_reason": hidden_reason,
-            },
+            debug=hidden_debug,
         )
 
+    debug = _finalize_missing_candidate_agreement_debug(
+        debug,
+        final_projection=_missing_debug_projection_name(debug) or fallback_source,
+    )
     return _MissingFallbackProjection(
         polygon=fallback_polygon,
         bbox=fallback_bbox,
@@ -2631,6 +3510,413 @@ def _try_missing_translation_rescue(
         shift_y=shift_y,
         shift_factor=float(shift_factor),
     )
+
+
+
+def _try_missing_local_displacement_field(
+    expected_item: _ProjectedExpected,
+    *,
+    slot: _ExpectedSlot | None,
+    projection_data: LocalProjectionData | None,
+    all_expected: list[_ProjectedExpected] | None = None,
+) -> _MissingLocalDisplacement | None:
+    if not settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_ENABLED:
+        return None
+    if slot is None or projection_data is None:
+        return None
+    reference_bbox = slot.reference_bbox
+    if reference_bbox is None:
+        reference_bbox = _bbox_from_polygon(expected_item.item.reference_polygon)
+    if reference_bbox is None:
+        return None
+
+    min_support = max(3, int(settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SUPPORT))
+    local_reference, local_frame = _missing_polygon_refinement_points(
+        expected_item,
+        slot=slot,
+        projection_data=projection_data,
+        all_expected=all_expected,
+    )
+    local_point_count = int(len(local_reference))
+    if local_point_count < min_support:
+        return None
+
+    base_affine = _reference_to_expected_affine(expected_item)
+    if base_affine is None:
+        return None
+    base_reference_projected = _project_points_by_affine(
+        local_reference,
+        base_affine,
+    )
+    if base_reference_projected is None or len(base_reference_projected) != local_point_count:
+        return None
+
+    residuals = (local_frame - base_reference_projected).astype(np.float32)
+    if not np.isfinite(residuals).all():
+        return None
+
+    local_diag = max(1.0, _bbox_diag(slot.projected_bbox))
+    max_shift = max(
+        1.0,
+        local_diag * float(settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_SHIFT_FACTOR),
+    )
+    residual_lengths = np.linalg.norm(residuals, axis=1)
+    finite_mask = np.isfinite(residual_lengths) & (residual_lengths <= max_shift)
+    if int(np.count_nonzero(finite_mask)) < min_support:
+        return None
+
+    local_reference = local_reference[finite_mask]
+    residuals = residuals[finite_mask]
+    kept_mask = _local_displacement_residual_consensus_mask(
+        local_reference,
+        residuals,
+        max_residual_error=float(
+            settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_RESIDUAL_ERROR
+        ),
+    )
+    if kept_mask is None or int(np.count_nonzero(kept_mask)) < min_support:
+        return None
+
+    kept_reference = local_reference[kept_mask]
+    kept_residuals = residuals[kept_mask]
+    kept_count = int(len(kept_reference))
+    reference_spread = _missing_context_spread_score(kept_reference, reference_bbox)
+    if reference_spread < settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SPREAD:
+        return None
+
+    quadrant_count = _missing_context_quadrant_count(kept_reference, reference_bbox)
+    if quadrant_count < settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_QUADRANTS:
+        return None
+
+    global_projection = _missing_global_projection(
+        expected_item,
+        projection_data=projection_data,
+    )
+    global_polygon = global_projection[0] if global_projection is not None else expected_item.polygon
+    base_points = np.asarray(expected_item.polygon, dtype=np.float32)
+    reference_vertices = np.asarray(
+        expected_item.item.reference_polygon,
+        dtype=np.float32,
+    )
+    if (
+        len(base_points) < 3
+        or len(reference_vertices) != len(base_points)
+        or reference_vertices.ndim != 2
+        or reference_vertices.shape[1] < 2
+    ):
+        return None
+
+    nearest_count = max(
+        3,
+        min(int(settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_NEAREST_POINTS), kept_count),
+    )
+    vertex_residuals = _interpolate_local_displacements(
+        reference_vertices[:, :2],
+        kept_reference,
+        kept_residuals,
+        nearest_count=nearest_count,
+    )
+    if vertex_residuals is None:
+        return None
+
+    displaced_points = base_points[:, :2] + vertex_residuals
+    if not np.isfinite(displaced_points).all():
+        return None
+
+    vertex_shifts = np.linalg.norm(displaced_points - base_points[:, :2], axis=1)
+    mean_vertex_shift = float(np.mean(vertex_shifts)) if len(vertex_shifts) else 0.0
+    max_vertex_shift = float(np.max(vertex_shifts)) if len(vertex_shifts) else 0.0
+    max_vertex_shift_factor = max_vertex_shift / local_diag
+    if max_vertex_shift_factor > settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_SHIFT_FACTOR:
+        return None
+
+    polygon = [[float(x), float(y)] for x, y in displaced_points.tolist()]
+    if len(polygon) < 3 or not _polygon_has_usable_area(polygon):
+        return None
+
+    bbox = _bbox_from_polygon(polygon)
+    if bbox is None:
+        return None
+    if (
+        projection_data.frame_size is not None
+        and not _is_visible_in_frame(
+            bbox,
+            projection_data.frame_size,
+            min_visible_fraction=0.05,
+        )
+    ):
+        return None
+
+    containment = _bbox_containment(bbox, slot.search_bbox)
+    if containment < settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_SEARCH_CONTAINMENT:
+        return None
+
+    area_score = _bbox_area_similarity(bbox, expected_item.bbox)
+    if area_score < settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MIN_LOCAL_AREA_SCORE:
+        return None
+
+    center_drift_factor = _bbox_center_distance_factor(bbox, expected_item.bbox)
+    if center_drift_factor > settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_LOCAL_CENTER_FACTOR:
+        return None
+
+    if _missing_rescue_overlaps_other_expected(
+        expected_item,
+        bbox=bbox,
+        all_expected=all_expected,
+        max_overlap=float(settings.INSPECTION_MISSING_LOCAL_DISPLACEMENT_MAX_OTHER_OVERLAP),
+    ):
+        return None
+
+    axis_angle_delta, major_length_ratio = _polygon_axis_delta(polygon, expected_item.polygon)
+    if axis_angle_delta is not None and axis_angle_delta > 22.0:
+        return None
+    if major_length_ratio is not None and not (0.62 <= major_length_ratio <= 1.62):
+        return None
+
+    residual_median_error, residual_max_error = _local_displacement_residual_errors(
+        kept_reference,
+        kept_residuals,
+    )
+
+    return _MissingLocalDisplacement(
+        polygon=polygon,
+        bbox=bbox,
+        local_point_count=local_point_count,
+        kept_point_count=kept_count,
+        nearest_count=nearest_count,
+        reference_spread=float(reference_spread),
+        quadrant_count=int(quadrant_count),
+        residual_median_error=float(residual_median_error),
+        residual_max_error=float(residual_max_error),
+        mean_vertex_shift=float(mean_vertex_shift),
+        max_vertex_shift=float(max_vertex_shift),
+        max_vertex_shift_factor=float(max_vertex_shift_factor),
+        containment=float(containment),
+        area_score=float(area_score),
+        center_drift_factor=float(center_drift_factor),
+        axis_angle_delta=axis_angle_delta,
+        major_length_ratio=major_length_ratio,
+    )
+
+
+def _project_points_by_homography(
+    points: np.ndarray,
+    homography: np.ndarray,
+) -> np.ndarray | None:
+    if len(points) == 0:
+        return None
+    source = np.asarray(points, dtype=np.float32)
+    if source.ndim != 2 or source.shape[1] < 2 or not np.isfinite(source).all():
+        return None
+    try:
+        projected = cv2.perspectiveTransform(
+            source[:, :2].reshape(-1, 1, 2),
+            homography.astype(np.float32),
+        ).reshape(-1, 2)
+    except cv2.error:
+        return None
+    if not np.isfinite(projected).all():
+        return None
+    return projected.astype(np.float32)
+
+
+
+def _reference_to_expected_affine(
+    expected_item: _ProjectedExpected,
+) -> np.ndarray | None:
+    source = np.asarray(expected_item.item.reference_polygon, dtype=np.float32)
+    target = np.asarray(expected_item.polygon, dtype=np.float32)
+    if (
+        source.ndim != 2
+        or target.ndim != 2
+        or source.shape[1] < 2
+        or target.shape[1] < 2
+        or len(source) != len(target)
+        or len(source) < 3
+        or not np.isfinite(source).all()
+        or not np.isfinite(target).all()
+    ):
+        return None
+    try:
+        affine, _inliers = cv2.estimateAffinePartial2D(
+            source[:, :2],
+            target[:, :2],
+            method=cv2.LMEDS,
+            refineIters=10,
+        )
+    except cv2.error:
+        return None
+    if affine is None or affine.shape != (2, 3) or not np.isfinite(affine).all():
+        return None
+    return affine.astype(np.float32)
+
+
+def _project_points_by_affine(
+    points: np.ndarray,
+    affine: np.ndarray,
+) -> np.ndarray | None:
+    if len(points) == 0:
+        return None
+    source = np.asarray(points, dtype=np.float32)
+    if source.ndim != 2 or source.shape[1] < 2 or not np.isfinite(source).all():
+        return None
+    try:
+        projected = cv2.transform(
+            source[:, :2].reshape(-1, 1, 2),
+            affine.astype(np.float32),
+        ).reshape(-1, 2)
+    except cv2.error:
+        return None
+    if not np.isfinite(projected).all():
+        return None
+    return projected.astype(np.float32)
+
+
+def _local_displacement_residual_consensus_mask(
+    reference_points: np.ndarray,
+    residuals: np.ndarray,
+    *,
+    max_residual_error: float,
+) -> np.ndarray | None:
+    count = int(len(reference_points))
+    if count == 0 or count != len(residuals):
+        return None
+    if count < 3:
+        return np.ones(count, dtype=bool)
+
+    # Keep matches whose residual agrees with nearby residuals.  Unlike a single
+    # translation RANSAC, this permits a smooth local displacement field while
+    # still rejecting isolated distractor matches.
+    neighbor_count = max(3, min(7, count - 1))
+    keep = np.zeros(count, dtype=bool)
+    for idx in range(count):
+        distances = np.linalg.norm(reference_points - reference_points[idx], axis=1)
+        order = np.argsort(distances)
+        neighbors = [int(i) for i in order if int(i) != idx][:neighbor_count]
+        if not neighbors:
+            continue
+        local_median = np.median(residuals[neighbors], axis=0)
+        error = float(np.linalg.norm(residuals[idx] - local_median))
+        if error <= max_residual_error:
+            keep[idx] = True
+
+    if int(np.count_nonzero(keep)) < 3:
+        return None
+    return keep
+
+
+def _local_displacement_residual_errors(
+    reference_points: np.ndarray,
+    residuals: np.ndarray,
+) -> tuple[float, float]:
+    count = int(len(reference_points))
+    if count < 2 or count != len(residuals):
+        return 0.0, 0.0
+    neighbor_count = max(1, min(5, count - 1))
+    errors: list[float] = []
+    for idx in range(count):
+        distances = np.linalg.norm(reference_points - reference_points[idx], axis=1)
+        order = np.argsort(distances)
+        neighbors = [int(i) for i in order if int(i) != idx][:neighbor_count]
+        if not neighbors:
+            continue
+        local_median = np.median(residuals[neighbors], axis=0)
+        errors.append(float(np.linalg.norm(residuals[idx] - local_median)))
+    if not errors:
+        return 0.0, 0.0
+    return float(np.median(errors)), float(np.max(errors))
+
+
+def _interpolate_local_displacements(
+    target_reference_points: np.ndarray,
+    source_reference_points: np.ndarray,
+    source_residuals: np.ndarray,
+    *,
+    nearest_count: int,
+) -> np.ndarray | None:
+    if (
+        len(target_reference_points) == 0
+        or len(source_reference_points) == 0
+        or len(source_reference_points) != len(source_residuals)
+    ):
+        return None
+
+    interpolated: list[np.ndarray] = []
+    power = 1.65
+    eps = 1e-3
+    for target in target_reference_points:
+        distances = np.linalg.norm(source_reference_points - target, axis=1)
+        order = np.argsort(distances)[:nearest_count]
+        if len(order) == 0:
+            return None
+        nearest_distances = distances[order]
+        nearest_residuals = source_residuals[order]
+        if float(np.min(nearest_distances)) <= eps:
+            interpolated.append(nearest_residuals[int(np.argmin(nearest_distances))])
+            continue
+        weights = 1.0 / np.power(nearest_distances + eps, power)
+        weight_sum = float(np.sum(weights))
+        if weight_sum <= 0.0 or not np.isfinite(weight_sum):
+            return None
+        residual = np.sum(nearest_residuals * weights[:, None], axis=0) / weight_sum
+        interpolated.append(residual.astype(np.float32))
+
+    result = np.asarray(interpolated, dtype=np.float32)
+    if result.ndim != 2 or result.shape[1] != 2 or not np.isfinite(result).all():
+        return None
+    return result
+
+
+def _merge_missing_local_displacement_debug(
+    missing_debug: dict[str, Any],
+    displacement: _MissingLocalDisplacement,
+) -> dict[str, Any]:
+    return {
+        **missing_debug,
+        "projection": "expected_slot_local_displacement",
+        "missing_polygon_projection": "expected_slot_local_displacement",
+        "missing_polygon_projection_safety": "sparse_local_displacement",
+        "missing_polygon_bbox": _bbox_debug(displacement.bbox),
+        "missing_polygon_local_displacement_points": displacement.local_point_count,
+        "missing_polygon_local_displacement_kept_points": displacement.kept_point_count,
+        "missing_polygon_local_displacement_nearest_points": displacement.nearest_count,
+        "missing_polygon_local_displacement_reference_spread": _round_debug(
+            displacement.reference_spread
+        ),
+        "missing_polygon_local_displacement_quadrants": displacement.quadrant_count,
+        "missing_polygon_local_displacement_residual_median_error": _round_debug(
+            displacement.residual_median_error
+        ),
+        "missing_polygon_local_displacement_residual_max_error": _round_debug(
+            displacement.residual_max_error
+        ),
+        "missing_polygon_local_displacement_mean_vertex_shift": _round_debug(
+            displacement.mean_vertex_shift
+        ),
+        "missing_polygon_local_displacement_max_vertex_shift": _round_debug(
+            displacement.max_vertex_shift
+        ),
+        "missing_polygon_local_displacement_max_vertex_shift_factor": _round_debug(
+            displacement.max_vertex_shift_factor
+        ),
+        "missing_polygon_containment": _round_debug(displacement.containment),
+        "missing_polygon_area_score": _round_debug(displacement.area_score),
+        "missing_polygon_center_drift_factor": _round_debug(
+            displacement.center_drift_factor
+        ),
+        "missing_polygon_axis_angle_delta": _round_debug(
+            displacement.axis_angle_delta
+        ),
+        "missing_polygon_major_length_ratio": _round_debug(
+            displacement.major_length_ratio
+        ),
+        "note": (
+            "Missing polygon was positioned by a sparse local displacement field "
+            "from surrounding feature residuals. This keeps the one-reference "
+            "alignment pipeline, but lets different polygon vertices follow "
+            "nearby context matches instead of one global affine/translation."
+        ),
+    }
 
 
 def _try_missing_global_fallback_translation_rescue(
@@ -6776,7 +8062,7 @@ def _choose_candidate_pairs_greedy(
 ) -> list[tuple[int, int, float]]:
     candidate_pairs = sorted(candidate_pairs, key=lambda item: item[0], reverse=True)
     matched_expected_indices: set[int] = set()
-    occupied_detection_indices: set[int] = set()
+    matched_detection_indices: set[int] = set()
     chosen_pairs: list[tuple[int, int, float]] = []
 
     for _score, iou, expected_index, detection_index in candidate_pairs:
