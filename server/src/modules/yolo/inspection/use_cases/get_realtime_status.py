@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from modules.yolo.inspection.domain.debug_payload import build_realtime_debug_payload
 from modules.yolo.inspection.api.schemas import InspectionRealtimeStatusResponse
 from modules.yolo.inspection.constants import inspections as inspections_constants
 from modules.yolo.inspection.realtime.streamer import InspectionStreamer
@@ -32,6 +33,7 @@ def get_realtime_status(
                 alignment_raw_match_count=None,
                 captured_at=None,
                 details=[],
+                debug_payload=None,
             )
 
         matched, total, missing, _, _ = _status_from_realtime_result(result)
@@ -47,6 +49,7 @@ def get_realtime_status(
             alignment_raw_match_count=result.alignment_raw_match_count,
             captured_at=result.captured_at,
             details=result.details,
+            debug_payload=build_realtime_debug_payload(result.details),
         )
 
     if result is None:
@@ -62,6 +65,7 @@ def get_realtime_status(
             alignment_raw_match_count=None,
             captured_at=None,
             details=[],
+            debug_payload=None,
         )
 
     matched, total, missing, status, passed = _status_from_realtime_result(result)
@@ -78,6 +82,7 @@ def get_realtime_status(
         alignment_raw_match_count=result.alignment_raw_match_count,
         captured_at=result.captured_at,
         details=result.details,
+        debug_payload=build_realtime_debug_payload(result.details),
     )
 
 

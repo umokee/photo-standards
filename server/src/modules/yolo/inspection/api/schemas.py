@@ -45,6 +45,7 @@ class InspectionTaskResultResponse(BaseModel):
     homography: list[list[float]] | None = None
 
     details: list[InspectionSegmentDetailResponse]
+    debug_payload: dict[str, Any] | None = None
     mode: str
     model_name: str | None = None
     image_path: str
@@ -152,6 +153,7 @@ class InspectionRealtimeStatusResponse(BaseModel):
     alignment_raw_match_count: int | None = None
     captured_at: datetime | None = None
     details: list[InspectionSegmentDetailResponse] = Field(default_factory=list)
+    debug_payload: dict[str, Any] | None = None
 
 
 class InspectionRealtimeSnapshotSaveRequest(BaseModel):

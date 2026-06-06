@@ -14,14 +14,6 @@ COLOR_MISSING = (70, 70, 184)
 COLOR_EXTRA = (0, 122, 200)
 COLOR_UNMATCHED = (48, 154, 209)
 
-COLOR_DEBUG_EXPECTED = (255, 180, 40)
-COLOR_DEBUG_DETECTED = (0, 210, 255)
-COLOR_DEBUG_SHADOW = (0, 0, 0)
-
-DEBUG_ALPHA_FILL = 0.08
-DEBUG_DASH_LENGTH = 18
-DEBUG_GAP_LENGTH = 10
-
 MIN_LABEL_FONT_SIZE = 16
 MAX_LABEL_FONT_SIZE = 34
 MIN_LINE_THICKNESS = 3
@@ -246,14 +238,6 @@ def _label_for_match(match: SegmentMatch) -> str:
     return name
 
 
-def _expected_label_for_match(match: SegmentMatch) -> str:
-    name = match.name
-    if len(name) > 16:
-        name = name[:15] + "…"
-
-    return f"ожидалось: {name}"
-
-
 def _label_anchor(polygon: list[list[float]]) -> tuple[int, int]:
     xs = [int(p[0]) for p in polygon]
     ys = [int(p[1]) for p in polygon]
@@ -277,8 +261,8 @@ def _render_label_plate(
 ) -> np.ndarray:
     font = _get_font(font_size)
     bbox = font.getbbox(text)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
+    text_w = int(round(bbox[2] - bbox[0]))
+    text_h = int(round(bbox[3] - bbox[1]))
     box_w = text_w + padding * 2
     box_h = text_h + padding * 2
 
@@ -520,199 +504,3 @@ def _draw_normal_polygon_items(
             font_size=label_font_size,
             padding=label_padding,
         )
-
-
-def _draw_debug_projection_items(
-    output: np.ndarray,
-    *,
-    expected_items: list[tuple[list[list[float]], tuple[int, int, int], str]],
-    detected_items: list[tuple[list[list[float]], tuple[int, int, int], str]],
-    thickness: int,
-    label_font_size: int,
-    label_padding: int,
-) -> None:
-    fill_overlay = output.copy()
-
-    for polygon, color, _label in expected_items:
-        pts = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
-        cv2.fillPoly(fill_overlay, [pts], color)
-
-    cv2.addWeighted(
-        fill_overlay,
-        DEBUG_ALPHA_FILL,
-        output,
-        1 - DEBUG_ALPHA_FILL,
-        0,
-        output,
-    )
-
-    for polygon, _color, _label in expected_items:
-        _draw_dashed_polygon(
-            output,
-            polygon,
-            COLOR_DEBUG_SHADOW,
-            thickness=thickness + 4,
-        )
-        _draw_dashed_polygon(
-            output,
-            polygon,
-            COLOR_DEBUG_EXPECTED,
-            thickness=thickness + 1,
-        )
-
-    for polygon, _color, _label in detected_items:
-        pts = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
-
-        cv2.polylines(
-            output,
-            [pts],
-            isClosed=True,
-            color=COLOR_DEBUG_SHADOW,
-            thickness=thickness + 4,
-            lineType=cv2.LINE_AA,
-        )
-        cv2.polylines(
-            output,
-            [pts],
-            isClosed=True,
-            color=COLOR_DEBUG_DETECTED,
-            thickness=thickness + 1,
-            lineType=cv2.LINE_AA,
-        )
-
-    for polygon, color, label in expected_items:
-        anchor = _label_anchor(polygon)
-        _draw_label(
-            output,
-            label,
-            (anchor[0], anchor[1] - 8),
-            color,
-            font_size=label_font_size,
-            padding=label_padding,
-        )
-
-    for polygon, color, label in detected_items:
-        anchor = _label_anchor(polygon)
-        _draw_label(
-            output,
-            label,
-            (anchor[0], anchor[1] + label_font_size + 14),
-            color,
-            font_size=label_font_size,
-            padding=label_padding,
-        )
-
-
-def _draw_dashed_polygon(
-    image: np.ndarray,
-    polygon: list[list[float]],
-    color: tuple[int, int, int],
-    *,
-    thickness: int,
-) -> None:
-    if len(polygon) < 2:
-        return
-
-    points = np.asarray(polygon, dtype=np.float32)
-    if points.ndim != 2 or points.shape[0] < 2 or points.shape[1] < 2:
-        return
-
-    points = points[:, :2]
-
-    for index in range(points.shape[0]):
-        start = points[index]
-        end = points[(index + 1) % points.shape[0]]
-        _draw_dashed_segment(
-            image,
-            start,
-            end,
-            color,
-            thickness=thickness,
-        )
-
-
-def _draw_dashed_segment(
-    image: np.ndarray,
-    start: np.ndarray,
-    end: np.ndarray,
-    color: tuple[int, int, int],
-    *,
-    thickness: int,
-) -> None:
-    vector = end - start
-    length = float(np.linalg.norm(vector))
-
-    if length < 1.0:
-        return
-
-    direction = vector / length
-    distance = 0.0
-
-    while distance < length:
-        dash_start = start + direction * distance
-        dash_end = start + direction * min(distance + DEBUG_DASH_LENGTH, length)
-
-        cv2.line(
-            image,
-            tuple(np.round(dash_start).astype(int)),
-            tuple(np.round(dash_end).astype(int)),
-            color=color,
-            thickness=thickness,
-            lineType=cv2.LINE_AA,
-        )
-
-        distance += DEBUG_DASH_LENGTH + DEBUG_GAP_LENGTH
-
-
-def _prepare_debug_polygon_for_render(
-    polygon: list[list[float]] | None,
-    *,
-    polygon_transform: np.ndarray | None,
-    frame_shape: tuple[int, int],
-) -> list[list[float]] | None:
-    if polygon is None or len(polygon) < 3:
-        return None
-
-    if polygon_transform is not None:
-        polygon = _transform_polygon(polygon, polygon_transform)
-        if polygon is None or len(polygon) < 3:
-            return None
-
-    frame_h, frame_w = frame_shape
-
-    points = np.asarray(polygon, dtype=np.float32)
-    if points.ndim != 2 or points.shape[0] < 3 or points.shape[1] < 2:
-        return None
-
-    points = points[:, :2]
-
-    if not np.isfinite(points).all():
-        return None
-
-    points = _remove_near_duplicate_points(points)
-    if points.shape[0] < 3:
-        return None
-
-    points[:, 0] = np.clip(points[:, 0], 0, max(0, frame_w - 1))
-    points[:, 1] = np.clip(points[:, 1], 0, max(0, frame_h - 1))
-
-    points = _remove_near_duplicate_points(points)
-    if points.shape[0] < 3:
-        return None
-
-    area = abs(float(cv2.contourArea(points.reshape(-1, 1, 2))))
-    if area < 2.0:
-        return None
-
-    return [[float(x), float(y)] for x, y in points]
-
-
-def _detected_debug_label_for_match(match: SegmentMatch) -> str:
-    name = match.name
-    if len(name) > 16:
-        name = name[:15] + "…"
-
-    if match.confidence is not None:
-        return f"YOLO: {name} {int(match.confidence * 100)}%"
-
-    return f"YOLO: {name}"

@@ -6,6 +6,7 @@ from uuid import UUID
 import numpy as np
 from app.config import settings
 from modules.yolo.inspection.constants import inspections as inspections_constants
+from modules.yolo.inspection.domain.debug_payload import build_inspection_debug_payload
 from modules.yolo.inspection.domain.types import SegmentMatch
 from modules.yolo.training.models import MlModel
 
@@ -80,6 +81,15 @@ def build_result_payload(
         or settings.INSPECTION_VERIFICATION_MODE
     )
     normalized_homography = _homography_to_json(homography)
+    details = [build_result_item(match) for match in matches]
+    debug_payload = build_inspection_debug_payload(
+        details=details,
+        raw_class_counts=raw_class_counts,
+        imgsz=context.model.imgsz,
+        weights_path=context.model.weights_path,
+        alignment_debug=alignment_debug,
+        verification_mode=resolved_verification_mode,
+    )
 
     return {
         "task_id": str(task_id) if task_id is not None else None,
@@ -110,7 +120,7 @@ def build_result_payload(
             if resolved_verification_mode == "yolo_count"
             else normalized_homography
         ),
-        "details": [build_result_item(match) for match in matches],
+        "details": details,
         "standard_id": str(context.standard.id),
         "model_id": str(context.model.id),
         "camera_id": payload.get("camera_id"),
@@ -118,13 +128,7 @@ def build_result_payload(
         "image_path": payload["image_path"],
         "result_image_path": result_image_path,
         "model_name": build_model_name(context.model),
-        "debug_payload": {
-            "raw_counts": raw_class_counts or {},
-            "imgsz": context.model.imgsz,
-            "weights_path": context.model.weights_path,
-            "alignment": alignment_debug,
-            "verification_mode": resolved_verification_mode,
-        },
+        "debug_payload": debug_payload,
     }
 
 
@@ -231,12 +235,16 @@ def build_realtime_save_payload(
         ),
         "details": result.details,
         "model_name": build_model_name(context.model),
-        "debug_payload": {
-            "alignment": result.alignment_debug,
-            "verification_mode": getattr(
+        "debug_payload": build_inspection_debug_payload(
+            details=result.details,
+            raw_class_counts=None,
+            imgsz=context.model.imgsz,
+            weights_path=context.model.weights_path,
+            alignment_debug=result.alignment_debug,
+            verification_mode=getattr(
                 result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
             ),
-        },
+        ),
     }
 
 
