@@ -32,6 +32,14 @@ _MAX_OPTIMAL_ASSIGNMENT_ITEMS = 18
 _DUPLICATE_MATCHED_BBOX_IOU = 0.55
 _DUPLICATE_MATCHED_CONTAINMENT = 0.80
 
+_RUNTIME_YOLO_ANCHOR_MIN_CONFIDENCE = 0.90
+_RUNTIME_YOLO_ANCHOR_MAX_CENTER_FACTOR = 0.28
+_RUNTIME_YOLO_ANCHOR_MIN_SLOT_IOU = 0.32
+_RUNTIME_YOLO_ANCHOR_MIN_DETECTION_CONTAINMENT = 0.45
+_RUNTIME_YOLO_ANCHOR_MIN_SLOT_COVERAGE = 0.50
+_RUNTIME_YOLO_ANCHOR_MIN_AREA_RATIO = 0.72
+_RUNTIME_YOLO_ANCHOR_MAX_AREA_RATIO = 1.60
+
 _MISSING_POLYGON_MAX_LOCAL_POINTS = 96
 _MISSING_POLYGON_MIN_CONTAINMENT = 0.18
 _MISSING_POLYGON_MIN_AREA_SCORE = 0.16
@@ -304,6 +312,7 @@ def match_segments(
     *,
     frame_size: tuple[int, int] | None = None,
     projection_data: LocalProjectionData | None = None,
+    yolo_anchor_rescue: bool = False,
 ) -> list[SegmentMatch]:
     projected_expected: list[_ProjectedExpected] = []
     unprojected_expected: list[tuple[int, ExpectedSegment, dict[str, Any]]] = []
@@ -382,6 +391,17 @@ def match_segments(
         projected_expected,
         projection_data=projection_data,
     )
+    runtime_anchor_traces = (
+        {
+            item.index: _build_runtime_yolo_anchor_trace(
+                item,
+                slot_by_index.get(item.index),
+            )
+            for item in projected_expected
+        }
+        if yolo_anchor_rescue
+        else {}
+    )
     trusted_anchor_build_debug: dict[str, Any] = {}
     trusted_anchors = _build_trusted_missing_anchors(
         projected_expected,
@@ -409,12 +429,28 @@ def match_segments(
                 expected_item.bbox,
                 detection_item.bbox,
             )
-            slot_candidate = _try_slot_candidate(
-                expected_item,
-                detection_item,
-                slot=slot_by_index.get(expected_item.index),
-                global_debug=global_debug,
-            )
+            if yolo_anchor_rescue:
+                slot_candidate = _runtime_yolo_anchor_candidate_details(
+                    expected_item,
+                    detection_item,
+                    slot=slot_by_index.get(expected_item.index),
+                    global_debug=global_debug,
+                )
+                if slot_candidate is not None:
+                    _record_runtime_yolo_anchor_trace_candidate(
+                        runtime_anchor_traces.get(expected_item.index),
+                        detection_index=detection_item.index,
+                        debug=slot_candidate[2],
+                    )
+                    if not slot_candidate[2].get("passed"):
+                        continue
+            else:
+                slot_candidate = _try_slot_candidate(
+                    expected_item,
+                    detection_item,
+                    slot=slot_by_index.get(expected_item.index),
+                    global_debug=global_debug,
+                )
             if slot_candidate is None:
                 continue
 
@@ -433,11 +469,13 @@ def match_segments(
     for expected_index, detection_index, iou in chosen_pairs:
         expected_item = projected_by_index[expected_index]
         detection_item = detection_by_index[detection_index]
+        match_debug = candidate_debug.get((expected_index, detection_index))
         matched_anchor = _trusted_anchor_from_matched_detection(
             expected_item,
             detection_item=detection_item,
             match_iou=iou,
             projection_data=projection_data,
+            match_debug=match_debug,
         )
         _append_or_replace_trusted_anchor(trusted_anchors, matched_anchor)
         _record_runtime_anchor_source(
@@ -457,6 +495,13 @@ def match_segments(
         expected_polygon = expected_item.polygon
         detected_polygon = _display_detected_polygon(detection_item)
 
+        match_debug = candidate_debug.get((expected_index, detection_index))
+        if yolo_anchor_rescue:
+            match_debug = _merge_runtime_yolo_anchor_trace_debug(
+                match_debug,
+                runtime_anchor_traces.get(expected_index),
+            )
+
         matches.append(
             SegmentMatch(
                 annotation_id=expected_item.item.annotation_id,
@@ -470,7 +515,7 @@ def match_segments(
                 expected_polygon=expected_polygon,
                 detected_polygon=detected_polygon,
                 detected_bbox=detection.bbox,
-                debug=candidate_debug.get((expected_index, detection_index)),
+                debug=match_debug,
             )
         )
 
@@ -480,6 +525,11 @@ def match_segments(
 
         slot = slot_by_index.get(expected_item.index)
         missing_debug = _missing_slot_debug(expected_item, slot)
+        if yolo_anchor_rescue:
+            missing_debug = _merge_runtime_yolo_no_anchor_debug(
+                missing_debug,
+                runtime_anchor_traces.get(expected_item.index),
+            )
         missing_polygon = expected_item.polygon
 
         missing_refinement = _try_missing_polygon_refinement(
@@ -571,6 +621,8 @@ def match_segments(
             probe=f"resolved_projection_{resolved_projection_name or 'unknown'}",
             reject=f"resolved_projection_rejected_{resolved_projection_name or 'unknown'}",
         )
+        if yolo_anchor_rescue:
+            missing_debug = _merge_runtime_applied_geometry_source_debug(missing_debug)
 
         matches.append(
             SegmentMatch(
@@ -640,6 +692,7 @@ def match_segments(
             slot_by_index=slot_by_index,
             occupied_detection_indices=occupied_detection_indices,
             detection_by_index=detection_by_index,
+            yolo_anchor_rescue=yolo_anchor_rescue,
         )
 
         detection = detection_item.detection
@@ -1101,6 +1154,351 @@ def _try_slot_candidate(
         return None
 
     return score, projected_iou, debug
+
+
+def _try_runtime_yolo_anchor_candidate(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    slot: _ExpectedSlot | None,
+    global_debug: dict[str, Any],
+) -> tuple[float, float, dict[str, Any]] | None:
+    """Return a trusted YOLO anchor candidate for the runtime fusion path.
+
+    This is intentionally stricter than the legacy slot matcher.  A detection
+    becomes an anchor only when the expected LightGlue slot and the factual YOLO
+    mask/bbox agree with each other.  If this check fails, the result is
+    ``no_anchor``; it must not be interpreted as a final missing decision by
+    itself.
+    """
+
+    details = _runtime_yolo_anchor_candidate_details(
+        expected_item,
+        detection_item,
+        slot=slot,
+        global_debug=global_debug,
+    )
+    if details is None:
+        return None
+
+    score, direct_iou, debug = details
+    if not debug.get("passed"):
+        return None
+
+    return score, direct_iou, debug
+
+
+def _runtime_yolo_anchor_candidate_details(
+    expected_item: _ProjectedExpected,
+    detection_item: _DetectionCandidate,
+    *,
+    slot: _ExpectedSlot | None,
+    global_debug: dict[str, Any],
+) -> tuple[float, float, dict[str, Any]] | None:
+    if slot is None:
+        return None
+
+    confidence = float(detection_item.detection.confidence or 0.0)
+    expected_bbox = slot.projected_bbox
+    detection_bbox = detection_item.bbox
+
+    slot_iou = _bbox_iou(expected_bbox, detection_bbox)
+    detection_containment = _bbox_containment(detection_bbox, expected_bbox)
+    slot_coverage = _bbox_containment(expected_bbox, detection_bbox)
+    center_factor = _bbox_center_distance_factor(detection_bbox, expected_bbox)
+
+    expected_area = max(1.0, _bbox_area(expected_bbox))
+    detection_area = max(1.0, _bbox_area(detection_bbox))
+    slot_area_ratio = float(detection_area / expected_area)
+
+    rejected_reason = _runtime_yolo_anchor_reject_reason(
+        confidence=confidence,
+        center_factor=center_factor,
+        slot_iou=slot_iou,
+        detection_containment=detection_containment,
+        slot_coverage=slot_coverage,
+        slot_area_ratio=slot_area_ratio,
+    )
+    accepted = rejected_reason is None
+    direct_iou = _polygon_iou(expected_item.polygon, detection_item.polygon)
+    score = (
+        confidence * 1.5
+        + slot_iou * 2.0
+        + slot_coverage
+        + detection_containment * 0.75
+        - center_factor * 2.0
+    )
+
+    debug = {
+        "reason": "trusted_yolo_anchor" if accepted else "yolo_anchor_rejected",
+        "reason_code": (
+            "runtime_trusted_yolo_anchor"
+            if accepted
+            else "runtime_yolo_anchor_candidate_rejected"
+        ),
+        "projection": (
+            "trusted_yolo_anchor_rescue"
+            if accepted
+            else "expected_slot"
+        ),
+        "candidate_source": (
+            "trusted_yolo_anchor"
+            if accepted
+            else "rejected_yolo_anchor_candidate"
+        ),
+        "passed": accepted,
+        "runtime_fusion_mode": "yolo_anchor_rescue",
+        "runtime_yolo_anchor_trusted": accepted,
+        "runtime_anchor_reject_reason": rejected_reason,
+        "yolo_anchor_status": "trusted_anchor" if accepted else "rejected_anchor",
+        "applied_geometry_source": "trusted_yolo_mask" if accepted else "baseline_geometry",
+        "no_anchor_semantics": (
+            "no_anchor means YOLO did not provide trusted geometry help; "
+            "it is not a standalone missing decision."
+        ),
+        "score": _round_debug(score),
+        "iou": _round_debug(direct_iou),
+        "global_score": global_debug.get("score"),
+        "global_iou": global_debug.get("iou"),
+        "global_reject_reason": global_debug.get("reject_reason"),
+        "runtime_anchor_confidence": _round_debug(confidence),
+        "runtime_anchor_min_confidence": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_CONFIDENCE
+        ),
+        "runtime_anchor_center_factor": _round_debug(center_factor),
+        "runtime_anchor_max_center_factor": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MAX_CENTER_FACTOR
+        ),
+        "runtime_anchor_slot_iou": _round_debug(slot_iou),
+        "runtime_anchor_min_slot_iou": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_SLOT_IOU
+        ),
+        "runtime_anchor_detection_containment": _round_debug(
+            detection_containment
+        ),
+        "runtime_anchor_min_detection_containment": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_DETECTION_CONTAINMENT
+        ),
+        "runtime_anchor_slot_coverage": _round_debug(slot_coverage),
+        "runtime_anchor_min_slot_coverage": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_SLOT_COVERAGE
+        ),
+        "runtime_anchor_slot_area_ratio": _round_debug(slot_area_ratio),
+        "runtime_anchor_min_slot_area_ratio": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_AREA_RATIO
+        ),
+        "runtime_anchor_max_slot_area_ratio": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MAX_AREA_RATIO
+        ),
+        "slot": _slot_debug_payload(slot),
+    }
+
+    return float(score), float(direct_iou), debug
+
+
+def _runtime_yolo_anchor_reject_reason(
+    *,
+    confidence: float,
+    center_factor: float,
+    slot_iou: float,
+    detection_containment: float,
+    slot_coverage: float,
+    slot_area_ratio: float,
+) -> str | None:
+    if confidence < _RUNTIME_YOLO_ANCHOR_MIN_CONFIDENCE:
+        return "runtime_anchor_low_confidence"
+    if center_factor > _RUNTIME_YOLO_ANCHOR_MAX_CENTER_FACTOR:
+        return "runtime_anchor_center_outside_expected_slot"
+    if slot_iou < _RUNTIME_YOLO_ANCHOR_MIN_SLOT_IOU:
+        return "runtime_anchor_low_slot_iou"
+    if detection_containment < _RUNTIME_YOLO_ANCHOR_MIN_DETECTION_CONTAINMENT:
+        return "runtime_anchor_detection_not_contained_in_slot"
+    if slot_coverage < _RUNTIME_YOLO_ANCHOR_MIN_SLOT_COVERAGE:
+        return "runtime_anchor_expected_slot_not_covered"
+    if (
+        slot_area_ratio < _RUNTIME_YOLO_ANCHOR_MIN_AREA_RATIO
+        or slot_area_ratio > _RUNTIME_YOLO_ANCHOR_MAX_AREA_RATIO
+    ):
+        return "runtime_anchor_bad_area_ratio"
+    return None
+
+
+def _build_runtime_yolo_anchor_trace(
+    expected_item: _ProjectedExpected,
+    slot: _ExpectedSlot | None,
+) -> dict[str, Any]:
+    return {
+        "mode": "yolo_anchor_rescue",
+        "expected_index": expected_item.index,
+        "expected_name": expected_item.item.name,
+        "class_key": expected_item.item.class_key,
+        "slot_available": slot is not None,
+        "candidate_count": 0,
+        "trusted_candidate_count": 0,
+        "rejected_candidate_count": 0,
+        "reject_counts": {},
+        "best_rejected_reason": None,
+        "best_rejected_score": None,
+        "best_candidate": None,
+        "top_candidates": [],
+        "thresholds": _runtime_yolo_anchor_thresholds_debug(),
+    }
+
+
+def _record_runtime_yolo_anchor_trace_candidate(
+    trace: dict[str, Any] | None,
+    *,
+    detection_index: int,
+    debug: dict[str, Any],
+) -> None:
+    if trace is None:
+        return
+
+    passed = bool(debug.get("passed"))
+    reject_reason = debug.get("runtime_anchor_reject_reason")
+    score = _debug_float(debug.get("score"), default=0.0)
+
+    trace["candidate_count"] = int(trace.get("candidate_count") or 0) + 1
+    if passed:
+        trace["trusted_candidate_count"] = int(trace.get("trusted_candidate_count") or 0) + 1
+    else:
+        trace["rejected_candidate_count"] = int(trace.get("rejected_candidate_count") or 0) + 1
+        reason = str(reject_reason or "runtime_anchor_rejected_unknown")
+        reject_counts = trace.setdefault("reject_counts", {})
+        reject_counts[reason] = int(reject_counts.get(reason) or 0) + 1
+        if (
+            trace.get("best_rejected_score") is None
+            or score > float(trace.get("best_rejected_score") or 0.0)
+        ):
+            trace["best_rejected_score"] = _round_debug(score)
+            trace["best_rejected_reason"] = reason
+
+    candidate = _runtime_yolo_anchor_candidate_summary(
+        detection_index=detection_index,
+        debug=debug,
+    )
+    if (
+        trace.get("best_candidate") is None
+        or score > float(trace["best_candidate"].get("score") or 0.0)
+    ):
+        trace["best_candidate"] = candidate
+
+    top_candidates = list(trace.get("top_candidates") or [])
+    top_candidates.append(candidate)
+    top_candidates.sort(key=lambda item: float(item.get("score") or 0.0), reverse=True)
+    trace["top_candidates"] = top_candidates[:3]
+
+
+def _merge_runtime_yolo_anchor_trace_debug(
+    debug: dict[str, Any] | None,
+    trace: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if debug is None or trace is None:
+        return debug
+
+    payload = _runtime_yolo_anchor_trace_payload(trace)
+    return {
+        **debug,
+        "runtime_anchor_trace": payload,
+        "runtime_anchor_candidate_count": payload["candidate_count"],
+        "runtime_anchor_trusted_candidate_count": payload["trusted_candidate_count"],
+        "runtime_anchor_rejected_candidate_count": payload["rejected_candidate_count"],
+        "runtime_anchor_reject_counts": payload["reject_counts"],
+        "runtime_anchor_best_rejected_reason": payload["best_rejected_reason"],
+    }
+
+
+def _runtime_yolo_anchor_trace_payload(trace: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "mode": trace.get("mode"),
+        "expected_index": trace.get("expected_index"),
+        "expected_name": trace.get("expected_name"),
+        "class_key": trace.get("class_key"),
+        "slot_available": bool(trace.get("slot_available")),
+        "candidate_count": int(trace.get("candidate_count") or 0),
+        "trusted_candidate_count": int(trace.get("trusted_candidate_count") or 0),
+        "rejected_candidate_count": int(trace.get("rejected_candidate_count") or 0),
+        "reject_counts": dict(trace.get("reject_counts") or {}),
+        "best_rejected_reason": trace.get("best_rejected_reason"),
+        "best_rejected_score": trace.get("best_rejected_score"),
+        "best_candidate": trace.get("best_candidate"),
+        "top_candidates": list(trace.get("top_candidates") or []),
+        "thresholds": dict(trace.get("thresholds") or {}),
+    }
+
+
+def _runtime_yolo_anchor_candidate_summary(
+    *,
+    detection_index: int,
+    debug: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "detection_index": detection_index,
+        "passed": bool(debug.get("passed")),
+        "reject_reason": debug.get("runtime_anchor_reject_reason"),
+        "score": debug.get("score"),
+        "confidence": debug.get("runtime_anchor_confidence"),
+        "slot_iou": debug.get("runtime_anchor_slot_iou"),
+        "center_factor": debug.get("runtime_anchor_center_factor"),
+        "detection_containment": debug.get("runtime_anchor_detection_containment"),
+        "slot_coverage": debug.get("runtime_anchor_slot_coverage"),
+        "slot_area_ratio": debug.get("runtime_anchor_slot_area_ratio"),
+        "direct_iou": debug.get("iou"),
+    }
+
+
+def _runtime_yolo_anchor_thresholds_debug() -> dict[str, float]:
+    return {
+        "min_confidence": _round_debug(_RUNTIME_YOLO_ANCHOR_MIN_CONFIDENCE),
+        "max_center_factor": _round_debug(_RUNTIME_YOLO_ANCHOR_MAX_CENTER_FACTOR),
+        "min_slot_iou": _round_debug(_RUNTIME_YOLO_ANCHOR_MIN_SLOT_IOU),
+        "min_detection_containment": _round_debug(
+            _RUNTIME_YOLO_ANCHOR_MIN_DETECTION_CONTAINMENT
+        ),
+        "min_slot_coverage": _round_debug(_RUNTIME_YOLO_ANCHOR_MIN_SLOT_COVERAGE),
+        "min_slot_area_ratio": _round_debug(_RUNTIME_YOLO_ANCHOR_MIN_AREA_RATIO),
+        "max_slot_area_ratio": _round_debug(_RUNTIME_YOLO_ANCHOR_MAX_AREA_RATIO),
+    }
+
+
+def _merge_runtime_yolo_no_anchor_debug(
+    debug: dict[str, Any],
+    trace: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    merged = {
+        **debug,
+        "reason": "YOLO не дал надёжный якорь в ожидаемой области",
+        "reason_code": "runtime_no_trusted_yolo_anchor",
+        "runtime_fusion_mode": "yolo_anchor_rescue",
+        "yolo_anchor_status": "no_anchor",
+        "applied_geometry_source": "baseline_geometry",
+        "no_anchor_semantics": (
+            "no_anchor means YOLO did not provide trusted geometry help; "
+            "it is not a standalone missing decision."
+        ),
+        "note": (
+            "LightGlue expected geometry is kept; YOLO absence is reported as "
+            "unconfirmed geometry, not as independent proof of absence."
+        ),
+    }
+    return _merge_runtime_yolo_anchor_trace_debug(merged, trace) or merged
+
+
+def _merge_runtime_applied_geometry_source_debug(
+    debug: dict[str, Any],
+) -> dict[str, Any]:
+    projection = _missing_debug_projection_name(debug)
+    if projection == "expected_slot_anchor_release":
+        return {
+            **debug,
+            "applied_geometry_source": "trusted_anchor_transform",
+            "runtime_anchor_transform_applied": True,
+        }
+    return {
+        **debug,
+        "applied_geometry_source": debug.get("applied_geometry_source") or "baseline_geometry",
+        "runtime_anchor_transform_applied": False,
+    }
 
 
 def _missing_slot_debug(
@@ -5483,10 +5881,16 @@ def _trusted_anchor_from_matched_detection(
     detection_item: _DetectionCandidate,
     match_iou: float,
     projection_data: LocalProjectionData | None,
+    match_debug: dict[str, Any] | None = None,
 ) -> _TrustedAnchor | None:
     if projection_data is None:
         return None
-    if match_iou < max(0.55, IOU_MATCH_THRESHOLD):
+
+    runtime_trusted = bool(
+        match_debug is not None
+        and match_debug.get("runtime_yolo_anchor_trusted") is True
+    )
+    if not runtime_trusted and match_iou < max(0.55, IOU_MATCH_THRESHOLD):
         return None
 
     global_projection = _missing_global_projection(
@@ -5517,7 +5921,16 @@ def _trusted_anchor_from_matched_detection(
         return None
 
     confidence = max(0.0, min(1.0, float(detection_item.detection.confidence or 0.0)))
-    quality = max(0.01, min(1.0, float(match_iou)))
+    if runtime_trusted and match_debug is not None:
+        anchor_iou = _debug_float(match_debug.get("runtime_anchor_slot_iou"), default=match_iou)
+        coverage = _debug_float(match_debug.get("runtime_anchor_slot_coverage"), default=match_iou)
+        containment = _debug_float(
+            match_debug.get("runtime_anchor_detection_containment"),
+            default=match_iou,
+        )
+        quality = max(0.01, min(1.0, (anchor_iou + coverage + containment) / 3.0))
+    else:
+        quality = max(0.01, min(1.0, float(match_iou)))
     return _TrustedAnchor(
         expected_index=expected_item.index,
         source="matched_detection",
@@ -8111,6 +8524,7 @@ def _classify_unmatched_detection(
     slot_by_index: dict[int, _ExpectedSlot],
     occupied_detection_indices: set[int],
     detection_by_index: dict[int, _DetectionCandidate],
+    yolo_anchor_rescue: bool = False,
     iou_threshold: float = 0.10,
 ) -> tuple[str, int | None, dict[str, Any] | None]:
     if detection.detection.confidence < settings.YOLO_EXTRA_CONF_THRESHOLD:
@@ -8148,12 +8562,20 @@ def _classify_unmatched_detection(
             expected_item.bbox,
             detection.bbox,
         )
-        slot_details = _slot_candidate_details(
-            expected_item,
-            detection,
-            slot=slot_by_index.get(expected_item.index),
-            global_debug=global_debug,
-        )
+        if yolo_anchor_rescue:
+            slot_details = _try_runtime_yolo_anchor_candidate(
+                expected_item,
+                detection,
+                slot=slot_by_index.get(expected_item.index),
+                global_debug=global_debug,
+            )
+        else:
+            slot_details = _slot_candidate_details(
+                expected_item,
+                detection,
+                slot=slot_by_index.get(expected_item.index),
+                global_debug=global_debug,
+            )
         if slot_details is None:
             continue
 

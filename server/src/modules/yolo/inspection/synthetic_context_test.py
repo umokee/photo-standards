@@ -536,7 +536,7 @@ def _parse_args() -> argparse.Namespace:
         help=(
             "Run the real synthetic YOLO-seg loop: first LightGlue baseline, then "
             "export a synthetic YOLO dataset, train/load a real Ultralytics model, "
-            "run inference and feed real masks back into the inspection matcher."
+            "run inference and evaluate YOLO as an anchor source for geometry rescue."
         ),
     )
     parser.add_argument(
@@ -558,6 +558,58 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--real-yolo-device", default="auto", help="auto, cpu, 0, 0,1, etc.")
     parser.add_argument("--real-yolo-conf", type=float, default=0.25)
     parser.add_argument("--real-yolo-iou", type=float, default=0.70)
+    parser.add_argument(
+        "--real-yolo-anchor-min-conf",
+        type=float,
+        default=0.90,
+        help=(
+            "Minimum YOLO confidence for a detection to become a trusted anchor. "
+            "No anchor never means missing; it only means YOLO did not provide geometry help."
+        ),
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-max-center-factor",
+        type=float,
+        default=0.28,
+        help="Maximum normalized distance between expected slot center and YOLO anchor center.",
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-min-slot-iou",
+        type=float,
+        default=0.32,
+        help="Minimum overlap between expected slot and YOLO anchor mask for trusted anchor assignment.",
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-min-containment",
+        type=float,
+        default=0.45,
+        help="Minimum fraction of YOLO anchor mask lying inside the expected slot.",
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-min-coverage",
+        type=float,
+        default=0.50,
+        help=(
+            "Minimum fraction of the expected slot covered by the YOLO anchor mask. "
+            "This is the expected→factual agreement gate: the factual object must "
+            "really occupy the expected area before it can become an anchor."
+        ),
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-min-area-ratio",
+        type=float,
+        default=0.72,
+        help=(
+            "Minimum YOLO anchor mask area divided by expected slot area. "
+            "Keeps undersized factual detections from becoming trusted anchors."
+        ),
+    )
+    parser.add_argument(
+        "--real-yolo-anchor-max-area-ratio",
+        type=float,
+        default=1.60,
+        help="Maximum YOLO anchor mask area divided by expected slot area.",
+    )
     parser.add_argument(
         "--real-yolo-keep-training-dir",
         action="store_true",
@@ -7768,8 +7820,12 @@ def _run_real_yolo_synthetic_pipeline(*, args: argparse.Namespace, output_dir: P
 
     The older report-only YOLO fixtures answer only a theoretical question.  This
     path is intentionally heavier: it exports real images/labels, trains or loads
-    Ultralytics YOLO-seg, runs real inference, and then sends the produced masks
-    through the same matcher guards used by inspection.
+    Ultralytics YOLO-seg, runs real inference, keeps the existing LightGlue
+    transfer as the baseline, and evaluates whether high-confidence YOLO masks
+    can be trusted as geometry anchors for rescuing failed polygon transfers.
+
+    Important: a missing YOLO detection is never treated as a missing object in
+    this diagnostic.  It only means that YOLO did not provide an anchor.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -7816,26 +7872,30 @@ def _run_real_yolo_synthetic_pipeline(*, args: argparse.Namespace, output_dir: P
         iou=args.real_yolo_iou,
         imgsz=args.real_yolo_imgsz,
         device=args.real_yolo_device,
+        baseline_results_path=baseline_dir / "results.json",
+        anchor_policy=_build_real_yolo_anchor_policy(args),
     )
 
     comparison = {
-        "mode": "real_yolo_synthetic_e2e",
+        "mode": "real_yolo_anchor_rescue_e2e",
         "baseline_lightglue": baseline_summary,
         "dataset": dataset_summary,
         "training": train_result,
-        "real_yolo": evaluation,
+        "real_yolo_anchor_rescue": evaluation,
+        "yolo_anchor_rescue": evaluation.get("yolo_anchor_rescue", {}),
         "decision_hint": _real_yolo_decision_hint(evaluation),
     }
     _write_json(output_dir / "real_yolo_synthetic_summary.json", comparison)
 
-    print("real_yolo_synthetic_e2e finished")
+    print("real_yolo_anchor_rescue_e2e finished")
     print(f"baseline={baseline_dir / 'summary.json'}")
     print(f"dataset={dataset_dir}")
     print(f"model={model_path}")
     print(f"eval={output_dir / 'real_yolo_eval' / 'summary.json'}")
     print(f"summary={output_dir / 'real_yolo_synthetic_summary.json'}")
 
-    if args.fail_on_fail and evaluation["combined"]["dangerous_expected_matches"] > 0:
+    anchor_rescue = evaluation.get("yolo_anchor_rescue", {})
+    if args.fail_on_fail and int(anchor_rescue.get("dangerous_missing_anchors") or 0) > 0:
         return 1
     return 0
 
@@ -8166,6 +8226,8 @@ def _evaluate_real_yolo_synthetic_model(
     iou: float,
     imgsz: int,
     device: str,
+    baseline_results_path: Path,
+    anchor_policy: dict[str, float],
 ) -> dict[str, Any]:
     try:
         from ultralytics import YOLO
@@ -8188,9 +8250,12 @@ def _evaluate_real_yolo_synthetic_model(
     )
     model = YOLO(str(model_path))
     names = _real_yolo_model_names(model)
+    baseline_metric_map = _load_real_yolo_baseline_metric_map(baseline_results_path)
 
     present_rows: list[dict[str, Any]] = []
     missing_rows: list[dict[str, Any]] = []
+    anchor_present_rows: list[dict[str, Any]] = []
+    anchor_missing_rows: list[dict[str, Any]] = []
     for index, scene in enumerate(scenes, start=1):
         present_image = _real_yolo_present_target_image(scene)
         present_path = images_dir / f"case_{index:04d}_present.png"
@@ -8211,6 +8276,16 @@ def _evaluate_real_yolo_synthetic_model(
                 target_image=present_image,
                 case_index=index,
                 variant="present",
+            )
+        )
+        anchor_present_rows.extend(
+            _evaluate_real_yolo_anchor_scene(
+                scene=scene,
+                detections=present_detections,
+                case_index=index,
+                variant="present",
+                baseline_metric_map=baseline_metric_map,
+                anchor_policy=anchor_policy,
             )
         )
 
@@ -8234,9 +8309,24 @@ def _evaluate_real_yolo_synthetic_model(
                 variant="missing",
             )
         )
+        anchor_missing_rows.extend(
+            _evaluate_real_yolo_anchor_scene(
+                scene=scene,
+                detections=missing_detections,
+                case_index=index,
+                variant="missing",
+                baseline_metric_map=baseline_metric_map,
+                anchor_policy=anchor_policy,
+            )
+        )
 
     present_summary = _summarize_real_yolo_eval_rows(present_rows, variant="present")
     missing_summary = _summarize_real_yolo_eval_rows(missing_rows, variant="missing")
+    anchor_rescue_summary = _summarize_real_yolo_anchor_rescue(
+        present_rows=anchor_present_rows,
+        missing_rows=anchor_missing_rows,
+        baseline_metric_map=baseline_metric_map,
+    )
     combined = {
         "total_expected_objects": present_summary["total_expected_objects"] + missing_summary["total_expected_objects"],
         "dangerous_expected_matches": present_summary["dangerous_expected_matches"] + missing_summary["dangerous_expected_matches"],
@@ -8244,21 +8334,533 @@ def _evaluate_real_yolo_synthetic_model(
         "missing_expected_objects": present_summary["missing_expected_objects"] + missing_summary["missing_expected_objects"],
     }
     summary = {
+        "mode": "real_yolo_anchor_rescue_diagnostic",
         "model_path": str(model_path),
         "classes": names,
         "conf": float(conf),
         "iou": float(iou),
         "imgsz": int(imgsz),
-        "present": present_summary,
-        "missing": missing_summary,
-        "combined": combined,
+        "anchor_policy": anchor_policy,
+        "yolo_anchor_rescue": anchor_rescue_summary,
+        "legacy_global_yolo_matching": {
+            "note": (
+                "Diagnostic only. These values are the old global YOLO matching metrics; "
+                "they are not the anchor-rescue decision and must not be used as release criteria."
+            ),
+            "present": present_summary,
+            "missing": missing_summary,
+            "combined": combined,
+        },
     }
     _write_json(output_dir / "summary.json", summary)
     _write_json(output_dir / "present_results.json", present_rows)
     _write_json(output_dir / "missing_results.json", missing_rows)
-    _write_real_yolo_eval_html(output_dir / "report.html", summary, present_rows, missing_rows)
+    _write_json(output_dir / "anchor_present_results.json", anchor_present_rows)
+    _write_json(output_dir / "anchor_missing_results.json", anchor_missing_rows)
+    _write_real_yolo_eval_html(output_dir / "report.html", summary, anchor_present_rows, anchor_missing_rows)
     return summary
 
+
+
+def _build_real_yolo_anchor_policy(args: argparse.Namespace) -> dict[str, float]:
+    return {
+        "min_confidence": float(args.real_yolo_anchor_min_conf),
+        "max_center_factor": float(args.real_yolo_anchor_max_center_factor),
+        "min_slot_iou": float(args.real_yolo_anchor_min_slot_iou),
+        "min_detection_containment": float(args.real_yolo_anchor_min_containment),
+        "min_slot_coverage": float(args.real_yolo_anchor_min_coverage),
+        "min_slot_area_ratio": float(args.real_yolo_anchor_min_area_ratio),
+        "max_slot_area_ratio": float(args.real_yolo_anchor_max_area_ratio),
+    }
+
+
+def _load_real_yolo_baseline_metric_map(path: Path) -> dict[tuple[int, str, str], dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        raw_results = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw_results, list):
+        return {}
+
+    mapping: dict[tuple[int, str, str], dict[str, Any]] = {}
+    for raw_case in raw_results:
+        if not isinstance(raw_case, dict):
+            continue
+        case_index = int(raw_case.get("index") or 0)
+        metrics = raw_case.get("object_metrics")
+        if not isinstance(metrics, list):
+            continue
+        for raw_metric in metrics:
+            if not isinstance(raw_metric, dict):
+                continue
+            key = _real_yolo_anchor_key(
+                case_index=case_index,
+                name=str(raw_metric.get("name") or ""),
+                object_shape=str(raw_metric.get("object_shape") or ""),
+            )
+            mapping[key] = dict(raw_metric)
+    return mapping
+
+
+def _real_yolo_anchor_key(*, case_index: int, name: str, object_shape: str) -> tuple[int, str, str]:
+    return (int(case_index), str(name), str(object_shape))
+
+
+def _evaluate_real_yolo_anchor_scene(
+    *,
+    scene: _SyntheticScene | _SyntheticMultiScene,
+    detections: list[YoloDetection],
+    case_index: int,
+    variant: str,
+    baseline_metric_map: dict[tuple[int, str, str], dict[str, Any]],
+    anchor_policy: dict[str, float],
+) -> list[dict[str, Any]]:
+    """Evaluate YOLO as a geometry-anchor source, not as a missing detector.
+
+    In this diagnostic, "no YOLO anchor" never means "object missing".  It only
+    means that the detector did not provide a reliable geometry anchor for this
+    expected object.  Missing scenes are used only as a safety check: a trusted
+    anchor on an intentionally removed target is dangerous and must be tuned out
+    before anchors can influence runtime geometry.
+    """
+    expected, annotation_to_object = _real_yolo_expected_segments(scene)
+    assignments = _select_real_yolo_trusted_anchor_assignments(
+        expected=expected,
+        detections=detections,
+        homography=scene.approximate_homography,
+        anchor_policy=anchor_policy,
+    )
+    anchor_transform = _real_yolo_anchor_translation_from_assignments(
+        expected=expected,
+        detections=detections,
+        assignments=assignments,
+        homography=scene.approximate_homography,
+    )
+
+    rows: list[dict[str, Any]] = []
+    for expected_index, expected_item in enumerate(expected):
+        obj = annotation_to_object[expected_item.annotation_id]
+        key = _real_yolo_anchor_key(
+            case_index=case_index,
+            name=str(obj["name"]),
+            object_shape=str(obj["object_shape"]),
+        )
+        baseline_metric = baseline_metric_map.get(key, {})
+        baseline_passed = bool(baseline_metric.get("passed"))
+        baseline_iou = _float_or_none(baseline_metric.get("iou"))
+        baseline_center_drift = _float_or_none(baseline_metric.get("center_drift_px"))
+        baseline_area_ratio = _float_or_none(baseline_metric.get("area_ratio"))
+        baseline_projection = str(baseline_metric.get("projection") or "unknown")
+
+        assignment = assignments.get(expected_index)
+        detection = detections[assignment["detection_index"]] if assignment is not None else None
+        detected_polygon = _real_yolo_detection_polygon(detection) if detection is not None else None
+        direct_iou = _polygon_iou(detected_polygon, obj["ground_truth_polygon"])
+        direct_center_drift = _polygon_center_distance(detected_polygon, obj["ground_truth_polygon"])
+        direct_area_ratio = _polygon_area_ratio(detected_polygon, obj["ground_truth_polygon"])
+        direct_rescue = (
+            variant == "present"
+            and not baseline_passed
+            and detection is not None
+            and _real_yolo_present_match_ok(
+                object_shape=str(obj["object_shape"]),
+                iou=direct_iou,
+                center_drift=direct_center_drift,
+                area_ratio=direct_area_ratio,
+            )
+        )
+
+        transformed_polygon = None
+        transformed_iou = 0.0
+        transformed_center_drift = float("inf")
+        transformed_area_ratio = 0.0
+        transform_rescue = False
+        if anchor_transform is not None and not baseline_passed and assignment is None:
+            transformed_polygon = _translate_polygon(
+                project_polygon(expected_item.reference_polygon, scene.approximate_homography),
+                anchor_transform,
+            )
+            transformed_iou = _polygon_iou(transformed_polygon, obj["ground_truth_polygon"])
+            transformed_center_drift = _polygon_center_distance(transformed_polygon, obj["ground_truth_polygon"])
+            transformed_area_ratio = _polygon_area_ratio(transformed_polygon, obj["ground_truth_polygon"])
+            transform_rescue = (
+                variant == "present"
+                and _real_yolo_present_match_ok(
+                    object_shape=str(obj["object_shape"]),
+                    iou=transformed_iou,
+                    center_drift=transformed_center_drift,
+                    area_ratio=transformed_area_ratio,
+                )
+            )
+
+        dangerous_anchor = variant == "missing" and detection is not None
+        applied_source = "baseline_geometry" if baseline_passed else "unresolved_baseline_failure"
+        applied_iou = baseline_iou if baseline_iou is not None else 0.0
+        applied_center_drift = (
+            baseline_center_drift if baseline_center_drift is not None else float("inf")
+        )
+        applied_area_ratio = baseline_area_ratio if baseline_area_ratio is not None else 0.0
+        applied_rescue = False
+
+        if variant == "present" and not baseline_passed:
+            if direct_rescue:
+                applied_source = "trusted_yolo_mask"
+                applied_iou = float(direct_iou)
+                applied_center_drift = float(direct_center_drift)
+                applied_area_ratio = float(direct_area_ratio)
+                applied_rescue = True
+            elif transform_rescue:
+                applied_source = "trusted_anchor_transform"
+                applied_iou = float(transformed_iou)
+                applied_center_drift = float(transformed_center_drift)
+                applied_area_ratio = float(transformed_area_ratio)
+                applied_rescue = True
+
+        applied_passed = baseline_passed or applied_rescue
+        applied_dangerous_missing_change = variant == "missing" and detection is not None
+
+        rows.append(
+            {
+                "case_index": case_index,
+                "variant": variant,
+                "name": obj["name"],
+                "object_shape": obj["object_shape"],
+                "class_key": expected_item.class_key,
+                "baseline_passed": baseline_passed,
+                "baseline_projection": baseline_projection,
+                "baseline_iou": baseline_iou,
+                "baseline_center_drift_px": baseline_center_drift,
+                "baseline_area_ratio": baseline_area_ratio,
+                "anchor_status": "trusted_anchor" if detection is not None else "no_anchor",
+                "anchor_confidence": float(detection.confidence) if detection is not None else None,
+                "anchor_detection_index": assignment.get("detection_index") if assignment is not None else None,
+                "anchor_score": assignment.get("score") if assignment is not None else None,
+                "anchor_slot_iou": assignment.get("slot_iou") if assignment is not None else None,
+                "anchor_center_factor": assignment.get("center_factor") if assignment is not None else None,
+                "anchor_detection_containment": assignment.get("detection_containment") if assignment is not None else None,
+                "anchor_slot_coverage": assignment.get("slot_coverage") if assignment is not None else None,
+                "anchor_slot_area_ratio": assignment.get("slot_area_ratio") if assignment is not None else None,
+                "direct_anchor_iou": float(direct_iou),
+                "direct_anchor_center_drift_px": float(direct_center_drift),
+                "direct_anchor_area_ratio": float(direct_area_ratio),
+                "direct_anchor_rescue": bool(direct_rescue),
+                "anchor_transform_available": anchor_transform is not None,
+                "anchor_transform_rescue": bool(transform_rescue),
+                "anchor_transform_iou": float(transformed_iou),
+                "anchor_transform_center_drift_px": float(transformed_center_drift),
+                "anchor_transform_area_ratio": float(transformed_area_ratio),
+                "dangerous_missing_anchor": bool(dangerous_anchor),
+                "applied_geometry_source": applied_source,
+                "applied_geometry_iou": float(applied_iou),
+                "applied_geometry_center_drift_px": float(applied_center_drift),
+                "applied_geometry_area_ratio": float(applied_area_ratio),
+                "applied_geometry_passed": bool(applied_passed),
+                "applied_rescued_baseline_failure": bool(applied_rescue),
+                "applied_dangerous_missing_change": bool(applied_dangerous_missing_change),
+                "semantics": "YOLO anchor helps geometry only; no_anchor is not a missing decision.",
+            }
+        )
+    return rows
+
+
+def _select_real_yolo_trusted_anchor_assignments(
+    *,
+    expected: Sequence[ExpectedSegment],
+    detections: Sequence[YoloDetection],
+    homography: np.ndarray,
+    anchor_policy: dict[str, float],
+) -> dict[int, dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for expected_index, expected_item in enumerate(expected):
+        slot_polygon = project_polygon(expected_item.reference_polygon, homography)
+        for detection_index, detection in enumerate(detections):
+            if detection.class_key != expected_item.class_key:
+                continue
+            candidate = _score_real_yolo_anchor_candidate(
+                expected_index=expected_index,
+                detection_index=detection_index,
+                slot_polygon=slot_polygon,
+                detection=detection,
+                anchor_policy=anchor_policy,
+            )
+            if candidate is not None:
+                candidates.append(candidate)
+
+    candidates.sort(key=lambda item: float(item["score"]), reverse=True)
+    used_expected: set[int] = set()
+    used_detection: set[int] = set()
+    assignments: dict[int, dict[str, Any]] = {}
+    for candidate in candidates:
+        expected_index = int(candidate["expected_index"])
+        detection_index = int(candidate["detection_index"])
+        if expected_index in used_expected or detection_index in used_detection:
+            continue
+        assignments[expected_index] = candidate
+        used_expected.add(expected_index)
+        used_detection.add(detection_index)
+    return assignments
+
+
+def _score_real_yolo_anchor_candidate(
+    *,
+    expected_index: int,
+    detection_index: int,
+    slot_polygon: PolygonPoints | None,
+    detection: YoloDetection,
+    anchor_policy: dict[str, float],
+) -> dict[str, Any] | None:
+    if float(detection.confidence) < float(anchor_policy["min_confidence"]):
+        return None
+
+    detection_polygon = _real_yolo_detection_polygon(detection)
+    slot_area = _polygon_area(slot_polygon)
+    detection_area = _polygon_area(detection_polygon)
+    if slot_area <= 0.0 or detection_area <= 0.0:
+        return None
+
+    intersection_area = _polygon_intersection_area(slot_polygon, detection_polygon)
+    slot_iou = _polygon_iou(slot_polygon, detection_polygon)
+    center_factor = _polygon_center_distance(slot_polygon, detection_polygon) / math.sqrt(max(slot_area, 1.0))
+    detection_containment = intersection_area / detection_area
+    slot_coverage = intersection_area / slot_area
+    slot_area_ratio = detection_area / slot_area
+
+    if center_factor > float(anchor_policy["max_center_factor"]):
+        return None
+    if slot_iou < float(anchor_policy["min_slot_iou"]):
+        return None
+    if detection_containment < float(anchor_policy["min_detection_containment"]):
+        return None
+    if slot_coverage < float(anchor_policy["min_slot_coverage"]):
+        return None
+
+    # Trusted anchor means expected geometry and factual YOLO mask agreed.
+    # A high-confidence same-class detection that only partially fills the
+    # expected slot is still just an unmatched detection, not a geometry anchor.
+    if slot_area_ratio < float(anchor_policy["min_slot_area_ratio"]):
+        return None
+    if slot_area_ratio > float(anchor_policy["max_slot_area_ratio"]):
+        return None
+
+    score = (
+        float(detection.confidence) * 2.0
+        + slot_iou * 2.0
+        + detection_containment
+        + slot_coverage
+        - center_factor
+    )
+    return {
+        "expected_index": int(expected_index),
+        "detection_index": int(detection_index),
+        "score": float(score),
+        "slot_iou": float(slot_iou),
+        "center_factor": float(center_factor),
+        "detection_containment": float(detection_containment),
+        "slot_coverage": float(slot_coverage),
+        "slot_area_ratio": float(slot_area_ratio),
+    }
+
+
+def _real_yolo_anchor_translation_from_assignments(
+    *,
+    expected: Sequence[ExpectedSegment],
+    detections: Sequence[YoloDetection],
+    assignments: dict[int, dict[str, Any]],
+    homography: np.ndarray,
+) -> tuple[float, float] | None:
+    shifts: list[np.ndarray] = []
+    for expected_index, assignment in assignments.items():
+        slot_polygon = project_polygon(expected[expected_index].reference_polygon, homography)
+        slot_center = _polygon_center(slot_polygon)
+        detection_polygon = _real_yolo_detection_polygon(detections[int(assignment["detection_index"])])
+        detection_center = _polygon_center(detection_polygon)
+        if slot_center is None or detection_center is None:
+            continue
+        shifts.append(detection_center - slot_center)
+    if not shifts:
+        return None
+    median_shift = np.median(np.asarray(shifts, dtype=np.float32), axis=0)
+    return (float(median_shift[0]), float(median_shift[1]))
+
+
+def _translate_polygon(polygon: PolygonPoints | None, shift: tuple[float, float]) -> PolygonPoints | None:
+    if not polygon:
+        return None
+    dx, dy = shift
+    return [[float(x) + dx, float(y) + dy] for x, y in polygon]
+
+
+def _real_yolo_detection_polygon(detection: YoloDetection | None) -> PolygonPoints | None:
+    if detection is None:
+        return None
+    if detection.polygon:
+        return [[float(point[0]), float(point[1])] for point in detection.polygon]
+    bbox = detection.bbox or {}
+    x = float(bbox.get("x", 0.0))
+    y = float(bbox.get("y", 0.0))
+    w = float(bbox.get("w", 0.0))
+    h = float(bbox.get("h", 0.0))
+    if w <= 0.0 or h <= 0.0:
+        return None
+    return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+
+
+def _polygon_area(polygon: PolygonPoints | None) -> float:
+    shape = _safe_shape(polygon)
+    return float(shape.area) if shape is not None else 0.0
+
+
+def _polygon_intersection_area(a: PolygonPoints | None, b: PolygonPoints | None) -> float:
+    shape_a = _safe_shape(a)
+    shape_b = _safe_shape(b)
+    if shape_a is None or shape_b is None:
+        return 0.0
+    try:
+        return float(shape_a.intersection(shape_b).area)
+    except GEOSException:
+        return 0.0
+
+
+def _summarize_real_yolo_anchor_rescue(
+    *,
+    present_rows: Sequence[dict[str, Any]],
+    missing_rows: Sequence[dict[str, Any]],
+    baseline_metric_map: dict[tuple[int, str, str], dict[str, Any]],
+) -> dict[str, Any]:
+    baseline_failed = [metric for metric in baseline_metric_map.values() if not bool(metric.get("passed"))]
+    baseline_failed_keys = {
+        _real_yolo_anchor_key(
+            case_index=int(row.get("case_index") or 0),
+            name=str(row.get("name") or ""),
+            object_shape=str(row.get("object_shape") or ""),
+        )
+        for row in present_rows
+        if not bool(row.get("baseline_passed"))
+    }
+    present_trusted = [row for row in present_rows if row.get("anchor_status") == "trusted_anchor"]
+    missing_trusted = [row for row in missing_rows if row.get("anchor_status") == "trusted_anchor"]
+    direct_rescues = [row for row in present_rows if row.get("direct_anchor_rescue")]
+    transform_rescues = [row for row in present_rows if row.get("anchor_transform_rescue")]
+    rescued_keys = {
+        _real_yolo_anchor_key(
+            case_index=int(row.get("case_index") or 0),
+            name=str(row.get("name") or ""),
+            object_shape=str(row.get("object_shape") or ""),
+        )
+        for row in [*direct_rescues, *transform_rescues]
+    }
+    dangerous_missing = [row for row in missing_rows if row.get("dangerous_missing_anchor")]
+    applied_runtime_shadow = _summarize_real_yolo_applied_anchor_rescue_shadow(
+        present_rows=present_rows,
+        missing_rows=missing_rows,
+        baseline_metric_map=baseline_metric_map,
+    )
+
+    total_failed = len(baseline_failed)
+    covered_failed = len(baseline_failed_keys)
+    rescued_failed = len(rescued_keys)
+    remaining_covered = max(0, covered_failed - rescued_failed)
+    not_covered = max(0, total_failed - covered_failed)
+
+    return {
+        "semantics": "YOLO is evaluated as a trusted-anchor source for geometry rescue, not as a missing detector.",
+        "no_anchor_semantics": "no_anchor means detector did not provide geometry help; it is not a missing decision.",
+        "release_criteria": "Use dangerous_missing_anchors == 0 and safety_ready_for_anchor_rescue == true. Ignore legacy_global_yolo_matching for release decisions.",
+        "baseline_total_objects": len(baseline_metric_map),
+        "baseline_failed_objects": total_failed,
+        "baseline_failed_objects_seen_in_real_yolo_test": covered_failed,
+        "baseline_failed_objects_covered_by_real_yolo_test": covered_failed,
+        "baseline_failed_objects_not_covered_by_real_yolo_test": not_covered,
+        "coverage_rate_of_baseline_failures": (covered_failed / total_failed * 100.0) if total_failed else 0.0,
+        "present_trusted_anchors": len(present_trusted),
+        "present_anchor_rate": (len(present_trusted) / len(present_rows) * 100.0) if present_rows else 0.0,
+        "baseline_failures_with_trusted_own_anchor": sum(
+            1
+            for row in present_rows
+            if not bool(row.get("baseline_passed")) and row.get("anchor_status") == "trusted_anchor"
+        ),
+        "direct_yolo_polygon_rescues": len(direct_rescues),
+        "anchor_transform_rescues": len(transform_rescues),
+        "rescued_baseline_failures": rescued_failed,
+        "remaining_baseline_failures_after_anchor_rescue": remaining_covered,
+        "remaining_covered_baseline_failures_after_anchor_rescue": remaining_covered,
+        "covered_baseline_failure_rescue_rate": (rescued_failed / covered_failed * 100.0) if covered_failed else 0.0,
+        "total_baseline_failure_rescue_rate": (rescued_failed / total_failed * 100.0) if total_failed else 0.0,
+        "missing_trusted_anchors": len(missing_trusted),
+        "dangerous_missing_anchors": len(dangerous_missing),
+        "safety_ready_for_anchor_rescue": len(dangerous_missing) == 0,
+        "top_direct_rescue_shapes": _count_rows_by_key(direct_rescues, "object_shape"),
+        "top_anchor_transform_rescue_shapes": _count_rows_by_key(transform_rescues, "object_shape"),
+        "top_dangerous_anchor_shapes": _count_rows_by_key(dangerous_missing, "object_shape"),
+        "applied_runtime_shadow": applied_runtime_shadow,
+    }
+
+
+def _summarize_real_yolo_applied_anchor_rescue_shadow(
+    *,
+    present_rows: Sequence[dict[str, Any]],
+    missing_rows: Sequence[dict[str, Any]],
+    baseline_metric_map: dict[tuple[int, str, str], dict[str, Any]],
+) -> dict[str, Any]:
+    baseline_total = len(baseline_metric_map)
+    baseline_failed = [metric for metric in baseline_metric_map.values() if not bool(metric.get("passed"))]
+    baseline_failures = len(baseline_failed)
+    applied_rescues = [row for row in present_rows if row.get("applied_rescued_baseline_failure")]
+    applied_direct = [row for row in applied_rescues if row.get("applied_geometry_source") == "trusted_yolo_mask"]
+    applied_transform = [
+        row for row in applied_rescues if row.get("applied_geometry_source") == "trusted_anchor_transform"
+    ]
+    present_baseline_failed = [row for row in present_rows if not bool(row.get("baseline_passed"))]
+    present_remaining_failed = [
+        row
+        for row in present_baseline_failed
+        if not bool(row.get("applied_rescued_baseline_failure"))
+    ]
+    missing_dangerous_changes = [row for row in missing_rows if row.get("applied_dangerous_missing_change")]
+
+    projected_failures_after_shadow = max(0, baseline_failures - len(applied_rescues))
+    projected_accuracy_after_shadow = (
+        (baseline_total - projected_failures_after_shadow) / baseline_total * 100.0
+        if baseline_total
+        else 0.0
+    )
+    baseline_accuracy = (
+        (baseline_total - baseline_failures) / baseline_total * 100.0
+        if baseline_total
+        else 0.0
+    )
+
+    return {
+        "semantics": (
+            "Runtime shadow keeps LightGlue geometry by default and changes only failed baseline "
+            "objects that are rescued by a trusted YOLO anchor."
+        ),
+        "baseline_total_objects": baseline_total,
+        "baseline_failed_objects": baseline_failures,
+        "present_covered_baseline_failures": len(present_baseline_failed),
+        "applied_rescued_baseline_failures": len(applied_rescues),
+        "applied_direct_yolo_mask_rescues": len(applied_direct),
+        "applied_anchor_transform_rescues": len(applied_transform),
+        "present_remaining_covered_failures_after_apply": len(present_remaining_failed),
+        "missing_dangerous_applied_changes": len(missing_dangerous_changes),
+        "baseline_object_accuracy_before_shadow": baseline_accuracy,
+        "projected_object_accuracy_after_shadow": projected_accuracy_after_shadow,
+        "projected_object_accuracy_gain": projected_accuracy_after_shadow - baseline_accuracy,
+        "runtime_shadow_ready": len(missing_dangerous_changes) == 0,
+        "top_applied_rescue_shapes": _count_rows_by_key(applied_rescues, "object_shape"),
+        "top_remaining_failure_shapes": _count_rows_by_key(present_remaining_failed, "object_shape"),
+        "top_dangerous_applied_shapes": _count_rows_by_key(missing_dangerous_changes, "object_shape"),
+    }
+
+
+def _count_rows_by_key(rows: Sequence[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(key) or "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
 
 def _real_yolo_model_names(model: Any) -> list[str]:
     raw_names = getattr(model, "names", None)
@@ -8517,50 +9119,77 @@ def _summarize_real_yolo_eval_rows(rows: Sequence[dict[str, Any]], *, variant: s
 
 
 def _real_yolo_decision_hint(evaluation: dict[str, Any]) -> str:
-    present = evaluation.get("present", {})
-    missing = evaluation.get("missing", {})
-    missing_danger = int(missing.get("dangerous_expected_matches") or 0)
-    present_pass = float(present.get("pass_rate") or 0.0)
-    if missing_danger > 0:
-        return "do_not_release_yolo_auto_accept: real YOLO produced false expected matches on missing scenes"
-    if present_pass < 70.0:
-        return "keep_as_experiment: real YOLO is safe on missing scenes but misses too many present objects"
-    return "candidate_for_guarded_runtime_integration: continue with slot guards and real project data"
+    anchor_rescue = evaluation.get("yolo_anchor_rescue", {})
+    dangerous_anchors = int(anchor_rescue.get("dangerous_missing_anchors") or 0)
+    rescued = int(anchor_rescue.get("rescued_baseline_failures") or 0)
+    if dangerous_anchors > 0:
+        return "do_not_use_yolo_anchors_yet: some missing targets still receive trusted YOLO anchors"
+    if rescued <= 0:
+        return "anchor_pipeline_safe_but_no_rescue_yet: tune anchor assignment or train YOLO better"
+    return "candidate_for_yolo_anchor_rescue_experiment: YOLO anchors reduce geometry failures without dangerous missing anchors"
 
 
 def _write_real_yolo_eval_html(
     path: Path,
     summary: dict[str, Any],
-    present_rows: Sequence[dict[str, Any]],
-    missing_rows: Sequence[dict[str, Any]],
+    anchor_present_rows: Sequence[dict[str, Any]],
+    anchor_missing_rows: Sequence[dict[str, Any]],
 ) -> None:
-    def rows_html(rows: Sequence[dict[str, Any]], limit: int = 80) -> str:
+    def value_cell(value: Any, *, digits: int | None = None) -> str:
+        if value is None:
+            return "—"
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                return "—"
+            if digits is not None:
+                return f"{value:.{digits}f}"
+        return html.escape(str(value))
+
+    def anchor_rows_html(rows: Sequence[dict[str, Any]], limit: int = 120) -> str:
         lines = []
         for row in rows[:limit]:
-            danger = "YES" if row.get("dangerous_expected_match") else "no"
             lines.append(
                 "<tr>"
                 f"<td>{html.escape(str(row.get('case_index')))}</td>"
                 f"<td>{html.escape(str(row.get('variant')))}</td>"
                 f"<td>{html.escape(str(row.get('name')))}</td>"
                 f"<td>{html.escape(str(row.get('object_shape')))}</td>"
-                f"<td>{html.escape(str(row.get('status')))}</td>"
-                f"<td>{'PASS' if row.get('passed') else 'FAIL'}</td>"
-                f"<td>{danger}</td>"
-                f"<td>{float(row.get('iou') or 0.0):.3f}</td>"
-                f"<td>{float(row.get('center_drift_px') or 0.0):.1f}</td>"
-                f"<td>{html.escape(str(row.get('confidence')))}</td>"
+                f"<td>{'yes' if row.get('baseline_passed') else 'no'}</td>"
+                f"<td>{html.escape(str(row.get('baseline_projection')))}</td>"
+                f"<td>{html.escape(str(row.get('anchor_status')))}</td>"
+                f"<td>{html.escape(str(row.get('applied_geometry_source')))}</td>"
+                f"<td>{'yes' if row.get('applied_rescued_baseline_failure') else 'no'}</td>"
+                f"<td>{'yes' if row.get('direct_anchor_rescue') else 'no'}</td>"
+                f"<td>{'yes' if row.get('anchor_transform_rescue') else 'no'}</td>"
+                f"<td>{'YES' if row.get('dangerous_missing_anchor') else 'no'}</td>"
+                f"<td>{value_cell(row.get('anchor_confidence'), digits=3)}</td>"
+                f"<td>{value_cell(row.get('anchor_slot_iou'), digits=3)}</td>"
+                f"<td>{value_cell(row.get('anchor_slot_coverage'), digits=3)}</td>"
+                f"<td>{value_cell(row.get('anchor_slot_area_ratio'), digits=3)}</td>"
                 "</tr>"
             )
         return "\n".join(lines)
 
-    present = summary["present"]
-    missing = summary["missing"]
+    anchor_rescue = summary.get("yolo_anchor_rescue", {})
+    applied_shadow = anchor_rescue.get("applied_runtime_shadow", {})
+    legacy = summary.get("legacy_global_yolo_matching", {})
+    summary_for_report = {
+        "mode": summary.get("mode"),
+        "model_path": summary.get("model_path"),
+        "classes": summary.get("classes"),
+        "conf": summary.get("conf"),
+        "iou": summary.get("iou"),
+        "imgsz": summary.get("imgsz"),
+        "anchor_policy": summary.get("anchor_policy"),
+        "yolo_anchor_rescue": anchor_rescue,
+        "legacy_global_yolo_matching_note": legacy.get("note"),
+    }
+    safe_label = "YES" if anchor_rescue.get("safety_ready_for_anchor_rescue") else "NO"
     content = f"""<!doctype html>
 <html lang=\"ru\">
 <head>
   <meta charset=\"utf-8\">
-  <title>Real YOLO synthetic inspection test</title>
+  <title>Real YOLO anchor rescue test</title>
   <style>
     body {{ font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; }}
     table {{ border-collapse: collapse; width: 100%; margin: 16px 0 28px; }}
@@ -8568,26 +9197,35 @@ def _write_real_yolo_eval_html(
     th {{ background: #242424; }}
     .metric {{ display: inline-block; min-width: 180px; margin: 8px; padding: 12px; background: #202020; border-radius: 10px; }}
     .metric b {{ display: block; font-size: 24px; margin-top: 4px; }}
+    .hint {{ color: #bbb; max-width: 1100px; }}
+    .good {{ color: #69db7c; }}
+    .bad {{ color: #ff8787; }}
   </style>
 </head>
 <body>
-  <h1>Real YOLO synthetic inspection test</h1>
-  <p>Это не oracle и не proxy: модель YOLO-seg реально обучается/загружается, делает inference, а её маски проходят через matcher и slot guards.</p>
-  <div class=\"metric\">Present pass rate<b>{present['pass_rate']:.1f}%</b></div>
-  <div class=\"metric\">Present dangerous<b>{present['dangerous_expected_matches']}</b></div>
-  <div class=\"metric\">Missing pass rate<b>{missing['pass_rate']:.1f}%</b></div>
-  <div class=\"metric\">Missing dangerous<b>{missing['dangerous_expected_matches']}</b></div>
-  <h2>Summary</h2>
-  <pre>{html.escape(json.dumps(summary, ensure_ascii=False, indent=2))}</pre>
-  <h2>Present object rows</h2>
-  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>status</th><th>result</th><th>danger</th><th>IoU</th><th>drift</th><th>conf</th></tr>{rows_html(present_rows)}</table>
-  <h2>Missing negative rows</h2>
-  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>status</th><th>result</th><th>danger</th><th>IoU</th><th>drift</th><th>conf</th></tr>{rows_html(missing_rows)}</table>
+  <h1>Real YOLO anchor rescue test</h1>
+  <p class="hint">YOLO здесь не является финальным контролёром missing/confirmed. Модель ищет объекты по всему кадру, а самые надёжные detections используются только как anchors для исправления переноса LightGlue. Если YOLO не нашла объект, это считается <code>no_anchor</code>, а не отсутствием детали.</p>
+  <p class="hint">Старые метрики global YOLO matching сохранены только в JSON как <code>legacy_global_yolo_matching</code>. Для вывода решения используются только метрики <code>yolo_anchor_rescue</code>.</p>
+  <div class="metric">Baseline failures total<b>{anchor_rescue.get('baseline_failed_objects', 0)}</b></div>
+  <div class="metric">Covered failures<b>{anchor_rescue.get('baseline_failed_objects_covered_by_real_yolo_test', 0)}</b></div>
+  <div class="metric">Rescued covered failures<b>{anchor_rescue.get('rescued_baseline_failures', 0)}</b></div>
+  <div class="metric">Remaining covered failures<b>{anchor_rescue.get('remaining_covered_baseline_failures_after_anchor_rescue', 0)}</b></div>
+  <div class="metric">Not covered failures<b>{anchor_rescue.get('baseline_failed_objects_not_covered_by_real_yolo_test', 0)}</b></div>
+  <div class="metric">Dangerous anchors<b>{anchor_rescue.get('dangerous_missing_anchors', 0)}</b></div>
+  <div class="metric">Safety ready<b class="{'good' if anchor_rescue.get('safety_ready_for_anchor_rescue') else 'bad'}">{safe_label}</b></div>
+  <div class="metric">Applied rescues<b>{applied_shadow.get('applied_rescued_baseline_failures', 0)}</b></div>
+  <div class="metric">Projected accuracy<b>{value_cell(applied_shadow.get('projected_object_accuracy_after_shadow'), digits=2)}%</b></div>
+  <div class="metric">Dangerous applied changes<b>{applied_shadow.get('missing_dangerous_applied_changes', 0)}</b></div>
+  <h2>Anchor rescue summary</h2>
+  <pre>{html.escape(json.dumps(summary_for_report, ensure_ascii=False, indent=2))}</pre>
+  <h2>Present anchor rows</h2>
+  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>baseline passed</th><th>baseline projection</th><th>anchor status</th><th>applied source</th><th>applied rescue</th><th>direct rescue</th><th>transform rescue</th><th>danger</th><th>conf</th><th>slot IoU</th><th>coverage</th><th>area ratio</th></tr>{anchor_rows_html(anchor_present_rows)}</table>
+  <h2>Missing negative anchor rows</h2>
+  <table><tr><th>case</th><th>variant</th><th>name</th><th>shape</th><th>baseline passed</th><th>baseline projection</th><th>anchor status</th><th>applied source</th><th>applied rescue</th><th>direct rescue</th><th>transform rescue</th><th>danger</th><th>conf</th><th>slot IoU</th><th>coverage</th><th>area ratio</th></tr>{anchor_rows_html(anchor_missing_rows)}</table>
 </body>
 </html>
 """
     path.write_text(content, encoding="utf-8")
-
 
 def _dict_int_debug(value: Any) -> dict[str, int]:
     if not isinstance(value, dict):

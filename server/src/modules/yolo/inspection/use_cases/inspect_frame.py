@@ -428,6 +428,7 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
+                yolo_anchor_rescue=True,
             )
             profile["inspect_matching_ms"] = _elapsed_ms(started_at)
         else:
@@ -437,6 +438,7 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
+                yolo_anchor_rescue=True,
             )
 
         _, matched, missing = summarize(matches)
