@@ -8212,7 +8212,20 @@ def _real_yolo_device_arg(device: str) -> str | None:
     normalized = str(device or "auto").strip().lower()
     if normalized in {"", "auto", "none"}:
         return None
+    if normalized != "cpu" and _real_yolo_cuda_device_requested(normalized):
+        try:
+            import torch
+        except Exception:
+            return "cpu"
+        if not torch.cuda.is_available() or torch.cuda.device_count() <= 0:
+            return "cpu"
     return str(device)
+
+
+def _real_yolo_cuda_device_requested(normalized_device: str) -> bool:
+    if normalized_device.startswith("cuda"):
+        return True
+    return all(part.strip().isdigit() for part in normalized_device.split(","))
 
 
 def _evaluate_real_yolo_synthetic_model(

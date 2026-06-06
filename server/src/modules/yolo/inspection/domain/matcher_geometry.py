@@ -96,7 +96,6 @@ def translate_bbox(bbox: BBox, *, dx: float, dy: float) -> BBox:
     return (x1 + dx, y1 + dy, x2 + dx, y2 + dy)
 
 
-
 def polygon_has_usable_area(polygon: list[list[float]]) -> bool:
     if len(polygon) < 3:
         return False
@@ -105,7 +104,6 @@ def polygon_has_usable_area(polygon: list[list[float]]) -> bool:
     except (ValueError, GEOSException):
         return False
     return not shape.is_empty and float(shape.area) > 1.0
-
 
 
 def project_polygon_by_affine(
@@ -339,7 +337,6 @@ def point_in_any_bbox(point: np.ndarray, bboxes: list[BBox]) -> bool:
     return any(point_in_bbox(point, bbox) for bbox in bboxes)
 
 
-
 def point_outside_np_polygon_margin(
     point: np.ndarray,
     polygon: np.ndarray,
@@ -386,7 +383,6 @@ def is_visible_in_frame(
         return False
 
     return visible_area / full_area >= min_visible_fraction
-
 
 
 __all__ = [

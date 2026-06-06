@@ -27,14 +27,6 @@ class MatcherThresholds:
     missing_fallback_min_global_area_score: float = 0.08
     missing_fallback_min_local_global_area_score: float = 0.32
     missing_fallback_max_local_global_center_factor: float = 0.75
-    missing_global_fallback_translation_rescue_min_support: int = 3
-    missing_global_fallback_translation_rescue_min_inlier_ratio: float = 0.72
-    missing_global_fallback_translation_rescue_max_residual_error: float = 6.5
-    missing_global_fallback_translation_rescue_max_shift_factor: float = 0.62
-    missing_global_fallback_translation_rescue_min_local_area_score: float = 0.24
-    missing_global_fallback_translation_rescue_max_local_center_factor: float = 1.05
-    missing_global_fallback_translation_rescue_min_search_containment: float = 0.05
-    missing_global_fallback_translation_rescue_max_other_overlap: float = 0.28
     missing_local_displacement_min_support: int = 6
     missing_local_displacement_nearest_points: int = 8
     missing_local_displacement_max_residual_error: float = 10.0

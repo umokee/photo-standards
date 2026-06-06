@@ -18,13 +18,11 @@ from modules.yolo.inspection.domain.matcher_structs import (
     ProjectedExpected,
 )
 
-
 _CANDIDATE_REGISTRY_LIMIT = 16
 _CANDIDATE_AGREEMENT_SOURCE_LIMIT = 8
 _CANDIDATE_AGREEMENT_MIN_IOU = 0.55
 _CANDIDATE_AGREEMENT_MIN_AREA_SCORE = 0.70
 _CANDIDATE_AGREEMENT_MAX_CENTER_FACTOR = 0.55
-
 
 
 def max_overlap_with_other_expected(
@@ -332,8 +330,7 @@ def _candidate_agrees_with_selected(
         iou >= _CANDIDATE_AGREEMENT_MIN_IOU
         or (
             area_score >= _CANDIDATE_AGREEMENT_MIN_AREA_SCORE
-            and center_factor
-            <= _CANDIDATE_AGREEMENT_MAX_CENTER_FACTOR
+            and center_factor <= _CANDIDATE_AGREEMENT_MAX_CENTER_FACTOR
         )
     )
     return agrees, iou, area_score, center_factor

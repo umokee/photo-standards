@@ -70,6 +70,22 @@ class MissingFallbackState:
 
 
 @dataclass(slots=True)
+class ProjectionCandidate:
+    source: str
+    polygon: list[list[float]] | None
+    bbox: BBox | None
+    debug: dict[str, Any]
+    context_rescue_used: bool = False
+
+
+@dataclass(slots=True)
+class ProjectionValidationResult:
+    accepted: bool
+    reject_reason: str | None = None
+    debug: dict[str, Any] | None = None
+
+
+@dataclass(slots=True)
 class MissingTranslationRescue:
     polygon: list[list[float]]
     bbox: BBox
@@ -81,6 +97,21 @@ class MissingTranslationRescue:
     shift_y: float
     shift_factor: float
     source_counts: dict[str, int] | None = None
+
+
+@dataclass(slots=True)
+class TranslationSolveResult:
+    residuals: np.ndarray
+    residual_errors: np.ndarray
+    inlier_mask: np.ndarray
+    median_residual: np.ndarray
+    candidate_count: int
+    inlier_count: int
+    inlier_ratio: float
+    median_error: float
+    shift_x: float
+    shift_y: float
+    shift_factor: float
 
 
 @dataclass(slots=True)
