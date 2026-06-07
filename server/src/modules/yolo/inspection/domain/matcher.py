@@ -4,8 +4,15 @@ from typing import Any
 
 import cv2
 import numpy as np
-from modules.yolo.inspection.domain.alignment import LocalProjectionData, project_polygon
-from modules.yolo.inspection.domain.types import ExpectedSegment, SegmentMatch, YoloDetection
+from modules.yolo.inspection.domain.alignment import (
+    LocalProjectionData,
+    project_polygon,
+)
+from modules.yolo.inspection.domain.types import (
+    ExpectedSegment,
+    SegmentMatch,
+    YoloDetection,
+)
 
 # This matcher is intentionally small again.
 # Pose/alignment is produced before this file:
@@ -87,19 +94,21 @@ def build_missing_matches(
                 status="missing",
                 expected_polygon=None if unconfirmed else projected,
                 debug=_missing_debug(
-                    projection="feature_lightglue_homography" if projected else "unconfirmed_hidden",
+                    projection="feature_lightglue_homography"
+                    if projected
+                    else "unconfirmed_hidden",
                     safety="unsafe_hidden" if unconfirmed else "confirmed",
                     reason=reason or "no_matching_detection",
                     reason_code=(
-                        "scene_pose_unconfirmed" if unconfirmed else "no_matching_detection"
+                        "scene_pose_unconfirmed"
+                        if unconfirmed
+                        else "no_matching_detection"
                     ),
                 ),
             )
         )
 
     return matches
-
-
 
 
 def match_segments(
@@ -124,7 +133,9 @@ def match_segments(
     resolved_frame_size = _resolve_frame_size(frame_size, projection_data)
 
     projected: list[_ProjectedSlot] = []
-    hidden_expected: list[tuple[int, ExpectedSegment, list[list[float]] | None, str]] = []
+    hidden_expected: list[
+        tuple[int, ExpectedSegment, list[list[float]] | None, str]
+    ] = []
     for index, item in enumerate(expected):
         polygon, reason = _project_expected_polygon(
             item,
@@ -132,16 +143,22 @@ def match_segments(
             frame_size=resolved_frame_size,
         )
         if polygon is None:
-            hidden_expected.append((index, item, None, reason or "scene_pose_unconfirmed"))
+            hidden_expected.append(
+                (index, item, None, reason or "scene_pose_unconfirmed")
+            )
             continue
         bbox = _bbox_from_polygon(polygon)
         if bbox is None:
             hidden_expected.append((index, item, polygon, "invalid_projected_polygon"))
             continue
-        projected.append(_ProjectedSlot(index=index, item=item, polygon=polygon, bbox=bbox))
+        projected.append(
+            _ProjectedSlot(index=index, item=item, polygon=polygon, bbox=bbox)
+        )
 
     detection_items = [
-        _DetectionSlot(index=index, detection=detection, polygon=_detection_polygon(detection))
+        _DetectionSlot(
+            index=index, detection=detection, polygon=_detection_polygon(detection)
+        )
         for index, detection in enumerate(detections)
     ]
     detection_items = [item for item in detection_items if item.bbox is not None]
@@ -234,13 +251,25 @@ def match_segments(
         used_expected=used_expected,
         used_detections=used_detections,
     )
-    used_unmatched_detections = {det_index for det_index, _debug in unmatched_assignments.values()}
+    used_unmatched_detections = {
+        det_index for det_index, _debug in unmatched_assignments.values()
+    }
 
-    unresolved: list[tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]] = []
+    unresolved: list[
+        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]
+    ] = []
     for slot in projected:
         if slot.index in used_expected:
             continue
-        unresolved.append((slot.index, slot.item, slot.polygon, slot.bbox, "no_detection_in_projected_slot"))
+        unresolved.append(
+            (
+                slot.index,
+                slot.item,
+                slot.polygon,
+                slot.bbox,
+                "no_detection_in_projected_slot",
+            )
+        )
     for index, item, polygon, reason in hidden_expected:
         if index in used_expected:
             continue
@@ -255,7 +284,9 @@ def match_segments(
         detection_items,
         occupied_detection_indices=used_detections | used_unmatched_detections,
     )
-    used_same_class_detections = {det_index for det_index, _debug in same_class_assignments.values()}
+    used_same_class_detections = {
+        det_index for det_index, _debug in same_class_assignments.values()
+    }
 
     for expected_index, item, polygon, _bbox, reason in unresolved:
         if expected_index in used_expected:
@@ -288,15 +319,27 @@ def match_segments(
                 status="missing",
                 expected_polygon=polygon,
                 debug=_missing_debug(
-                    projection="feature_lightglue_homography" if confirmed_projection else "unconfirmed_hidden",
+                    projection="feature_lightglue_homography"
+                    if confirmed_projection
+                    else "unconfirmed_hidden",
                     safety="confirmed" if confirmed_projection else "unsafe_hidden",
-                    reason=("no_detection_in_projected_slot" if confirmed_projection else reason),
-                    reason_code=("no_detection_in_projected_slot" if confirmed_projection else "scene_pose_unconfirmed"),
+                    reason=(
+                        "no_detection_in_projected_slot"
+                        if confirmed_projection
+                        else reason
+                    ),
+                    reason_code=(
+                        "no_detection_in_projected_slot"
+                        if confirmed_projection
+                        else "scene_pose_unconfirmed"
+                    ),
                 ),
             )
         )
 
-    occupied_detection_indices = used_detections | used_unmatched_detections | used_same_class_detections
+    occupied_detection_indices = (
+        used_detections | used_unmatched_detections | used_same_class_detections
+    )
     extra_items = _collapse_extra_detections(
         detection_items,
         projected,
@@ -398,7 +441,9 @@ def _unmatched_candidate(
 
 
 def _choose_same_class_unresolved_assignments(
-    unresolved: list[tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]],
+    unresolved: list[
+        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]
+    ],
     detection_items: list[_DetectionSlot],
     *,
     occupied_detection_indices: set[int],
@@ -441,7 +486,6 @@ def _choose_same_class_unresolved_assignments(
         assignments[expected_index] = (detection_index, debug)
         used_detections.add(detection_index)
     return assignments
-
 
 
 def _collapse_extra_detections(
@@ -513,7 +557,10 @@ def _collapse_extra_detections(
     collapsed.sort(key=lambda item: _extra_detection_sort_key(item[0]), reverse=True)
     return collapsed
 
-def _dedupe_detection_items(detection_items: list[_DetectionSlot]) -> list[_DetectionSlot]:
+
+def _dedupe_detection_items(
+    detection_items: list[_DetectionSlot],
+) -> list[_DetectionSlot]:
     if len(detection_items) <= 1:
         return detection_items
 
@@ -524,7 +571,9 @@ def _dedupe_detection_items(detection_items: list[_DetectionSlot]) -> list[_Dete
     for det in ordered:
         if det.index in suppressed:
             continue
-        if any(_detections_are_same_physical_object(det, existing) for existing in kept):
+        if any(
+            _detections_are_same_physical_object(det, existing) for existing in kept
+        ):
             suppressed.add(det.index)
             continue
         kept.append(det)
@@ -532,7 +581,6 @@ def _dedupe_detection_items(detection_items: list[_DetectionSlot]) -> list[_Dete
     # Keep deterministic order for downstream debug/result stability.
     kept.sort(key=lambda item: item.index)
     return kept
-
 
 
 def _detections_are_same_physical_object(a: _DetectionSlot, b: _DetectionSlot) -> bool:
@@ -568,9 +616,9 @@ def _bbox_inner_containment(inner: BBox, outer: BBox) -> float:
 def _bbox_max_containment(a: BBox, b: BBox) -> float:
     return max(_bbox_inner_containment(a, b), _bbox_inner_containment(b, a))
 
+
 def _extra_detection_sort_key(det: _DetectionSlot) -> tuple[float, float]:
     return (float(det.detection.confidence or 0.0), _bbox_area(det.bbox))
-
 
 
 def _is_duplicate_of_occupied_detection(
@@ -590,6 +638,7 @@ def _is_duplicate_of_occupied_detection(
         if _detections_are_same_physical_object(det, other):
             return True
     return False
+
 
 def _bbox_area(bbox: BBox | None) -> float:
     if bbox is None:
@@ -652,7 +701,9 @@ def summarize(matches: list[SegmentMatch]) -> tuple[int, int, list[str]]:
     total = len(expected_matches)
     matched = sum(1 for match in expected_matches if match.status == "ok")
     missing_names = [
-        match.name for match in expected_matches if match.status in {"missing", "unmatched"}
+        match.name
+        for match in expected_matches
+        if match.status in {"missing", "unmatched"}
     ]
     return total, matched, missing_names
 
@@ -670,7 +721,14 @@ def all_ok(matches: list[SegmentMatch], *, expected_total: int | None = None) ->
 class _ProjectedSlot:
     __slots__ = ("index", "item", "polygon", "bbox")
 
-    def __init__(self, *, index: int, item: ExpectedSegment, polygon: list[list[float]], bbox: BBox) -> None:
+    def __init__(
+        self,
+        *,
+        index: int,
+        item: ExpectedSegment,
+        polygon: list[list[float]],
+        bbox: BBox,
+    ) -> None:
         self.index = index
         self.item = item
         self.polygon = polygon
@@ -680,11 +738,15 @@ class _ProjectedSlot:
 class _DetectionSlot:
     __slots__ = ("index", "detection", "polygon", "bbox")
 
-    def __init__(self, *, index: int, detection: YoloDetection, polygon: list[list[float]] | None) -> None:
+    def __init__(
+        self, *, index: int, detection: YoloDetection, polygon: list[list[float]] | None
+    ) -> None:
         self.index = index
         self.detection = detection
         self.polygon = polygon
-        self.bbox = _bbox_from_polygon(polygon) if polygon else _bbox_from_detection(detection)
+        self.bbox = (
+            _bbox_from_polygon(polygon) if polygon else _bbox_from_detection(detection)
+        )
 
 
 def _expected_match(
@@ -792,7 +854,6 @@ def _resolve_frame_size(
     return None
 
 
-
 def _project_expected_polygon(
     item: ExpectedSegment,
     homography: np.ndarray | None,
@@ -832,7 +893,9 @@ def _detection_polygon(detection: YoloDetection) -> list[list[float]] | None:
     return [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
 
 
-def _score_slot_detection(slot: _ProjectedSlot, det: _DetectionSlot) -> tuple[float, float, float, bool]:
+def _score_slot_detection(
+    slot: _ProjectedSlot, det: _DetectionSlot
+) -> tuple[float, float, float, bool]:
     if det.bbox is None:
         return -1.0, 0.0, 999.0, False
     iou = _bbox_iou(slot.bbox, det.bbox)
@@ -882,7 +945,9 @@ def _candidate_is_acceptable(
     return False, "rejected_geometry"
 
 
-def _containing_slot(det: _DetectionSlot, slots: list[_ProjectedSlot]) -> _ProjectedSlot | None:
+def _containing_slot(
+    det: _DetectionSlot, slots: list[_ProjectedSlot]
+) -> _ProjectedSlot | None:
     if det.bbox is None:
         return None
     center = _bbox_center(det.bbox)
@@ -975,7 +1040,9 @@ def _bbox_from_detection(detection: YoloDetection) -> BBox | None:
     if all(key in bbox for key in ("x", "y", "width", "height")):
         x = float(bbox["x"])
         y = float(bbox["y"])
-        return _normalize_bbox((x, y, x + float(bbox["width"]), y + float(bbox["height"])))
+        return _normalize_bbox(
+            (x, y, x + float(bbox["width"]), y + float(bbox["height"]))
+        )
     return None
 
 
@@ -1064,7 +1131,11 @@ def _intersection_area(a: BBox, b: BBox) -> float:
 
 def _polygon_is_finite(polygon: list[list[float]]) -> bool:
     arr = np.asarray(polygon, dtype=np.float64)
-    return bool(arr.ndim == 2 and arr.shape[0] >= _MIN_POLYGON_POINTS and np.isfinite(arr[:, :2]).all())
+    return bool(
+        arr.ndim == 2
+        and arr.shape[0] >= _MIN_POLYGON_POINTS
+        and np.isfinite(arr[:, :2]).all()
+    )
 
 
 def _clean_polygon(polygon: list[list[float]]) -> list[list[float]]:
