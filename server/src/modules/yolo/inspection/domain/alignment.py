@@ -88,6 +88,7 @@ class FrameAlignment:
     masked_reference_feature_count: int | None = None
     reference_size: tuple[int, int] | None = None
     frame_size: tuple[int, int] | None = None
+    extra_debug: dict[str, Any] | None = None
 
     @property
     def is_success(self) -> bool:
@@ -140,6 +141,7 @@ class FrameAlignment:
                 if self.frame_size is not None
                 else None
             ),
+            "extra_debug": self.extra_debug,
         }
 
 

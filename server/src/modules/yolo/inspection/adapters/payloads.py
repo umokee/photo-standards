@@ -129,6 +129,7 @@ def build_result_payload(
         "result_image_path": result_image_path,
         "model_name": build_model_name(context.model),
         "debug_payload": debug_payload,
+        "pose_pipeline": _extract_pose_pipeline(debug_payload),
     }
 
 
@@ -184,6 +185,20 @@ def build_realtime_save_payload(
     result: RealtimeFrameResult,
     result_image_path: str | None = None,
 ) -> dict:
+    verification_mode = getattr(
+        result,
+        "verification_mode",
+        settings.INSPECTION_VERIFICATION_MODE,
+    )
+    debug_payload = build_inspection_debug_payload(
+        details=result.details,
+        raw_class_counts=None,
+        imgsz=context.model.imgsz,
+        weights_path=context.model.weights_path,
+        alignment_debug=result.alignment_debug,
+        verification_mode=verification_mode,
+    )
+
     return {
         "task_id": None,
         "inspection_id": None,
@@ -201,51 +216,42 @@ def build_realtime_save_payload(
         "missing": result.missing,
         "alignment_status": (
             None
-            if getattr(
-                result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
-            )
-            == "yolo_count"
+            if verification_mode == "yolo_count"
             else normalize_alignment_status_for_db(
                 result.alignment_db_status or result.alignment_status
             )
         ),
         "alignment_inlier_count": (
             None
-            if getattr(
-                result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
-            )
-            == "yolo_count"
+            if verification_mode == "yolo_count"
             else result.alignment_inlier_count
         ),
         "alignment_raw_match_count": (
             None
-            if getattr(
-                result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
-            )
-            == "yolo_count"
+            if verification_mode == "yolo_count"
             else result.alignment_raw_match_count
         ),
         "homography": (
             None
-            if getattr(
-                result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
-            )
-            == "yolo_count"
+            if verification_mode == "yolo_count"
             else _homography_to_json(result.homography)
         ),
         "details": result.details,
         "model_name": build_model_name(context.model),
-        "debug_payload": build_inspection_debug_payload(
-            details=result.details,
-            raw_class_counts=None,
-            imgsz=context.model.imgsz,
-            weights_path=context.model.weights_path,
-            alignment_debug=result.alignment_debug,
-            verification_mode=getattr(
-                result, "verification_mode", settings.INSPECTION_VERIFICATION_MODE
-            ),
-        ),
+        "debug_payload": debug_payload,
+        "pose_pipeline": _extract_pose_pipeline(debug_payload),
     }
+
+
+def _extract_pose_pipeline(debug_payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(debug_payload, dict):
+        return None
+
+    pose_pipeline = debug_payload.get("pose_pipeline")
+    if isinstance(pose_pipeline, dict):
+        return pose_pipeline
+
+    return None
 
 
 def build_result_item(match: SegmentMatch) -> dict:

@@ -70,6 +70,8 @@ def build_inspection_history_item_response(
         result_image_path=inspection.result_image_path,
         total_segments=inspection.total_segments,
         matched_segments=inspection.matched_segments,
+        final_pose_source=_get_final_pose_source(inspection),
+        final_pose_reason=_get_final_pose_reason(inspection),
         notes=inspection.notes,
         inspected_at=inspection.inspected_at,
     )
@@ -113,6 +115,7 @@ def build_inspection_result_response(
         homography=inspection.homography,
         notes=inspection.notes,
         debug_payload=inspection.debug_payload,
+        pose_pipeline=_get_pose_pipeline(inspection),
         inspected_at=inspection.inspected_at,
         segment_results=[
             InspectionSegmentResultResponse.model_validate(item)
@@ -130,3 +133,31 @@ def _get_standard_reference_path(standard: object | None) -> str | None:
             return image.image_path
 
     return None
+
+
+def _get_pose_pipeline(inspection: InspectionResult) -> dict | None:
+    payload = inspection.debug_payload
+    if not isinstance(payload, dict):
+        return None
+
+    pose_pipeline = payload.get("pose_pipeline")
+    if isinstance(pose_pipeline, dict):
+        return pose_pipeline
+
+    return None
+
+
+def _get_final_pose_source(inspection: InspectionResult) -> str | None:
+    pose_pipeline = _get_pose_pipeline(inspection)
+    if pose_pipeline is None:
+        return None
+    value = pose_pipeline.get("final_pose_source")
+    return str(value) if value is not None else None
+
+
+def _get_final_pose_reason(inspection: InspectionResult) -> str | None:
+    pose_pipeline = _get_pose_pipeline(inspection)
+    if pose_pipeline is None:
+        return None
+    value = pose_pipeline.get("final_pose_reason")
+    return str(value) if value is not None else None

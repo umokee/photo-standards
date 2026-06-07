@@ -33,6 +33,9 @@ from modules.yolo.inspection.domain.matcher import (
     match_segments_by_count,
     summarize,
 )
+from modules.yolo.inspection.domain.yolo_anchor_pose import (
+    estimate_yolo_anchor_alignment,
+)
 from modules.yolo.inspection.domain.overlay import render_overlay
 from modules.yolo.inspection.domain.types import (
     ExpectedSegment,
@@ -374,6 +377,53 @@ def inspect_frame_parallel(
     )
 
 
+def _select_effective_alignment(
+    *,
+    context: InspectionContext,
+    expected: list[ExpectedSegment],
+    detections: list[YoloDetection],
+    alignment: FrameAlignment,
+    alignment_display_message: str,
+    frame: np.ndarray,
+    profile: dict[str, float],
+    profile_enabled: bool,
+) -> tuple[FrameAlignment, str]:
+    mode = getattr(settings, "INSPECTION_YOLO_ANCHOR_POSE_MODE", "auto")
+    if mode == "off" or not detections:
+        return alignment, alignment_display_message
+
+    existing_projection = _build_projection_data(
+        context=context,
+        alignment=alignment,
+        frame=frame,
+    )
+    existing_can_project = _can_project_segments(
+        alignment=alignment,
+        projection_data=existing_projection,
+    )
+    if mode == "fallback" and existing_can_project:
+        return alignment, alignment_display_message
+
+    started_at = time.perf_counter()
+    anchor_debug: dict[str, object] = {}
+    anchor_alignment = estimate_yolo_anchor_alignment(
+        expected,
+        detections,
+        frame_size=(frame.shape[1], frame.shape[0]),
+        debug_out=anchor_debug,
+    )
+    if profile_enabled:
+        profile["inspect_yolo_anchor_pose_ms"] = _elapsed_ms(started_at)
+
+    if anchor_alignment is not None and anchor_alignment.is_success:
+        return anchor_alignment, "Совмещение по видимым YOLO-объектам"
+
+    if anchor_debug:
+        _merge_alignment_extra_debug(alignment, anchor_debug)
+
+    return alignment, alignment_display_message
+
+
 def _compose_frame_result(
     *,
     context: InspectionContext,
@@ -429,6 +479,17 @@ def _compose_frame_result(
             verification_mode=verification_mode,
         )
 
+    alignment, alignment_display_message = _select_effective_alignment(
+        context=context,
+        expected=expected,
+        detections=detection_result.detections,
+        alignment=alignment,
+        alignment_display_message=alignment_display_message,
+        frame=frame,
+        profile=profile,
+        profile_enabled=profile_enabled,
+    )
+
     projection_data = _build_projection_data(
         context=context,
         alignment=alignment,
@@ -443,7 +504,6 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
-                yolo_anchor_rescue=True,
             )
             profile["inspect_matching_ms"] = _elapsed_ms(started_at)
         else:
@@ -453,7 +513,6 @@ def _compose_frame_result(
                 alignment.homography,
                 frame_size=(frame.shape[1], frame.shape[0]),
                 projection_data=projection_data,
-                yolo_anchor_rescue=True,
             )
 
         _, matched, missing = summarize(matches)
@@ -466,13 +525,22 @@ def _compose_frame_result(
         if profile_enabled:
             profile["inspect_matching_ms"] = 0.0
 
-        matches = build_missing_matches(
-            expected,
-            alignment.homography,
-            frame_size=(frame.shape[1], frame.shape[0]),
-            projection_data=projection_data,
-        )
-        missing = [item.name for item in expected]
+        if _failsafe_requires_confirmed_pose():
+            matches = _build_scene_unconfirmed_matches(
+                expected,
+                alignment=alignment,
+                reason="pose_not_confirmed",
+            )
+            missing = []
+            alignment_display_message = _scene_unconfirmed_message(alignment)
+        else:
+            matches = build_missing_matches(
+                expected,
+                alignment.homography,
+                frame_size=(frame.shape[1], frame.shape[0]),
+                projection_data=projection_data,
+            )
+            missing = [item.name for item in expected]
         matched = 0
         inspection_status = inspections_constants.statuses.failed
 
@@ -516,6 +584,69 @@ def _compose_frame_result(
         profile=profile,
         verification_mode=verification_mode,
     )
+
+
+def _failsafe_requires_confirmed_pose() -> bool:
+    return bool(getattr(settings, "INSPECTION_FAILSAFE_REQUIRE_CONFIRMED_POSE", True))
+
+
+def _scene_unconfirmed_message(alignment: FrameAlignment) -> str:
+    if alignment.reason:
+        return f"Сцена не подтверждена: {alignment.reason}"
+    if alignment.stage:
+        return f"Сцена не подтверждена: {alignment.stage}"
+    return "Сцена не подтверждена: нет надёжной позы для переноса слотов"
+
+
+def _build_scene_unconfirmed_matches(
+    expected: list[ExpectedSegment],
+    *,
+    alignment: FrameAlignment,
+    reason: str,
+) -> list[SegmentMatch]:
+    debug = {
+        "reason": "Сцена не подтверждена, missing-полигон не рисуется",
+        "reason_code": "scene_pose_unconfirmed",
+        "projection": "none",
+        "missing_polygon_projection": "hidden_unconfirmed_pose",
+        "missing_polygon_projection_safety": "safe_hidden",
+        "pose_failsafe": True,
+        "pose_failsafe_reason": reason,
+        "alignment_method": alignment.method,
+        "alignment_status": alignment.status.value,
+        "alignment_stage": alignment.stage,
+        "alignment_reason": alignment.reason,
+    }
+
+    return [
+        SegmentMatch(
+            annotation_id=item.annotation_id,
+            segment_class_id=item.segment_class_id,
+            class_key=item.class_key,
+            name=item.name,
+            hue=item.hue,
+            status="unmatched",
+            iou=None,
+            confidence=None,
+            expected_polygon=None,
+            detected_polygon=None,
+            detected_bbox=None,
+            debug=dict(debug),
+        )
+        for item in expected
+    ]
+
+
+def _merge_alignment_extra_debug(
+    alignment: FrameAlignment,
+    extra: dict[str, object],
+) -> None:
+    existing = alignment.extra_debug if isinstance(alignment.extra_debug, dict) else {}
+    merged = dict(existing)
+    for key, value in extra.items():
+        if key not in merged:
+            merged[key] = value
+    alignment.extra_debug = merged
 
 
 def _resolve_expected_segments(

@@ -8,6 +8,21 @@ from modules.yolo.inspection.realtime.streamer import InspectionStreamer
 from .realtime_session import get_realtime_session_or_raise
 
 
+def _build_debug_payload(result):
+    return build_realtime_debug_payload(
+        result.details,
+        alignment_debug=getattr(result, "alignment_debug", None),
+        verification_mode=getattr(result, "verification_mode", "realtime"),
+    )
+
+
+def _extract_pose_pipeline(debug_payload):
+    if not isinstance(debug_payload, dict):
+        return None
+    pose_pipeline = debug_payload.get("pose_pipeline")
+    return pose_pipeline if isinstance(pose_pipeline, dict) else None
+
+
 def get_realtime_status(
     *,
     streamer: InspectionStreamer,
@@ -34,9 +49,11 @@ def get_realtime_status(
                 captured_at=None,
                 details=[],
                 debug_payload=None,
+                pose_pipeline=None,
             )
 
         matched, total, missing, _, _ = _status_from_realtime_result(result)
+        failed_debug_payload = _build_debug_payload(result)
         return InspectionRealtimeStatusResponse(
             state="failed",
             matched=matched,
@@ -49,7 +66,8 @@ def get_realtime_status(
             alignment_raw_match_count=result.alignment_raw_match_count,
             captured_at=result.captured_at,
             details=result.details,
-            debug_payload=build_realtime_debug_payload(result.details),
+            debug_payload=failed_debug_payload,
+            pose_pipeline=_extract_pose_pipeline(failed_debug_payload),
         )
 
     if result is None:
@@ -69,6 +87,7 @@ def get_realtime_status(
         )
 
     matched, total, missing, status, passed = _status_from_realtime_result(result)
+    online_debug_payload = _build_debug_payload(result)
 
     return InspectionRealtimeStatusResponse(
         state="online",
@@ -82,7 +101,8 @@ def get_realtime_status(
         alignment_raw_match_count=result.alignment_raw_match_count,
         captured_at=result.captured_at,
         details=result.details,
-        debug_payload=build_realtime_debug_payload(result.details),
+        debug_payload=online_debug_payload,
+        pose_pipeline=_extract_pose_pipeline(online_debug_payload),
     )
 
 

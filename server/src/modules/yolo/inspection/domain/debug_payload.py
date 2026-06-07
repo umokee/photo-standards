@@ -4,14 +4,6 @@ from collections import Counter
 from typing import Any
 
 from app.config import settings
-from modules.yolo.inspection.domain.runtime_fusion_contract import (
-    APPLIED_GEOMETRY_SOURCE_TRUSTED_ANCHOR_TRANSFORM,
-    APPLIED_GEOMETRY_SOURCE_TRUSTED_YOLO_MASK,
-    APPLIED_GEOMETRY_SOURCE_UNRESOLVED_BASELINE_FAILURE,
-    RUNTIME_FUSION_SUMMARY_MODE,
-    YOLO_ANCHOR_STATUS_NO_ANCHOR,
-    YOLO_ANCHOR_STATUS_TRUSTED,
-)
 
 
 def build_inspection_debug_payload(
@@ -31,188 +23,219 @@ def build_inspection_debug_payload(
         "verification_mode": verification_mode,
     }
 
-    _add_runtime_anchor_fusion_summary(payload, details)
+    payload["pose_pipeline"] = build_pose_pipeline_summary(
+        details=details,
+        raw_class_counts=raw_class_counts,
+        alignment_debug=alignment_debug,
+        verification_mode=verification_mode,
+    )
     return payload
 
 
 def build_realtime_debug_payload(
     details: list[dict[str, Any]] | None,
+    *,
+    raw_class_counts: dict[str, int] | None = None,
+    alignment_debug: dict[str, Any] | None = None,
+    verification_mode: str | None = None,
 ) -> dict[str, Any] | None:
     if not settings.INSPECTION_DEBUG_PAYLOAD:
         return None
 
-    payload: dict[str, Any] = {}
-    _add_runtime_anchor_fusion_summary(payload, details)
-    return payload or None
+    pose_pipeline = build_pose_pipeline_summary(
+        details=details,
+        raw_class_counts=raw_class_counts,
+        alignment_debug=alignment_debug,
+        verification_mode=verification_mode or "realtime",
+    )
+    return {
+        "alignment": alignment_debug,
+        "raw_counts": raw_class_counts or {},
+        "verification_mode": verification_mode or "realtime",
+        "pose_pipeline": pose_pipeline,
+    }
 
 
-def build_runtime_anchor_fusion_summary(
+def build_pose_pipeline_summary(
+    *,
     details: list[dict[str, Any]] | None,
+    raw_class_counts: dict[str, int] | None,
+    alignment_debug: dict[str, Any] | None,
+    verification_mode: str | None,
 ) -> dict[str, Any]:
     details = list(details or [])
-    status_counts = Counter(_string_value(detail.get("status")) for detail in details)
-    status_counts.pop("", None)
+    alignment_debug = alignment_debug if isinstance(alignment_debug, dict) else {}
 
-    yolo_anchor_status_counts: Counter[str] = Counter()
-    applied_geometry_source_counts: Counter[str] = Counter()
-    runtime_anchor_reject_counts: Counter[str] = Counter()
-    runtime_anchor_best_rejected_reason_counts: Counter[str] = Counter()
-    rejected_samples: list[dict[str, Any]] = []
+    mode = str(getattr(settings, "INSPECTION_YOLO_ANCHOR_POSE_MODE", "auto"))
+    raw_counts = raw_class_counts or {}
+    yolo_detection_count = int(sum(_int_value(value) for value in raw_counts.values()))
+    method = _string_value(alignment_debug.get("method"))
+    status = _string_value(alignment_debug.get("status"))
+    reason = _string_value(alignment_debug.get("reason"))
+    stage = _string_value(alignment_debug.get("stage"))
 
-    candidate_count = 0
-    trusted_candidate_count = 0
-    rejected_candidate_count = 0
+    has_scene_unconfirmed = _has_scene_unconfirmed_details(details)
+    final_source = _final_pose_source(
+        verification_mode=verification_mode,
+        method=method,
+        status=status,
+        yolo_detection_count=yolo_detection_count,
+        has_scene_unconfirmed=has_scene_unconfirmed,
+    )
+    final_reason = _final_pose_reason(
+        final_source=final_source,
+        method=method,
+        status=status,
+        stage=stage,
+        reason=reason,
+        yolo_detection_count=yolo_detection_count,
+    )
 
+    return {
+        "mode": mode,
+        "verification_mode": verification_mode,
+        "final_pose_source": final_source,
+        "final_pose_reason": final_reason,
+        "yolo_detection_count": yolo_detection_count,
+        "detail_status_counts": dict(_detail_status_counts(details)),
+        "feature_alignment": _feature_alignment_summary(alignment_debug),
+        "yolo_anchor_pose": _yolo_anchor_pose_summary(alignment_debug),
+        "next_step_hint": _next_step_hint(
+            final_source=final_source,
+            yolo_detection_count=yolo_detection_count,
+            status=status,
+            method=method,
+        ),
+    }
+
+
+def _final_pose_source(
+    *,
+    verification_mode: str | None,
+    method: str,
+    status: str,
+    yolo_detection_count: int,
+    has_scene_unconfirmed: bool,
+) -> str:
+    if verification_mode == "yolo_count":
+        return "yolo_count"
+    if has_scene_unconfirmed:
+        return "scene_unconfirmed"
+    if method == "yolo_anchor_pose" and status == "success":
+        return "yolo_anchor_pose"
+    if status == "success":
+        return "feature_slot_fallback"
+    if yolo_detection_count <= 0:
+        return "none_yolo_empty_feature_unconfirmed"
+    if method:
+        return "unconfirmed"
+    return "unknown"
+
+
+def _final_pose_reason(
+    *,
+    final_source: str,
+    method: str,
+    status: str,
+    stage: str,
+    reason: str,
+    yolo_detection_count: int,
+) -> str:
+    if final_source == "yolo_anchor_pose":
+        return "visible YOLO objects produced an accepted scene pose"
+    if final_source == "feature_slot_fallback":
+        return "YOLO-anchor pose was unavailable/not selected; feature/slot fallback produced a pose"
+    if final_source == "yolo_count":
+        return "alignment is disabled by verification mode"
+    if final_source == "scene_unconfirmed":
+        return "no confirmed pose; missing polygons were intentionally hidden by fail-safe policy"
+    if final_source == "none_yolo_empty_feature_unconfirmed":
+        return "YOLO produced no detections and feature/slot fallback did not confirm a pose"
+    parts = [part for part in (method, status, stage, reason) if part]
+    if parts:
+        return "; ".join(parts)
+    if yolo_detection_count <= 0:
+        return "YOLO produced no detections"
+    return "pose source is not available in debug payload"
+
+
+def _feature_alignment_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
+    method = _string_value(alignment_debug.get("method"))
+    is_yolo_anchor = method == "yolo_anchor_pose"
+    return {
+        "method": None if is_yolo_anchor else method or None,
+        "status": alignment_debug.get("status"),
+        "stage": alignment_debug.get("stage"),
+        "reason": alignment_debug.get("reason"),
+        "raw_match_count": alignment_debug.get("raw_match_count"),
+        "inlier_count": alignment_debug.get("inlier_count"),
+        "median_error": alignment_debug.get("median_error"),
+        "reference_feature_count": alignment_debug.get("reference_feature_count"),
+        "frame_feature_count": alignment_debug.get("frame_feature_count"),
+        "masked_alignment_used": alignment_debug.get("masked_alignment_used"),
+    }
+
+
+def _yolo_anchor_pose_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
+    extra = alignment_debug.get("extra_debug")
+    if isinstance(extra, dict):
+        pose = extra.get("yolo_anchor_pose")
+        if isinstance(pose, dict):
+            return pose
+
+    method = _string_value(alignment_debug.get("method"))
+    if method != "yolo_anchor_pose":
+        return {"attempted": False, "accepted": False, "reject_reason": "not_selected"}
+
+    return {
+        "attempted": True,
+        "accepted": alignment_debug.get("status") == "success",
+        "reject_reason": None if alignment_debug.get("status") == "success" else alignment_debug.get("reason"),
+        "raw_point_count": alignment_debug.get("raw_match_count"),
+        "inlier_point_count": alignment_debug.get("inlier_count"),
+        "median_center_error_px": alignment_debug.get("median_error"),
+        "reference_anchor_count": alignment_debug.get("reference_feature_count"),
+        "frame_detection_count": alignment_debug.get("frame_feature_count"),
+    }
+
+
+def _next_step_hint(
+    *,
+    final_source: str,
+    yolo_detection_count: int,
+    status: str,
+    method: str,
+) -> str:
+    if final_source == "yolo_anchor_pose":
+        return "V4 pose is active; inspect missing/presence decisions inside projected slots"
+    if final_source == "feature_slot_fallback" and yolo_detection_count <= 0:
+        return "YOLO is empty; this result is using the slot/feature fallback as intended"
+    if final_source == "feature_slot_fallback":
+        return "YOLO detections exist but V4 pose was not selected; inspect yolo_anchor_pose reject thresholds"
+    if final_source in {"none_yolo_empty_feature_unconfirmed", "scene_unconfirmed"}:
+        return "No confirmed pose; do not draw confident missing polygons, ask for recapture or inspect fallback thresholds"
+    if status and status != "success":
+        return f"pose is unconfirmed by {method or 'unknown'}: {status}"
+    return "inspect final_pose_source and alignment debug"
+
+
+def _has_scene_unconfirmed_details(details: list[dict[str, Any]]) -> bool:
     for detail in details:
         debug = detail.get("debug")
         if not isinstance(debug, dict):
             continue
-
-        yolo_status = _string_value(debug.get("yolo_anchor_status"))
-        if yolo_status:
-            yolo_anchor_status_counts[yolo_status] += 1
-
-        applied_source = _string_value(debug.get("applied_geometry_source"))
-        if applied_source:
-            applied_geometry_source_counts[applied_source] += 1
-
-        candidate_count += _int_value(debug.get("runtime_anchor_candidate_count"))
-        trusted_candidate_count += _int_value(
-            debug.get("runtime_anchor_trusted_candidate_count")
-        )
-        rejected_candidate_count += _int_value(
-            debug.get("runtime_anchor_rejected_candidate_count")
-        )
-
-        reject_counts = debug.get("runtime_anchor_reject_counts")
-        if isinstance(reject_counts, dict):
-            for reason, count in reject_counts.items():
-                reason_text = _string_value(reason)
-                if reason_text:
-                    runtime_anchor_reject_counts[reason_text] += _int_value(count)
-
-        best_rejected_reason = _string_value(
-            debug.get("runtime_anchor_best_rejected_reason")
-        )
-        if best_rejected_reason:
-            runtime_anchor_best_rejected_reason_counts[best_rejected_reason] += 1
-
-        if _should_include_rejected_anchor_sample(debug):
-            rejected_samples.append(_runtime_anchor_rejected_sample(detail, debug))
-
-    return {
-        "mode": RUNTIME_FUSION_SUMMARY_MODE,
-        "profile": settings.INSPECTION_ALIGNMENT_PROFILE,
-        "status_counts": dict(status_counts),
-        "yolo_anchor_status_counts": dict(yolo_anchor_status_counts),
-        "applied_geometry_source_counts": dict(applied_geometry_source_counts),
-        "runtime_anchor_candidate_count": candidate_count,
-        "runtime_anchor_trusted_candidate_count": trusted_candidate_count,
-        "runtime_anchor_rejected_candidate_count": rejected_candidate_count,
-        "runtime_anchor_reject_counts": dict(runtime_anchor_reject_counts),
-        "runtime_anchor_best_rejected_reason_counts": dict(
-            runtime_anchor_best_rejected_reason_counts
-        ),
-        "trusted_anchor_match_count": yolo_anchor_status_counts.get(
-            YOLO_ANCHOR_STATUS_TRUSTED,
-            0,
-        ),
-        "no_anchor_match_count": yolo_anchor_status_counts.get(
-            YOLO_ANCHOR_STATUS_NO_ANCHOR,
-            0,
-        ),
-        "trusted_yolo_mask_applied_count": applied_geometry_source_counts.get(
-            APPLIED_GEOMETRY_SOURCE_TRUSTED_YOLO_MASK,
-            0,
-        ),
-        "trusted_anchor_transform_applied_count": applied_geometry_source_counts.get(
-            APPLIED_GEOMETRY_SOURCE_TRUSTED_ANCHOR_TRANSFORM,
-            0,
-        ),
-        "unresolved_baseline_failure_count": applied_geometry_source_counts.get(
-            APPLIED_GEOMETRY_SOURCE_UNRESOLVED_BASELINE_FAILURE,
-            0,
-        ),
-        "top_runtime_anchor_rejected_samples": rejected_samples[:10],
-        "next_step_hint": _runtime_anchor_next_step_hint(
-            yolo_anchor_status_counts=yolo_anchor_status_counts,
-            applied_geometry_source_counts=applied_geometry_source_counts,
-            reject_counts=runtime_anchor_reject_counts,
-            candidate_count=candidate_count,
-        ),
-    }
+        if debug.get("reason_code") == "scene_pose_unconfirmed":
+            return True
+    return False
 
 
-def _add_runtime_anchor_fusion_summary(
-    payload: dict[str, Any],
-    details: list[dict[str, Any]] | None,
-) -> None:
-    if not settings.INSPECTION_RUNTIME_ANCHOR_FUSION_SUMMARY:
-        return
-
-    payload["runtime_anchor_fusion"] = build_runtime_anchor_fusion_summary(details)
-
-
-def _should_include_rejected_anchor_sample(debug: dict[str, Any]) -> bool:
-    if _int_value(debug.get("runtime_anchor_rejected_candidate_count")) > 0:
-        return True
-
-    return bool(_string_value(debug.get("runtime_anchor_best_rejected_reason")))
-
-
-def _runtime_anchor_rejected_sample(
-    detail: dict[str, Any],
-    debug: dict[str, Any],
-) -> dict[str, Any]:
-    trace = debug.get("runtime_anchor_trace")
-    top_candidates: list[Any] = []
-    if isinstance(trace, dict):
-        candidates = trace.get("top_candidates")
-        if isinstance(candidates, list):
-            top_candidates = candidates[:3]
-
-    return {
-        "name": detail.get("name"),
-        "class_key": detail.get("class_key"),
-        "status": detail.get("status"),
-        "yolo_anchor_status": debug.get("yolo_anchor_status"),
-        "applied_geometry_source": debug.get("applied_geometry_source"),
-        "best_rejected_reason": debug.get("runtime_anchor_best_rejected_reason"),
-        "candidate_count": debug.get("runtime_anchor_candidate_count"),
-        "rejected_candidate_count": debug.get(
-            "runtime_anchor_rejected_candidate_count"
-        ),
-        "top_candidates": top_candidates,
-    }
-
-
-def _runtime_anchor_next_step_hint(
-    *,
-    yolo_anchor_status_counts: Counter[str],
-    applied_geometry_source_counts: Counter[str],
-    reject_counts: Counter[str],
-    candidate_count: int,
-) -> str:
-    if not yolo_anchor_status_counts and candidate_count == 0:
-        return "runtime anchor fusion debug is absent for this result"
-
-    if candidate_count == 0:
-        return "YOLO produced no anchor candidates for selected expected segments"
-
-    if applied_geometry_source_counts.get(APPLIED_GEOMETRY_SOURCE_TRUSTED_ANCHOR_TRANSFORM, 0) > 0:
-        return "trusted anchor transform is already applied; inspect unresolved failures next"
-
-    if applied_geometry_source_counts.get(APPLIED_GEOMETRY_SOURCE_TRUSTED_YOLO_MASK, 0) > 0:
-        return "trusted YOLO masks are applied; transform rescue is the next reserve"
-
-    if reject_counts:
-        reason = reject_counts.most_common(1)[0][0]
-        return f"most rejected anchors are blocked by {reason}"
-
-    if yolo_anchor_status_counts.get(YOLO_ANCHOR_STATUS_NO_ANCHOR, 0) > 0:
-        return "most segments have no trusted YOLO anchor; check detector coverage or slot policy"
-
-    return "runtime anchor fusion is stable; no immediate action required"
+def _detail_status_counts(details: list[dict[str, Any]]) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for detail in details:
+        status = _string_value(detail.get("status"))
+        if status:
+            counts[status] += 1
+    return counts
 
 
 def _string_value(value: Any) -> str:
@@ -224,17 +247,13 @@ def _string_value(value: Any) -> str:
 def _int_value(value: Any) -> int:
     if isinstance(value, bool):
         return int(value)
-
     if isinstance(value, int):
         return value
-
     if isinstance(value, float):
         return int(value)
-
     if isinstance(value, str):
         try:
             return int(float(value))
         except ValueError:
             return 0
-
     return 0

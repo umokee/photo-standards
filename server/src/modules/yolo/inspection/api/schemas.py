@@ -46,6 +46,7 @@ class InspectionTaskResultResponse(BaseModel):
 
     details: list[InspectionSegmentDetailResponse]
     debug_payload: dict[str, Any] | None = None
+    pose_pipeline: dict[str, Any] | None = None
     mode: str
     model_name: str | None = None
     image_path: str
@@ -103,6 +104,9 @@ class InspectionHistoryItemResponse(BaseModel):
     total_segments: int
     matched_segments: int
 
+    final_pose_source: str | None = None
+    final_pose_reason: str | None = None
+
     notes: str | None = None
     inspected_at: datetime
 
@@ -136,6 +140,7 @@ class InspectionResultResponse(BaseModel):
 
     notes: str | None
     debug_payload: dict | None
+    pose_pipeline: dict[str, Any] | None = None
     inspected_at: datetime
 
     segment_results: list[InspectionSegmentResultResponse] = Field(default_factory=list)
@@ -154,6 +159,7 @@ class InspectionRealtimeStatusResponse(BaseModel):
     captured_at: datetime | None = None
     details: list[InspectionSegmentDetailResponse] = Field(default_factory=list)
     debug_payload: dict[str, Any] | None = None
+    pose_pipeline: dict[str, Any] | None = None
 
 
 class InspectionRealtimeSnapshotSaveRequest(BaseModel):

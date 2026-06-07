@@ -16,12 +16,6 @@ from modules.yolo.inspection.domain.matcher_geometry import (
     is_visible_in_frame,
     translate_polygon,
 )
-from modules.yolo.inspection.domain.matcher_slot_local import (
-    SlotLocalProjection,
-    slot_local_budget,
-    try_slot_local_lightglue_projection,
-)
-from modules.yolo.inspection.domain.matcher_structs import ProjectedExpected
 from modules.yolo.inspection.domain.types import ExpectedSegment, SegmentMatch
 
 PolygonPoints = list[list[float]]
@@ -186,10 +180,7 @@ def transfer_missing_segments_v2(
         frame_size=frame_size,
     )
     budget = _TransferV2Budget(limit=max(16, len(expected) * 3))
-    slot_budget = slot_local_budget()
     all_seed_polygons = [seed.polygon for seed in seeds]
-    slot_projected_expected = [_projected_expected_from_seed(seed) for seed in seeds]
-    slot_projected_by_index = {item.index: item for item in slot_projected_expected}
     matches: list[SegmentMatch] = []
 
     for index, item in enumerate(expected):
@@ -230,21 +221,7 @@ def transfer_missing_segments_v2(
         )
         debug = {**base_debug, **refine_debug}
 
-        slot_refinement: _LocalRefinement | None = None
-        if _should_try_v2_slot_local(refinement):
-            slot_refinement, slot_debug = _try_v2_slot_local_refinement(
-                seed,
-                projection_data=projection_data,
-                all_expected=slot_projected_expected,
-                projected_expected=slot_projected_by_index.get(seed.index),
-                budget=slot_budget,
-            )
-            debug = {**debug, **slot_debug}
-
-        selected_refinement = _select_confirmed_v2_refinement(
-            context_refinement=refinement,
-            slot_refinement=slot_refinement,
-        )
+        selected_refinement = _select_confirmed_v2_refinement(refinement)
 
         if selected_refinement is None:
             matches.append(
@@ -257,7 +234,6 @@ def transfer_missing_segments_v2(
                         "missing_polygon_projection": "v2_unconfirmed",
                         "missing_polygon_projection_safety": "unsafe_hidden",
                         "missing_polygon_hidden_reason": debug.get("v2_reject_reason")
-                        or debug.get("v2_slot_local_rescue_reject_reason")
                         or "v2_local_context_registration_failed",
                         "reason_code": "v2_local_context_registration_failed",
                     },
@@ -265,11 +241,7 @@ def transfer_missing_segments_v2(
             )
             continue
 
-        confirmed_reason = (
-            "slot_local_lightglue_confirmed"
-            if selected_refinement.source == "slot_local_lightglue"
-            else "v2_context_registration_confirmed"
-        )
+        confirmed_reason = "v2_context_registration_confirmed"
         matches.append(
             _v2_match(
                 item,
@@ -302,14 +274,6 @@ def transfer_missing_segments_v2(
     return matches
 
 
-
-def _projected_expected_from_seed(seed: _ProjectedSeed) -> ProjectedExpected:
-    return ProjectedExpected(
-        index=seed.index,
-        item=seed.item,
-        polygon=seed.polygon,
-        bbox=seed.bbox,
-    )
 
 
 @dataclass(slots=True)
@@ -769,124 +733,14 @@ def _direct_local_reject(
     }
 
 
-def _should_try_v2_slot_local(refinement: _LocalRefinement | None) -> bool:
-    if refinement is None:
-        return True
-    if refinement.source in {"v2_context_seed", "v2_context_phase", "v2_context_ecc"}:
-        return True
-    if refinement.shift_factor > _V2_LARGE_SHIFT_FACTOR:
-        return True
-    if refinement.center_factor > 0.30:
-        return True
-    if refinement.max_other_overlap > 0.40:
-        return True
-    if refinement.source == "v2_context_points":
-        if refinement.candidate_count <= 0:
-            return True
-    return False
-
-
-def _try_v2_slot_local_refinement(
-    seed: _ProjectedSeed,
-    *,
-    projection_data: LocalProjectionData | None,
-    all_expected: list[ProjectedExpected],
-    projected_expected: ProjectedExpected | None,
-    budget: Any,
-) -> tuple[_LocalRefinement | None, dict[str, Any]]:
-    debug: dict[str, Any] = {
-        "v2_slot_local_rescue_attempted": False,
-        "v2_slot_local_rescue_accepted": False,
-    }
-    if projected_expected is None:
-        debug["v2_slot_local_rescue_reject_reason"] = "missing_projected_expected"
-        return None, debug
-
-    slot_projection, slot_debug = try_slot_local_lightglue_projection(
-        projected_expected,
-        slot=None,
-        projection_data=projection_data,
-        all_expected=all_expected,
-        budget=budget,
-    )
-    debug.update(slot_debug)
-    debug["v2_slot_local_rescue_attempted"] = bool(
-        slot_debug.get("slot_local_lightglue_attempted")
-    )
-    if slot_projection is None:
-        debug["v2_slot_local_rescue_reject_reason"] = slot_debug.get(
-            "slot_local_lightglue_reject_reason", "slot_local_rejected"
-        )
-        return None, debug
-
-    debug["v2_slot_local_rescue_accepted"] = True
-    return _slot_local_projection_to_refinement(seed, slot_projection), debug
-
-
-def _slot_local_projection_to_refinement(
-    seed: _ProjectedSeed,
-    slot_projection: SlotLocalProjection,
-) -> _LocalRefinement:
-    seed_cx, seed_cy = _bbox_center_xy(seed.bbox)
-    slot_cx, slot_cy = _bbox_center_xy(slot_projection.bbox)
-    dx = float(slot_cx - seed_cx)
-    dy = float(slot_cy - seed_cy)
-    shift_factor = float(np.hypot(dx, dy) / max(bbox_diag(seed.bbox), 1.0))
-    return _LocalRefinement(
-        polygon=slot_projection.polygon,
-        bbox=slot_projection.bbox,
-        shift_x=dx,
-        shift_y=dy,
-        shift_factor=shift_factor,
-        ecc_score=None,
-        phase_response=None,
-        ring_fraction=1.0,
-        max_other_overlap=slot_projection.max_other_overlap,
-        center_factor=slot_projection.center_factor,
-        other_center_factor=None,
-        source="slot_local_lightglue",
-        candidate_score=None,
-        candidate_selection_score=None,
-        crop_mode=slot_projection.mode,
-        start_mode="slot_local_lightglue",
-        candidate_count=1,
-    )
-
-
 def _select_confirmed_v2_refinement(
-    *,
-    context_refinement: _LocalRefinement | None,
-    slot_refinement: _LocalRefinement | None,
+    refinement: _LocalRefinement | None,
 ) -> _LocalRefinement | None:
-    if slot_refinement is not None and _v2_refinement_reject_reason(slot_refinement) is None:
-        if context_refinement is None:
-            return slot_refinement
-        context_reject = _v2_refinement_reject_reason(context_refinement)
-        if context_reject is not None:
-            return slot_refinement
-        if _slot_local_beats_context(slot_refinement, context_refinement):
-            return slot_refinement
-
-    if context_refinement is None:
+    if refinement is None:
         return None
-    if _v2_refinement_reject_reason(context_refinement) is not None:
+    if _v2_refinement_reject_reason(refinement) is not None:
         return None
-    return context_refinement
-
-
-def _slot_local_beats_context(
-    slot_refinement: _LocalRefinement,
-    context_refinement: _LocalRefinement,
-) -> bool:
-    if context_refinement.source in {"v2_context_seed", "v2_context_phase", "v2_context_ecc"}:
-        return True
-    if context_refinement.shift_factor > _V2_LARGE_SHIFT_FACTOR:
-        return True
-    if context_refinement.max_other_overlap > 0.42 and slot_refinement.max_other_overlap <= 0.30:
-        return True
-    if context_refinement.center_factor > 0.34 and slot_refinement.center_factor <= 0.24:
-        return True
-    return False
+    return refinement
 
 
 def _v2_refinement_reject_reason(refinement: _LocalRefinement) -> str | None:
@@ -926,13 +780,6 @@ def _v2_refinement_reject_reason(refinement: _LocalRefinement) -> str | None:
         # Scene seed is allowed only when it stayed near the globally registered slot.
         if refinement.shift_factor > _V2_SMALL_SHIFT_FACTOR:
             return "seed_shifted_too_far"
-        return None
-
-    if refinement.source == "slot_local_lightglue":
-        if refinement.center_factor > 0.30:
-            return "slot_local_center_shift_too_large"
-        if refinement.max_other_overlap > 0.42:
-            return "slot_local_overlaps_other_expected_slot"
         return None
 
     return "unknown_refinement_source"
