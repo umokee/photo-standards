@@ -126,19 +126,6 @@ class Settings(InspectionSettingsMixin, BaseSettings):
         )
 
     @property
-    def database_url_conninfo(self) -> str:
-        if self.DB_SOCKET_DIR:
-            return (
-                f"postgresql://{self.DB_USER}:{self.DB_PASS}"
-                f"@/{self.DB_NAME}?{self._database_host_query}"
-            )
-
-        return (
-            f"postgresql://{self.DB_USER}:{self.DB_PASS}"
-            f"@{self._database_host_query}/{self.DB_NAME}"
-        )
-
-    @property
     def database_url_async_for_listen(self) -> str:
         url = self.database_url_async
         return url.replace("postgresql+asyncpg", "postgresql")

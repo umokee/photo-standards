@@ -14,13 +14,6 @@ from modules.yolo.inspection.domain.types import (
     YoloDetection,
 )
 
-# This matcher is intentionally small again.
-# Pose/alignment is produced before this file:
-#   - primary: YOLO-anchor pose when YOLO found visible objects;
-#   - fallback: feature alignment from SuperPoint/LightGlue homography.
-# This file only projects reference slots, matches detections to projected slots,
-# and marks missing/extra/unmatched safely.
-
 _MIN_POLYGON_POINTS = 3
 _MIN_MATCH_IOU = 0.10
 _MAX_CENTER_DISTANCE_FACTOR = 0.60
@@ -29,9 +22,6 @@ _UNMATCHED_NEARBY_CENTER_DISTANCE_FACTOR = 1.35
 _UNMATCHED_RELAXED_IOU = 0.015
 _DUPLICATE_DETECTION_IOU = 0.70
 _DUPLICATE_DETECTION_CONTAINMENT = 0.85
-# Low YOLO confidence is allowed only when it helps confirm an expected slot.
-# A detection outside all expected slots is an extra candidate and must pass a
-# stronger confidence gate, otherwise low-conf clutter becomes false positives.
 _MIN_EXPECTED_SLOT_CONFIDENCE = 0.05
 _MIN_EXTRA_CONFIDENCE = 0.25
 _RELAXED_SAME_CLASS_CENTER_FACTOR = 1.10
@@ -162,11 +152,6 @@ def match_segments(
         for index, detection in enumerate(detections)
     ]
     detection_items = [item for item in detection_items if item.bbox is not None]
-    # v19_one_detection_one_slot_assignment:
-    # YOLO-seg can return several masks/boxes for one physical object at different
-    # confidence levels. If we keep all of them, one real object can satisfy two
-    # expected slots of the same class. Deduplicate before assignment so the matcher
-    # preserves the invariant: one physical detection cluster -> one expected slot.
     detection_items = _dedupe_detection_items(detection_items)
 
     if not projected and not hidden_expected:
@@ -276,9 +261,6 @@ def match_segments(
         bbox = _bbox_from_polygon(polygon) if polygon is not None else None
         unresolved.append((index, item, polygon, bbox, reason))
 
-    # v17: after strict slot matching, use any remaining same-class YOLO detection
-    # to explain an unresolved expected slot. This prevents contradictory UI rows
-    # like "same class missing" + "same class extra" for one physical detection.
     same_class_assignments = _choose_same_class_unresolved_assignments(
         unresolved,
         detection_items,
@@ -500,10 +482,6 @@ def _collapse_extra_detections(
     for item in expected:
         expected_by_class.setdefault(item.class_key, item)
 
-    # v19.1_safe_dedupe:
-    # Extras are collapsed by physical detection cluster, not by class_key.
-    # If two extra details of the same class are far apart, both stay visible.
-    # Only overlapping/contained YOLO duplicates are suppressed.
     clusters: list[tuple[_DetectionSlot, list[int]]] = []
 
     for det in detection_items:
@@ -578,7 +556,6 @@ def _dedupe_detection_items(
             continue
         kept.append(det)
 
-    # Keep deterministic order for downstream debug/result stability.
     kept.sort(key=lambda item: item.index)
     return kept
 
@@ -872,11 +849,6 @@ def _project_expected_polygon(
     if bbox is None:
         return None, "invalid_projected_bbox"
 
-    # v17_missing_overlay_fix:
-    # A projected expected slot can be partially outside the frame. That should
-    # still be returned to the renderer so the visible part can be clipped and
-    # drawn. Returning None here made the UI show "Отсутствует" without any
-    # polygon, which looked like a logic bug.
     reason: str | None = None
     if frame_size is not None and not _bbox_visible(bbox, frame_size):
         reason = "projected_polygon_outside_frame"
@@ -901,9 +873,6 @@ def _score_slot_detection(
     iou = _bbox_iou(slot.bbox, det.bbox)
     center_factor = _center_distance_factor(slot.bbox, det.bbox)
     center_inside = _point_in_bbox(_bbox_center(det.bbox), slot.bbox)
-    # Give a small bonus for detections whose center is actually inside the
-    # projected expected slot. Center distance alone is not enough: it caused a
-    # far duplicate detection of the same class to be accepted as "На месте".
     score = (
         iou
         - 0.18 * center_factor
@@ -927,10 +896,6 @@ def _candidate_is_acceptable(
     if center_inside and center_factor <= _MAX_CENTER_DISTANCE_FACTOR:
         return True, "projected_slot_center_inside"
 
-    # v19: keep the v18 idea that low confidence can confirm an expected slot,
-    # but do not accept a detection only because it is "near" by center distance.
-    # The detection center must be inside the projected slot. Otherwise one lower
-    # same-class object can be incorrectly assigned to an upper empty slot.
     if (
         class_matches
         and center_inside
@@ -959,72 +924,6 @@ def _containing_slot(
         if best is None or iou > best[0]:
             best = (iou, slot)
     return best[1] if best is not None else None
-
-
-def _score_unmatched_detection(
-    slot: _ProjectedSlot,
-    det: _DetectionSlot,
-) -> tuple[float, dict[str, Any]]:
-    if det.bbox is None:
-        return -999.0, {
-            "reason": "detection_inside_projected_slot_but_not_matched",
-            "reason_code": "invalid_detection_bbox",
-            "expected_class_key": slot.item.class_key,
-            "detected_class_key": det.detection.class_key,
-        }
-
-    iou = _bbox_iou(slot.bbox, det.bbox)
-    center_factor = _center_distance_factor(slot.bbox, det.bbox)
-    same_class = slot.item.class_key == det.detection.class_key
-    score = (
-        iou
-        - 0.12 * center_factor
-        + (0.25 if same_class else 0.0)
-        + 0.001 * float(det.detection.confidence or 0.0)
-    )
-    return score, {
-        "reason": "detection_inside_projected_slot_but_not_matched",
-        "reason_code": (
-            "same_class_detection_failed_geometry"
-            if same_class
-            else "wrong_class_detection_inside_expected_slot"
-        ),
-        "expected_class_key": slot.item.class_key,
-        "detected_class_key": det.detection.class_key,
-        "detected_class_in_zone": det.detection.class_key,
-        "iou": _round(iou),
-        "center_distance_factor": _round(center_factor),
-        "status_policy": "expected_slot_level_unmatched",
-    }
-
-
-def _build_class_display(
-    expected: list[ExpectedSegment],
-) -> dict[str, tuple[str, int | None]]:
-    result: dict[str, tuple[str, int | None]] = {}
-    for item in expected:
-        result.setdefault(item.class_key, (item.name, item.hue))
-    return result
-
-
-def _detection_display(
-    detection: YoloDetection,
-    class_display: dict[str, tuple[str, int | None]],
-) -> tuple[str, int | None]:
-    display = class_display.get(detection.class_key)
-    if display is not None:
-        return display
-    return "Лишнее", None
-
-
-def _sort_matches_for_ui(matches: list[SegmentMatch]) -> list[SegmentMatch]:
-    status_order = {"ok": 0, "missing": 1, "unmatched": 2, "extra": 3}
-
-    def sort_key(match: SegmentMatch) -> tuple[int, str, float]:
-        confidence = float(match.confidence or 0.0)
-        return (status_order.get(match.status, 9), match.name, -confidence)
-
-    return sorted(matches, key=sort_key)
 
 
 def _bbox_from_detection(detection: YoloDetection) -> BBox | None:

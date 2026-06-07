@@ -6,7 +6,7 @@ import threading
 import time
 import traceback
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -55,18 +55,6 @@ _MAX_DEPTH = 4
 _URL_AUTH_RE = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*://)(?P<auth>[^/@]+)@")
 _TIMESTAMPER = structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp")
 _THROTTLE_LOCK = threading.Lock()
-
-
-@dataclass(slots=True)
-class Timer:
-    started_at: float = field(default_factory=time.perf_counter)
-
-    @property
-    def duration_ms(self) -> float:
-        return elapsed_ms(self.started_at)
-
-    def reset(self) -> None:
-        self.started_at = time.perf_counter()
 
 
 @dataclass(slots=True)
