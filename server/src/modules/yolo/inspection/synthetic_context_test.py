@@ -31,7 +31,11 @@ from modules.yolo.inspection.adapters.features import (
     AlignmentValidationConfig,
     align_with_features,
 )
-from modules.yolo.inspection.domain.matcher_thresholds import thresholds as _thresholds
+# Synthetic-only constants formerly stored in matcher_thresholds.py.
+# Production matcher no longer uses that threshold bag.
+_SYNTHETIC_MISSING_POLYGON_MIN_FEATURE_SUPPORT = 4
+_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION = 3.0
+_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXCLUSION_MARGIN = 8.0
 from modules.yolo.inspection.domain.reference_masking import mask_reference_polygons
 from shapely.errors import GEOSException
 from shapely.geometry import Polygon
@@ -3026,7 +3030,7 @@ def _object_crop_verification_metric_fields(
     if not candidate_rows:
         return _object_crop_verification_empty_fields("no_candidate")
 
-    weak_context = scene.scenario.weak_context or support < _thresholds.missing_polygon_min_feature_support
+    weak_context = scene.scenario.weak_context or support < _SYNTHETIC_MISSING_POLYGON_MIN_FEATURE_SUPPORT
     scored_rows: list[dict[str, Any]] = []
     for row in candidate_rows:
         polygon = row.get("polygon")
@@ -3462,7 +3466,7 @@ def _case_notes(
         )
         return notes
 
-    weak_context = scene.scenario.weak_context or support < _thresholds.missing_polygon_min_feature_support
+    weak_context = scene.scenario.weak_context or support < _SYNTHETIC_MISSING_POLYGON_MIN_FEATURE_SUPPORT
     min_iou = 0.42 if weak_context else 0.55
     max_drift = 38.0 if weak_context else 28.0
 
@@ -3899,7 +3903,7 @@ def _sample_context_points_around_object(
         return np.empty((0, 2), dtype=np.float32)
 
     bbox = _bbox_from_polygon(reference_polygon)
-    expanded = _expand_bbox(bbox, factor=_thresholds.missing_polygon_context_expansion)
+    expanded = _expand_bbox(bbox, factor=_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION)
     x1, y1, x2, y2 = expanded
     object_arrays = [np.asarray(poly, dtype=np.float32) for poly in all_object_polygons]
     margin = _context_exclusion_margin(bbox)
@@ -3999,7 +4003,7 @@ def _count_points_in_context_windows(
         windows.append(
             _expand_bbox(
                 _bbox_from_polygon(poly),
-                factor=_thresholds.missing_polygon_context_expansion,
+                factor=_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION,
             )
         )
     if not windows:
@@ -4572,7 +4576,7 @@ def _sample_context_points(
     cluster_bias: float = 0.0,
 ) -> np.ndarray:
     bbox = _bbox_from_polygon(reference_polygon)
-    expanded = _expand_bbox(bbox, factor=_thresholds.missing_polygon_context_expansion)
+    expanded = _expand_bbox(bbox, factor=_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION)
     x1, y1, x2, y2 = expanded
     polygon_np = np.asarray(reference_polygon, dtype=np.float32)
     margin = _context_exclusion_margin(bbox)
@@ -4914,7 +4918,7 @@ def _draw_vector_set(
 
 def _draw_context_ring(image: np.ndarray, polygon: PolygonPoints) -> None:
     bbox = _bbox_from_polygon(polygon)
-    expanded = _expand_bbox(bbox, factor=_thresholds.missing_polygon_context_expansion)
+    expanded = _expand_bbox(bbox, factor=_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION)
     x1, y1, x2, y2 = [int(round(v)) for v in expanded]
     cv2.rectangle(image, (x1, y1), (x2, y2), _CONTEXT_COLOR, 2)
     cv2.putText(image, "context search window", (x1, max(18, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.48, _CONTEXT_COLOR, 1)
@@ -7757,9 +7761,9 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
         "mean_center_drift_px": float(np.mean(drifts)) if drifts else 0.0,
         "max_center_drift_px": float(np.max(drifts)) if drifts else 0.0,
         "edge_refinement_enabled": False,
-        "context_expansion": float(_thresholds.missing_polygon_context_expansion),
-        "context_exclusion_margin": float(_thresholds.missing_polygon_context_exclusion_margin),
-        "min_feature_support": int(_thresholds.missing_polygon_min_feature_support),
+        "context_expansion": float(_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXPANSION),
+        "context_exclusion_margin": float(_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXCLUSION_MARGIN),
+        "min_feature_support": int(_SYNTHETIC_MISSING_POLYGON_MIN_FEATURE_SUPPORT),
         "shape_names": sorted(shape_names),
     }
 
@@ -9194,7 +9198,7 @@ def _expand_bbox(
 def _context_exclusion_margin(bbox: tuple[float, float, float, float]) -> float:
     x1, y1, x2, y2 = bbox
     min_side = max(1.0, min(float(x2 - x1), float(y2 - y1)))
-    configured = float(_thresholds.missing_polygon_context_exclusion_margin)
+    configured = float(_SYNTHETIC_MISSING_POLYGON_CONTEXT_EXCLUSION_MARGIN)
     return max(0.0, min(configured, min_side * 0.25))
 
 

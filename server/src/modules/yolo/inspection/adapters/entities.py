@@ -93,6 +93,11 @@ def build_matches_from_details(details: list[dict[str, Any]]) -> list[SegmentMat
                 expected_polygon=detail.get("expected_polygon"),
                 detected_polygon=detail.get("detected_polygon"),
                 detected_bbox=detail.get("detected_bbox"),
+                detected_class_in_zone=(
+                    str(detail.get("detected_class_in_zone"))
+                    if detail.get("detected_class_in_zone") is not None
+                    else None
+                ),
                 debug=detail.get("debug") if isinstance(detail.get("debug"), dict) else None,
             )
         )

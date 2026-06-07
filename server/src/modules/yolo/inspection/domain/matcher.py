@@ -18,6 +18,17 @@ _MIN_POLYGON_POINTS = 3
 _MIN_MATCH_IOU = 0.10
 _MAX_CENTER_DISTANCE_FACTOR = 0.60
 _MIN_VISIBLE_FRACTION = 0.04
+_UNMATCHED_NEARBY_CENTER_DISTANCE_FACTOR = 1.35
+_UNMATCHED_RELAXED_IOU = 0.015
+_DUPLICATE_DETECTION_IOU = 0.70
+_DUPLICATE_DETECTION_CONTAINMENT = 0.85
+# Low YOLO confidence is allowed only when it helps confirm an expected slot.
+# A detection outside all expected slots is an extra candidate and must pass a
+# stronger confidence gate, otherwise low-conf clutter becomes false positives.
+_MIN_EXPECTED_SLOT_CONFIDENCE = 0.05
+_MIN_EXTRA_CONFIDENCE = 0.25
+_RELAXED_SAME_CLASS_CENTER_FACTOR = 1.10
+_RELAXED_SAME_CLASS_MIN_IOU = 0.015
 
 BBox = tuple[float, float, float, float]
 
@@ -89,6 +100,8 @@ def build_missing_matches(
     return matches
 
 
+
+
 def match_segments(
     expected: list[ExpectedSegment],
     detections: list[YoloDetection],
@@ -97,11 +110,21 @@ def match_segments(
     frame_size: tuple[int, int] | None = None,
     projection_data: LocalProjectionData | None = None,
 ) -> list[SegmentMatch]:
+    """Assign detections to expected slots with one row per expected object.
+
+    v17_status_conflict_fix:
+    - expected-slot rows own the final status: ok / unmatched / missing;
+    - a same-class YOLO detection is first consumed by an unresolved expected slot
+      before it can become an extra row;
+    - missing polygons are kept when the homography produced a finite polygon even
+      if the polygon is partly outside the frame, so overlay can clip and draw it;
+    - extra rows are only remaining detections after expected slots are satisfied.
+    """
     transform = _resolve_homography(homography, projection_data)
     resolved_frame_size = _resolve_frame_size(frame_size, projection_data)
 
     projected: list[_ProjectedSlot] = []
-    hidden_expected: list[tuple[ExpectedSegment, str]] = []
+    hidden_expected: list[tuple[int, ExpectedSegment, list[list[float]] | None, str]] = []
     for index, item in enumerate(expected):
         polygon, reason = _project_expected_polygon(
             item,
@@ -109,36 +132,52 @@ def match_segments(
             frame_size=resolved_frame_size,
         )
         if polygon is None:
-            hidden_expected.append((item, reason or "scene_pose_unconfirmed"))
+            hidden_expected.append((index, item, None, reason or "scene_pose_unconfirmed"))
             continue
         bbox = _bbox_from_polygon(polygon)
         if bbox is None:
-            hidden_expected.append((item, "invalid_projected_polygon"))
+            hidden_expected.append((index, item, polygon, "invalid_projected_polygon"))
             continue
         projected.append(_ProjectedSlot(index=index, item=item, polygon=polygon, bbox=bbox))
-
-    if not projected:
-        return build_missing_matches(
-            expected,
-            transform,
-            frame_size=resolved_frame_size,
-            projection_data=projection_data,
-            hide_unconfirmed_projection=True,
-        )
 
     detection_items = [
         _DetectionSlot(index=index, detection=detection, polygon=_detection_polygon(detection))
         for index, detection in enumerate(detections)
     ]
     detection_items = [item for item in detection_items if item.bbox is not None]
+    # v19_one_detection_one_slot_assignment:
+    # YOLO-seg can return several masks/boxes for one physical object at different
+    # confidence levels. If we keep all of them, one real object can satisfy two
+    # expected slots of the same class. Deduplicate before assignment so the matcher
+    # preserves the invariant: one physical detection cluster -> one expected slot.
+    detection_items = _dedupe_detection_items(detection_items)
+
+    if not projected and not hidden_expected:
+        return []
+
+    if not projected and not detection_items:
+        return build_missing_matches(
+            expected,
+            transform,
+            frame_size=resolved_frame_size,
+            projection_data=projection_data,
+            hide_unconfirmed_projection=transform is None,
+        )
 
     candidates: list[tuple[float, float, int, int, dict[str, Any]]] = []
     for slot in projected:
         for det in detection_items:
             if slot.item.class_key != det.detection.class_key:
                 continue
-            score, iou, center_factor = _score_slot_detection(slot, det)
-            if _candidate_is_acceptable(iou=iou, center_factor=center_factor):
+            score, iou, center_factor, center_inside = _score_slot_detection(slot, det)
+            acceptable, match_source = _candidate_is_acceptable(
+                iou=iou,
+                center_factor=center_factor,
+                center_inside=center_inside,
+                class_matches=True,
+                confidence=det.detection.confidence,
+            )
+            if acceptable:
                 candidates.append(
                     (
                         score,
@@ -146,9 +185,14 @@ def match_segments(
                         slot.index,
                         det.index,
                         {
-                            "match_source": "projected_slot",
+                            "match_source": match_source,
                             "iou": _round(iou),
                             "center_distance_factor": _round(center_factor),
+                            "center_inside_projected_slot": center_inside,
+                            "expected_slot_low_conf_allowed": (
+                                float(det.detection.confidence or 0.0)
+                                >= _MIN_EXPECTED_SLOT_CONFIDENCE
+                            ),
                         },
                     )
                 )
@@ -184,69 +228,373 @@ def match_segments(
             )
         )
 
+    unmatched_assignments = _choose_unmatched_assignments(
+        projected,
+        detection_items,
+        used_expected=used_expected,
+        used_detections=used_detections,
+    )
+    used_unmatched_detections = {det_index for det_index, _debug in unmatched_assignments.values()}
+
+    unresolved: list[tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]] = []
     for slot in projected:
         if slot.index in used_expected:
             continue
-        matches.append(
-            _expected_match(
-                slot.item,
-                status="missing",
-                expected_polygon=slot.polygon,
-                debug=_missing_debug(
-                    projection="feature_lightglue_homography",
-                    safety="confirmed",
-                    reason="no_matching_detection",
-                    reason_code="no_matching_detection",
-                ),
-            )
-        )
+        unresolved.append((slot.index, slot.item, slot.polygon, slot.bbox, "no_detection_in_projected_slot"))
+    for index, item, polygon, reason in hidden_expected:
+        if index in used_expected:
+            continue
+        bbox = _bbox_from_polygon(polygon) if polygon is not None else None
+        unresolved.append((index, item, polygon, bbox, reason))
 
-    for item, reason in hidden_expected:
+    # v17: after strict slot matching, use any remaining same-class YOLO detection
+    # to explain an unresolved expected slot. This prevents contradictory UI rows
+    # like "same class missing" + "same class extra" for one physical detection.
+    same_class_assignments = _choose_same_class_unresolved_assignments(
+        unresolved,
+        detection_items,
+        occupied_detection_indices=used_detections | used_unmatched_detections,
+    )
+    used_same_class_detections = {det_index for det_index, _debug in same_class_assignments.values()}
+
+    for expected_index, item, polygon, _bbox, reason in unresolved:
+        if expected_index in used_expected:
+            continue
+
+        unmatched = unmatched_assignments.get(expected_index)
+        if unmatched is None:
+            unmatched = same_class_assignments.get(expected_index)
+
+        if unmatched is not None:
+            detection_index, debug = unmatched
+            det = detection_by_index[detection_index]
+            match = _expected_match(
+                item,
+                status="unmatched",
+                confidence=det.detection.confidence,
+                expected_polygon=polygon,
+                detected_polygon=det.polygon,
+                detected_bbox=det.detection.bbox,
+                debug=debug,
+            )
+            match.detected_class_in_zone = det.detection.class_key
+            matches.append(match)
+            continue
+
+        confirmed_projection = polygon is not None and transform is not None
         matches.append(
             _expected_match(
                 item,
                 status="missing",
-                expected_polygon=None,
+                expected_polygon=polygon,
                 debug=_missing_debug(
-                    projection="unconfirmed_hidden",
-                    safety="unsafe_hidden",
-                    reason=reason,
-                    reason_code="scene_pose_unconfirmed",
+                    projection="feature_lightglue_homography" if confirmed_projection else "unconfirmed_hidden",
+                    safety="confirmed" if confirmed_projection else "unsafe_hidden",
+                    reason=("no_detection_in_projected_slot" if confirmed_projection else reason),
+                    reason_code=("no_detection_in_projected_slot" if confirmed_projection else "scene_pose_unconfirmed"),
                 ),
             )
         )
 
-    for det in detection_items:
-        if det.index in used_detections:
-            continue
-        containing_slot = _containing_slot(det, projected)
-        if containing_slot is not None:
-            match = _detection_match(
+    occupied_detection_indices = used_detections | used_unmatched_detections | used_same_class_detections
+    extra_items = _collapse_extra_detections(
+        detection_items,
+        projected,
+        detection_by_index=detection_by_index,
+        occupied_detection_indices=occupied_detection_indices,
+        expected=expected,
+    )
+    for det, debug, display_item in extra_items:
+        matches.append(
+            _detection_match(
                 det.detection,
-                name=containing_slot.item.name,
-                hue=containing_slot.item.hue,
-                status="unmatched",
+                name=display_item.name if display_item is not None else "Лишняя деталь",
+                hue=display_item.hue if display_item is not None else None,
+                status="extra",
                 detected_polygon=det.polygon,
-                debug={
-                    "reason": "detection_inside_projected_slot_but_not_matched",
-                    "expected_class_key": containing_slot.item.class_key,
-                },
+                debug=debug,
             )
-            match.detected_class_in_zone = det.detection.class_key
-            matches.append(match)
-        else:
-            matches.append(
-                _detection_match(
-                    det.detection,
-                    name="Лишнее",
-                    hue=None,
-                    status="extra",
-                    detected_polygon=det.polygon,
-                    debug={"reason": "outside_projected_slots"},
-                )
-            )
+        )
 
     return matches
+
+
+def _choose_unmatched_assignments(
+    projected: list[_ProjectedSlot],
+    detection_items: list[_DetectionSlot],
+    *,
+    used_expected: set[int],
+    used_detections: set[int],
+) -> dict[int, tuple[int, dict[str, Any]]]:
+    candidates: list[tuple[float, int, int, dict[str, Any]]] = []
+    for slot in projected:
+        if slot.index in used_expected:
+            continue
+        for det in detection_items:
+            if det.index in used_detections:
+                continue
+            candidate = _unmatched_candidate(slot, det)
+            if candidate is None:
+                continue
+            score, debug = candidate
+            candidates.append((score, slot.index, det.index, debug))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    assignments: dict[int, tuple[int, dict[str, Any]]] = {}
+    occupied_detections: set[int] = set()
+    for _score, expected_index, detection_index, debug in candidates:
+        if expected_index in assignments or detection_index in occupied_detections:
+            continue
+        assignments[expected_index] = (detection_index, debug)
+        occupied_detections.add(detection_index)
+    return assignments
+
+
+def _unmatched_candidate(
+    slot: _ProjectedSlot,
+    det: _DetectionSlot,
+) -> tuple[float, dict[str, Any]] | None:
+    if det.bbox is None:
+        return None
+
+    iou = _bbox_iou(slot.bbox, det.bbox)
+    center_factor = _center_distance_factor(slot.bbox, det.bbox)
+    center_inside = _point_in_bbox(_bbox_center(det.bbox), slot.bbox)
+    class_matches = slot.item.class_key == det.detection.class_key
+
+    if class_matches:
+        accepted = (
+            center_inside
+            or iou >= _UNMATCHED_RELAXED_IOU
+            or center_factor <= _UNMATCHED_NEARBY_CENTER_DISTANCE_FACTOR
+        )
+    else:
+        accepted = center_inside or iou >= _MIN_MATCH_IOU
+
+    if not accepted:
+        return None
+
+    score = (
+        (2.0 if class_matches else 0.0)
+        + iou * 3.0
+        - center_factor
+        + 0.001 * float(det.detection.confidence or 0.0)
+    )
+    reason_code = (
+        "same_class_detection_near_projected_slot_but_not_matched"
+        if class_matches
+        else "different_class_detection_inside_projected_slot"
+    )
+    debug = {
+        "reason": _reason_message(reason_code),
+        "reason_code": reason_code,
+        "expected_class_key": slot.item.class_key,
+        "detected_class_key": det.detection.class_key,
+        "iou": _round(iou),
+        "center_distance_factor": _round(center_factor),
+        "center_inside_projected_slot": center_inside,
+    }
+    return score, debug
+
+
+def _choose_same_class_unresolved_assignments(
+    unresolved: list[tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]],
+    detection_items: list[_DetectionSlot],
+    *,
+    occupied_detection_indices: set[int],
+) -> dict[int, tuple[int, dict[str, Any]]]:
+    candidates: list[tuple[float, int, int, dict[str, Any]]] = []
+    for expected_index, item, _polygon, bbox, reason in unresolved:
+        for det in detection_items:
+            if det.index in occupied_detection_indices:
+                continue
+            if det.detection.class_key != item.class_key:
+                continue
+            score = float(det.detection.confidence or 0.0)
+            center_factor: float | None = None
+            iou: float | None = None
+            if bbox is not None and det.bbox is not None:
+                center_factor = _center_distance_factor(bbox, det.bbox)
+                iou = _bbox_iou(bbox, det.bbox)
+                score += (iou * 1.5) - (0.05 * min(center_factor, 20.0))
+            reason_code = "same_class_detection_exists_but_expected_slot_not_confirmed"
+            debug = {
+                "reason": _reason_message(reason_code),
+                "reason_code": reason_code,
+                "raw_missing_reason": reason,
+                "expected_class_key": item.class_key,
+                "detected_class_key": det.detection.class_key,
+                "assignment_scope": "expected_slot_before_extra",
+            }
+            if center_factor is not None:
+                debug["center_distance_factor"] = _round(center_factor)
+            if iou is not None:
+                debug["iou"] = _round(iou)
+            candidates.append((score, expected_index, det.index, debug))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    assignments: dict[int, tuple[int, dict[str, Any]]] = {}
+    used_detections: set[int] = set()
+    for _score, expected_index, detection_index, debug in candidates:
+        if expected_index in assignments or detection_index in used_detections:
+            continue
+        assignments[expected_index] = (detection_index, debug)
+        used_detections.add(detection_index)
+    return assignments
+
+
+
+def _collapse_extra_detections(
+    detection_items: list[_DetectionSlot],
+    projected: list[_ProjectedSlot],
+    *,
+    detection_by_index: dict[int, _DetectionSlot],
+    occupied_detection_indices: set[int],
+    expected: list[ExpectedSegment],
+) -> list[tuple[_DetectionSlot, dict[str, Any], ExpectedSegment | None]]:
+    expected_by_class: dict[str, ExpectedSegment] = {}
+    for item in expected:
+        expected_by_class.setdefault(item.class_key, item)
+
+    # v19.1_safe_dedupe:
+    # Extras are collapsed by physical detection cluster, not by class_key.
+    # If two extra details of the same class are far apart, both stay visible.
+    # Only overlapping/contained YOLO duplicates are suppressed.
+    clusters: list[tuple[_DetectionSlot, list[int]]] = []
+
+    for det in detection_items:
+        if det.index in occupied_detection_indices:
+            continue
+        if _containing_slot(det, projected) is not None:
+            continue
+        if _is_duplicate_of_occupied_detection(
+            det,
+            occupied_detection_indices,
+            detection_by_index=detection_by_index,
+        ):
+            continue
+        if float(det.detection.confidence or 0.0) < _MIN_EXTRA_CONFIDENCE:
+            continue
+
+        replacement_index: int | None = None
+        for index, (current_det, _suppressed) in enumerate(clusters):
+            if _detections_are_same_physical_object(det, current_det):
+                replacement_index = index
+                break
+
+        if replacement_index is None:
+            clusters.append((det, []))
+            continue
+
+        current_det, suppressed = clusters[replacement_index]
+        if _extra_detection_sort_key(det) > _extra_detection_sort_key(current_det):
+            suppressed.append(current_det.index)
+            clusters[replacement_index] = (det, suppressed)
+        else:
+            suppressed.append(det.index)
+
+    collapsed: list[tuple[_DetectionSlot, dict[str, Any], ExpectedSegment | None]] = []
+    for det, suppressed in clusters:
+        reason_code = "extra_detection_outside_all_expected_slots"
+        debug = {
+            "reason": _reason_message(reason_code),
+            "reason_code": reason_code,
+            "raw_reason": "outside_projected_slots",
+            "dedupe_scope": "physical_detection_cluster",
+            "duplicate_policy": "overlap_or_containment_only",
+            "duplicate_iou_threshold": _DUPLICATE_DETECTION_IOU,
+            "duplicate_containment_threshold": _DUPLICATE_DETECTION_CONTAINMENT,
+            "extra_min_confidence": _MIN_EXTRA_CONFIDENCE,
+            "duplicate_count": len(suppressed) + 1,
+            "suppressed_detection_indices": suppressed,
+        }
+        collapsed.append((det, debug, expected_by_class.get(det.detection.class_key)))
+
+    collapsed.sort(key=lambda item: _extra_detection_sort_key(item[0]), reverse=True)
+    return collapsed
+
+def _dedupe_detection_items(detection_items: list[_DetectionSlot]) -> list[_DetectionSlot]:
+    if len(detection_items) <= 1:
+        return detection_items
+
+    kept: list[_DetectionSlot] = []
+    suppressed: set[int] = set()
+    ordered = sorted(detection_items, key=_extra_detection_sort_key, reverse=True)
+
+    for det in ordered:
+        if det.index in suppressed:
+            continue
+        if any(_detections_are_same_physical_object(det, existing) for existing in kept):
+            suppressed.add(det.index)
+            continue
+        kept.append(det)
+
+    # Keep deterministic order for downstream debug/result stability.
+    kept.sort(key=lambda item: item.index)
+    return kept
+
+
+
+def _detections_are_same_physical_object(a: _DetectionSlot, b: _DetectionSlot) -> bool:
+    if a.bbox is None or b.bbox is None:
+        return False
+    if a.detection.class_key != b.detection.class_key:
+        return False
+
+    iou = _bbox_iou(a.bbox, b.bbox)
+    if iou >= _DUPLICATE_DETECTION_IOU:
+        return True
+
+    containment = _bbox_max_containment(a.bbox, b.bbox)
+    return containment >= _DUPLICATE_DETECTION_CONTAINMENT
+
+
+def _bbox_inner_containment(inner: BBox, outer: BBox) -> float:
+    ix1, iy1, ix2, iy2 = inner
+    ox1, oy1, ox2, oy2 = outer
+    inter_x1 = max(ix1, ox1)
+    inter_y1 = max(iy1, oy1)
+    inter_x2 = min(ix2, ox2)
+    inter_y2 = min(iy2, oy2)
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    inner_area = _bbox_area(inner)
+    if inner_area <= 0.0:
+        return 0.0
+    return float(inter_area / inner_area)
+
+
+def _bbox_max_containment(a: BBox, b: BBox) -> float:
+    return max(_bbox_inner_containment(a, b), _bbox_inner_containment(b, a))
+
+def _extra_detection_sort_key(det: _DetectionSlot) -> tuple[float, float]:
+    return (float(det.detection.confidence or 0.0), _bbox_area(det.bbox))
+
+
+
+def _is_duplicate_of_occupied_detection(
+    det: _DetectionSlot,
+    occupied_detection_indices: set[int],
+    *,
+    detection_by_index: dict[int, _DetectionSlot],
+) -> bool:
+    if det.bbox is None:
+        return False
+    for occupied_index in occupied_detection_indices:
+        other = detection_by_index.get(occupied_index)
+        if other is None or other.bbox is None:
+            continue
+        if other.detection.class_key != det.detection.class_key:
+            continue
+        if _detections_are_same_physical_object(det, other):
+            return True
+    return False
+
+def _bbox_area(bbox: BBox | None) -> float:
+    if bbox is None:
+        return 0.0
+    return max(0.0, bbox[2] - bbox[0]) * max(0.0, bbox[3] - bbox[1])
 
 
 def match_segments_by_count(
@@ -391,6 +739,20 @@ def _detection_match(
     )
 
 
+def _reason_message(reason_code: str | None) -> str:
+    messages = {
+        "projected_polygon_outside_frame": "Эталонная зона частично или полностью вне кадра",
+        "scene_pose_unconfirmed": "Сцена не подтверждена, зона не рисуется как уверенная",
+        "no_detection_in_projected_slot": "YOLO не нашёл объект в эталонной зоне",
+        "same_class_detection_near_projected_slot_but_not_matched": "Найден объект этого класса рядом с эталонной зоной, но геометрия слабая",
+        "same_class_detection_exists_but_expected_slot_not_confirmed": "Найден объект этого класса, но слот не подтверждён геометрией",
+        "different_class_detection_inside_projected_slot": "В эталонной зоне найден объект другого класса",
+        "extra_detection_outside_all_expected_slots": "YOLO нашёл объект вне всех эталонных зон",
+        "invalid_projected_polygon": "Не удалось построить корректный полигон зоны",
+    }
+    return messages.get(str(reason_code or ""), str(reason_code or "unknown"))
+
+
 def _missing_debug(
     *,
     projection: str,
@@ -402,8 +764,9 @@ def _missing_debug(
         "missing_polygon_projection": projection,
         "projection": projection,
         "missing_polygon_projection_safety": safety,
-        "reason": reason,
+        "reason": _reason_message(reason_code or reason),
         "reason_code": reason_code,
+        "raw_reason": reason,
     }
 
 
@@ -429,6 +792,7 @@ def _resolve_frame_size(
     return None
 
 
+
 def _project_expected_polygon(
     item: ExpectedSegment,
     homography: np.ndarray | None,
@@ -446,9 +810,16 @@ def _project_expected_polygon(
     bbox = _bbox_from_polygon(projected)
     if bbox is None:
         return None, "invalid_projected_bbox"
+
+    # v17_missing_overlay_fix:
+    # A projected expected slot can be partially outside the frame. That should
+    # still be returned to the renderer so the visible part can be clipped and
+    # drawn. Returning None here made the UI show "Отсутствует" without any
+    # polygon, which looked like a logic bug.
+    reason: str | None = None
     if frame_size is not None and not _bbox_visible(bbox, frame_size):
-        return None, "projected_polygon_outside_frame"
-    return _clean_polygon(projected), None
+        reason = "projected_polygon_outside_frame"
+    return _clean_polygon(projected), reason
 
 
 def _detection_polygon(detection: YoloDetection) -> list[list[float]] | None:
@@ -461,17 +832,54 @@ def _detection_polygon(detection: YoloDetection) -> list[list[float]] | None:
     return [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
 
 
-def _score_slot_detection(slot: _ProjectedSlot, det: _DetectionSlot) -> tuple[float, float, float]:
+def _score_slot_detection(slot: _ProjectedSlot, det: _DetectionSlot) -> tuple[float, float, float, bool]:
     if det.bbox is None:
-        return -1.0, 0.0, 999.0
+        return -1.0, 0.0, 999.0, False
     iou = _bbox_iou(slot.bbox, det.bbox)
     center_factor = _center_distance_factor(slot.bbox, det.bbox)
-    score = iou - 0.18 * center_factor + 0.001 * float(det.detection.confidence or 0.0)
-    return score, iou, center_factor
+    center_inside = _point_in_bbox(_bbox_center(det.bbox), slot.bbox)
+    # Give a small bonus for detections whose center is actually inside the
+    # projected expected slot. Center distance alone is not enough: it caused a
+    # far duplicate detection of the same class to be accepted as "На месте".
+    score = (
+        iou
+        - 0.18 * center_factor
+        + (0.20 if center_inside else 0.0)
+        + 0.001 * float(det.detection.confidence or 0.0)
+    )
+    return score, iou, center_factor, center_inside
 
 
-def _candidate_is_acceptable(*, iou: float, center_factor: float) -> bool:
-    return iou >= _MIN_MATCH_IOU or center_factor <= _MAX_CENTER_DISTANCE_FACTOR
+def _candidate_is_acceptable(
+    *,
+    iou: float,
+    center_factor: float,
+    center_inside: bool,
+    class_matches: bool,
+    confidence: float | None,
+) -> tuple[bool, str]:
+    if iou >= _MIN_MATCH_IOU:
+        return True, "projected_slot_iou"
+
+    if center_inside and center_factor <= _MAX_CENTER_DISTANCE_FACTOR:
+        return True, "projected_slot_center_inside"
+
+    # v19: keep the v18 idea that low confidence can confirm an expected slot,
+    # but do not accept a detection only because it is "near" by center distance.
+    # The detection center must be inside the projected slot. Otherwise one lower
+    # same-class object can be incorrectly assigned to an upper empty slot.
+    if (
+        class_matches
+        and center_inside
+        and float(confidence or 0.0) >= _MIN_EXPECTED_SLOT_CONFIDENCE
+        and (
+            iou >= _RELAXED_SAME_CLASS_MIN_IOU
+            or center_factor <= _RELAXED_SAME_CLASS_CENTER_FACTOR
+        )
+    ):
+        return True, "projected_slot_relaxed_same_class_inside"
+
+    return False, "rejected_geometry"
 
 
 def _containing_slot(det: _DetectionSlot, slots: list[_ProjectedSlot]) -> _ProjectedSlot | None:
@@ -486,6 +894,72 @@ def _containing_slot(det: _DetectionSlot, slots: list[_ProjectedSlot]) -> _Proje
         if best is None or iou > best[0]:
             best = (iou, slot)
     return best[1] if best is not None else None
+
+
+def _score_unmatched_detection(
+    slot: _ProjectedSlot,
+    det: _DetectionSlot,
+) -> tuple[float, dict[str, Any]]:
+    if det.bbox is None:
+        return -999.0, {
+            "reason": "detection_inside_projected_slot_but_not_matched",
+            "reason_code": "invalid_detection_bbox",
+            "expected_class_key": slot.item.class_key,
+            "detected_class_key": det.detection.class_key,
+        }
+
+    iou = _bbox_iou(slot.bbox, det.bbox)
+    center_factor = _center_distance_factor(slot.bbox, det.bbox)
+    same_class = slot.item.class_key == det.detection.class_key
+    score = (
+        iou
+        - 0.12 * center_factor
+        + (0.25 if same_class else 0.0)
+        + 0.001 * float(det.detection.confidence or 0.0)
+    )
+    return score, {
+        "reason": "detection_inside_projected_slot_but_not_matched",
+        "reason_code": (
+            "same_class_detection_failed_geometry"
+            if same_class
+            else "wrong_class_detection_inside_expected_slot"
+        ),
+        "expected_class_key": slot.item.class_key,
+        "detected_class_key": det.detection.class_key,
+        "detected_class_in_zone": det.detection.class_key,
+        "iou": _round(iou),
+        "center_distance_factor": _round(center_factor),
+        "status_policy": "expected_slot_level_unmatched",
+    }
+
+
+def _build_class_display(
+    expected: list[ExpectedSegment],
+) -> dict[str, tuple[str, int | None]]:
+    result: dict[str, tuple[str, int | None]] = {}
+    for item in expected:
+        result.setdefault(item.class_key, (item.name, item.hue))
+    return result
+
+
+def _detection_display(
+    detection: YoloDetection,
+    class_display: dict[str, tuple[str, int | None]],
+) -> tuple[str, int | None]:
+    display = class_display.get(detection.class_key)
+    if display is not None:
+        return display
+    return "Лишнее", None
+
+
+def _sort_matches_for_ui(matches: list[SegmentMatch]) -> list[SegmentMatch]:
+    status_order = {"ok": 0, "missing": 1, "unmatched": 2, "extra": 3}
+
+    def sort_key(match: SegmentMatch) -> tuple[int, str, float]:
+        confidence = float(match.confidence or 0.0)
+        return (status_order.get(match.status, 9), match.name, -confidence)
+
+    return sorted(matches, key=sort_key)
 
 
 def _bbox_from_detection(detection: YoloDetection) -> BBox | None:

@@ -27,6 +27,7 @@ class InspectionSegmentDetailResponse(BaseModel):
     expected_polygon: list[list[float]] | None = None
     detected_polygon: list[list[float]] | None = None
     detected_bbox: dict[str, float] | None = None
+    detected_class_in_zone: str | None = None
     debug: dict[str, Any] | None = None
 
 

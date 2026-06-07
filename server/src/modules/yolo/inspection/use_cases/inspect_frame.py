@@ -388,40 +388,361 @@ def _select_effective_alignment(
     profile: dict[str, float],
     profile_enabled: bool,
 ) -> tuple[FrameAlignment, str]:
-    mode = getattr(settings, "INSPECTION_YOLO_ANCHOR_POSE_MODE", "auto")
+    """Choose the final pose source.
+
+    The previous "auto" behaved like "YOLO exists -> trust YOLO-anchor pose".
+    That can be worse than the LightGlue feature fallback when synthetic/real
+    detections are noisy or repeated. Auto must be an arbiter: compute both
+    candidates when possible and keep the safest confirmed pose.
+    """
+
+    mode = str(getattr(settings, "INSPECTION_YOLO_ANCHOR_POSE_MODE", "auto") or "auto")
     if mode == "off" or not detections:
+        _merge_alignment_extra_debug(
+            alignment,
+            {
+                "pose_arbiter": {
+                    "mode": mode,
+                    "selected": "feature_slot_fallback",
+                    "reason": "yolo_anchor_disabled_or_no_detections",
+                    "yolo_detection_count": len(detections),
+                }
+            },
+        )
         return alignment, alignment_display_message
 
-    existing_projection = _build_projection_data(
+    fallback_projection = _build_projection_data(
         context=context,
         alignment=alignment,
         frame=frame,
     )
-    existing_can_project = _can_project_segments(
+    fallback_can_project = _can_project_segments(
         alignment=alignment,
-        projection_data=existing_projection,
+        projection_data=fallback_projection,
     )
-    if mode == "fallback" and existing_can_project:
+    fallback_strong = _is_strong_feature_pose(alignment) and fallback_can_project
+
+    if mode == "fallback" and fallback_can_project:
+        _merge_alignment_extra_debug(
+            alignment,
+            {
+                "pose_arbiter": {
+                    "mode": mode,
+                    "selected": "feature_slot_fallback",
+                    "reason": "fallback_mode_keeps_lightglue_feature_pose",
+                    "fallback_strong": fallback_strong,
+                    "yolo_detection_count": len(detections),
+                }
+            },
+        )
         return alignment, alignment_display_message
 
     started_at = time.perf_counter()
     anchor_debug: dict[str, object] = {}
-    anchor_alignment = estimate_yolo_anchor_alignment(
-        expected,
-        detections,
-        frame_size=(frame.shape[1], frame.shape[0]),
-        debug_out=anchor_debug,
-    )
+    try:
+        anchor_alignment = estimate_yolo_anchor_alignment(
+            expected,
+            detections,
+            frame_size=(frame.shape[1], frame.shape[0]),
+            debug_out=anchor_debug,
+        )
+    except TypeError:
+        # Compatibility with older yolo_anchor_pose.py before debug_out existed.
+        anchor_alignment = estimate_yolo_anchor_alignment(
+            expected,
+            detections,
+            frame_size=(frame.shape[1], frame.shape[0]),
+        )
     if profile_enabled:
         profile["inspect_yolo_anchor_pose_ms"] = _elapsed_ms(started_at)
-
-    if anchor_alignment is not None and anchor_alignment.is_success:
-        return anchor_alignment, "Совмещение по видимым YOLO-объектам"
 
     if anchor_debug:
         _merge_alignment_extra_debug(alignment, anchor_debug)
 
-    return alignment, alignment_display_message
+    if anchor_alignment is None or not anchor_alignment.is_success:
+        _merge_alignment_extra_debug(
+            alignment,
+            {
+                "pose_arbiter": {
+                    "mode": mode,
+                    "selected": "feature_slot_fallback",
+                    "reason": "yolo_anchor_pose_rejected",
+                    "fallback_strong": fallback_strong,
+                    "fallback_can_project": fallback_can_project,
+                    "yolo_detection_count": len(detections),
+                }
+            },
+        )
+        return alignment, alignment_display_message
+
+    anchor_strong = _is_strong_yolo_anchor_pose(anchor_alignment, anchor_debug)
+    disagreement_px = _median_pose_disagreement_px(
+        expected,
+        alignment.homography,
+        anchor_alignment.homography,
+    )
+
+    if mode == "prefer":
+        _merge_alignment_extra_debug(
+            anchor_alignment,
+            {
+                "pose_arbiter": {
+                    "mode": mode,
+                    "selected": "yolo_anchor_pose",
+                    "reason": "prefer_mode_uses_accepted_yolo_anchor_pose",
+                    "anchor_strong": anchor_strong,
+                    "fallback_strong": fallback_strong,
+                    "pose_disagreement_px": disagreement_px,
+                    "yolo_detection_count": len(detections),
+                }
+            },
+        )
+        return anchor_alignment, "Совмещение по видимым YOLO-объектам"
+
+    selected, message, reason = _choose_auto_pose_candidate(
+        fallback_alignment=alignment,
+        fallback_message=alignment_display_message,
+        anchor_alignment=anchor_alignment,
+        fallback_strong=fallback_strong,
+        fallback_can_project=fallback_can_project,
+        anchor_strong=anchor_strong,
+        disagreement_px=disagreement_px,
+    )
+    _merge_alignment_extra_debug(
+        selected,
+        {
+            "pose_arbiter": {
+                "mode": mode,
+                "selected": selected.method,
+                "reason": reason,
+                "anchor_strong": anchor_strong,
+                "fallback_strong": fallback_strong,
+                "fallback_can_project": fallback_can_project,
+                "pose_disagreement_px": disagreement_px,
+                "yolo_detection_count": len(detections),
+            }
+        },
+    )
+    return selected, message
+
+
+def _choose_auto_pose_candidate(
+    *,
+    fallback_alignment: FrameAlignment,
+    fallback_message: str,
+    anchor_alignment: FrameAlignment,
+    fallback_strong: bool,
+    fallback_can_project: bool,
+    anchor_strong: bool,
+    disagreement_px: float | None,
+) -> tuple[FrameAlignment, str, str]:
+    # If LightGlue/fallback cannot project a scene, the accepted YOLO-anchor
+    # pose is the only usable candidate.
+    if not fallback_can_project or not fallback_alignment.is_success:
+        return (
+            anchor_alignment,
+            "Совмещение по видимым YOLO-объектам",
+            "fallback_unavailable_yolo_anchor_used",
+        )
+
+    # If both are usable but disagree a lot, prefer the strong LightGlue pose.
+    # This fixes the observed auto regression where a noisy accepted YOLO pose
+    # overrode an actually better feature fallback.
+    if disagreement_px is not None and disagreement_px > 14.0:
+        if fallback_strong:
+            return (
+                fallback_alignment,
+                fallback_message,
+                "feature_fallback_strong_yolo_disagrees",
+            )
+        if not anchor_strong:
+            return (
+                fallback_alignment,
+                fallback_message,
+                "both_candidates_weak_or_disagree_keep_safer_fallback",
+            )
+
+    # If YOLO is clearly strong and either fallback is weak or both agree,
+    # prefer YOLO-anchor pose for multi-object missing cases.
+    if anchor_strong and (not fallback_strong or disagreement_px is None or disagreement_px <= 8.0):
+        return (
+            anchor_alignment,
+            "Совмещение по видимым YOLO-объектам",
+            "yolo_anchor_strong_and_consistent",
+        )
+
+    # Default safe auto behavior: do not let a merely accepted YOLO candidate
+    # replace a projectable LightGlue fallback.
+    return (
+        fallback_alignment,
+        fallback_message,
+        "feature_fallback_preferred_over_weak_yolo_anchor",
+    )
+
+
+def _is_strong_feature_pose(alignment: FrameAlignment) -> bool:
+    if not alignment.is_success or alignment.homography is None:
+        return False
+    raw = int(alignment.raw_match_count or 0)
+    inliers = int(alignment.inlier_count or 0)
+    ratio = inliers / max(1, raw)
+    if raw < 24 or inliers < 14 or ratio < 0.24:
+        return False
+    if alignment.median_error is not None and float(alignment.median_error) > 9.0:
+        return False
+    return True
+
+
+def _is_strong_yolo_anchor_pose(
+    alignment: FrameAlignment,
+    anchor_debug: dict[str, object] | None,
+) -> bool:
+    if not alignment.is_success or alignment.homography is None:
+        return False
+    payload = _yolo_anchor_payload(alignment, anchor_debug)
+    if payload and payload.get("accepted") is False:
+        return False
+
+    anchor_count = _int_payload(payload, "anchor_count", alignment.reference_feature_count)
+    inlier_anchors = _int_payload(payload, "inlier_anchor_count", None)
+    point_ratio = _float_payload(payload, "point_inlier_ratio", None)
+    median_error = _float_payload(payload, "median_center_error_px", alignment.median_error)
+    p90_error = _float_payload(payload, "p90_center_error_px", None)
+    spread = _float_payload(payload, "anchor_spread_score", None)
+    condition = _float_payload(payload, "homography_condition", None)
+
+    if anchor_count is not None and anchor_count < 3:
+        # Two anchors can form a transform but are fragile with repeated parts.
+        return False
+    if inlier_anchors is not None and inlier_anchors < 3:
+        return False
+    if point_ratio is not None and point_ratio < 0.48:
+        return False
+    if median_error is not None and median_error > 8.0:
+        return False
+    if p90_error is not None and p90_error > 18.0:
+        return False
+    if spread is not None and spread < 0.16:
+        return False
+    if condition is not None and condition > 5.0e7:
+        return False
+    return True
+
+
+def _yolo_anchor_payload(
+    alignment: FrameAlignment,
+    anchor_debug: dict[str, object] | None,
+) -> dict[str, object]:
+    if anchor_debug:
+        candidate = anchor_debug.get("yolo_anchor_pose")
+        if isinstance(candidate, dict):
+            return candidate
+    extra = getattr(alignment, "extra_debug", None)
+    if isinstance(extra, dict):
+        candidate = extra.get("yolo_anchor_pose")
+        if isinstance(candidate, dict):
+            return candidate
+    return {}
+
+
+def _int_payload(payload: dict[str, object], key: str, default: object) -> int | None:
+    value = payload.get(key, default)
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_payload(payload: dict[str, object], key: str, default: object) -> float | None:
+    value = payload.get(key, default)
+    try:
+        if value is None:
+            return None
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(out):
+        return None
+    return out
+
+
+def _median_pose_disagreement_px(
+    expected: list[ExpectedSegment],
+    fallback_homography: np.ndarray | None,
+    anchor_homography: np.ndarray | None,
+) -> float | None:
+    if fallback_homography is None or anchor_homography is None:
+        return None
+    distances: list[float] = []
+    for item in expected[:80]:
+        center = _reference_polygon_center(item)
+        if center is None:
+            continue
+        a = _project_xy(center, fallback_homography)
+        b = _project_xy(center, anchor_homography)
+        if a is None or b is None:
+            continue
+        distances.append(float(np.hypot(a[0] - b[0], a[1] - b[1])))
+    if not distances:
+        return None
+    return float(np.median(distances))
+
+
+def _reference_polygon_center(item: ExpectedSegment) -> tuple[float, float] | None:
+    try:
+        points = np.asarray(item.reference_polygon, dtype=np.float64)
+    except (TypeError, ValueError):
+        return None
+    if points.ndim != 2 or points.shape[0] < 3 or points.shape[1] < 2:
+        return None
+    center = np.mean(points[:, :2], axis=0)
+    if not np.isfinite(center).all():
+        return None
+    return float(center[0]), float(center[1])
+
+
+def _project_xy(
+    point: tuple[float, float],
+    homography: np.ndarray,
+) -> tuple[float, float] | None:
+    try:
+        matrix = np.asarray(homography, dtype=np.float64)
+    except (TypeError, ValueError):
+        return None
+    if matrix.shape != (3, 3):
+        return None
+    source = np.asarray([point[0], point[1], 1.0], dtype=np.float64)
+    projected = matrix @ source
+    if abs(float(projected[2])) < 1e-9:
+        return None
+    x = float(projected[0] / projected[2])
+    y = float(projected[1] / projected[2])
+    if not np.isfinite([x, y]).all():
+        return None
+    return x, y
+
+
+def _merge_alignment_extra_debug(
+    alignment: FrameAlignment,
+    extra: dict[str, object],
+) -> None:
+    current = getattr(alignment, "extra_debug", None)
+    merged = dict(current) if isinstance(current, dict) else {}
+    for key, value in extra.items():
+        if key not in merged:
+            merged[key] = value
+        elif isinstance(merged[key], dict) and isinstance(value, dict):
+            nested = dict(merged[key])
+            nested.update(value)
+            merged[key] = nested
+    try:
+        alignment.extra_debug = merged
+    except (AttributeError, TypeError):
+        # Older FrameAlignment without extra_debug: keep the arbiter fail-safe,
+        # only the debug attachment is skipped.
+        return
 
 
 def _compose_frame_result(
