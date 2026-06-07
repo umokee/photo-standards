@@ -10,8 +10,10 @@ import numpy as np
 from app.config import settings
 from infra.storage.file_storage import resolve_storage_path
 from modules.core.standards.reference_constants import (
-    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
-    SUPERPOINT_OFFLINE_MAX_SIDE,
+    SUPERPOINT_PHOTO_GRID_COLS,
+    SUPERPOINT_PHOTO_GRID_ROWS,
+    SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    SUPERPOINT_PHOTO_MAX_SIDE,
 )
 from modules.yolo.inspection.adapters.context import InspectionContext
 from modules.yolo.inspection.adapters.features import align_frame, load_image
@@ -82,7 +84,8 @@ def inspect_image_path(
         image_path=image_path,
         render=render,
         profile_enabled=profile_enabled,
-        alignment_max_side=SUPERPOINT_OFFLINE_MAX_SIDE,
+        alignment_max_side=SUPERPOINT_PHOTO_MAX_SIDE,
+        alignment_max_keypoints=SUPERPOINT_PHOTO_MAX_KEYPOINTS,
         yolo_conf=settings.YOLO_CONF_THRESHOLD,
     )
 
@@ -99,8 +102,12 @@ def inspect_frame(
     skip_detection_when_alignment_failed: bool = False,
     expected_segments: list[ExpectedSegment] | None = None,
     profile_enabled: bool = False,
-    alignment_max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
-    alignment_max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    alignment_max_side: int | None = SUPERPOINT_PHOTO_MAX_SIDE,
+    alignment_max_keypoints: int = SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    alignment_selection_grid: tuple[int, int] | None = (
+        SUPERPOINT_PHOTO_GRID_ROWS,
+        SUPERPOINT_PHOTO_GRID_COLS,
+    ),
     yolo_conf: float | None = None,
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
@@ -155,6 +162,7 @@ def inspect_frame(
                 frame=frame,
                 max_side=alignment_max_side,
                 max_keypoints=alignment_max_keypoints,
+                selection_grid=alignment_selection_grid,
             )
             profile["inspect_alignment_ms"] = _elapsed_ms(started_at)
         else:
@@ -163,6 +171,7 @@ def inspect_frame(
                 frame=frame,
                 max_side=alignment_max_side,
                 max_keypoints=alignment_max_keypoints,
+                selection_grid=alignment_selection_grid,
             )
 
     message = alignment_display_message or alignment_message(alignment)
@@ -215,8 +224,12 @@ def inspect_frame_parallel(
     expected_segments: list[ExpectedSegment] | None = None,
     profile_enabled: bool = False,
     executor: Executor | None = None,
-    alignment_max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
-    alignment_max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    alignment_max_side: int | None = SUPERPOINT_PHOTO_MAX_SIDE,
+    alignment_max_keypoints: int = SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    alignment_selection_grid: tuple[int, int] | None = (
+        SUPERPOINT_PHOTO_GRID_ROWS,
+        SUPERPOINT_PHOTO_GRID_COLS,
+    ),
     yolo_conf: float | None = None,
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
@@ -286,6 +299,7 @@ def inspect_frame_parallel(
                 frame.copy(),
                 alignment_max_side,
                 alignment_max_keypoints,
+                alignment_selection_grid,
             )
             detection_future = active_executor.submit(
                 _timed_detect_segments,
@@ -416,6 +430,7 @@ def _compose_frame_result(
         )
 
     projection_data = _build_projection_data(
+        context=context,
         alignment=alignment,
         frame=frame,
     )
@@ -533,6 +548,7 @@ def _timed_align_frame(
     frame: np.ndarray,
     max_side: int | None,
     max_keypoints: int,
+    selection_grid: tuple[int, int] | None,
 ) -> tuple[FrameAlignment, float]:
     started_at = time.perf_counter()
     alignment = align_frame(
@@ -540,6 +556,7 @@ def _timed_align_frame(
         frame=frame,
         max_side=max_side,
         max_keypoints=max_keypoints,
+        selection_grid=selection_grid,
     )
     return alignment, _elapsed_ms(started_at)
 
@@ -556,6 +573,7 @@ def _timed_detect_segments(
 
 def _build_projection_data(
     *,
+    context: InspectionContext,
     alignment: FrameAlignment,
     frame: np.ndarray,
 ) -> LocalProjectionData | None:
@@ -581,8 +599,24 @@ def _build_projection_data(
         frame_points=frame_points,
         frame_size=(frame.shape[1], frame.shape[0]),
         frame=frame,
+        reference_frame=_load_projection_reference_frame(context),
+        reference_feature_count=alignment.reference_feature_count,
+        frame_feature_count=alignment.frame_feature_count,
+        frame_max_keypoints=alignment.frame_max_keypoints,
+        frame_keypoint_grid=alignment.frame_keypoint_grid,
+        masked_alignment_used=alignment.masked_alignment_used,
+        original_reference_feature_count=alignment.original_reference_feature_count,
+        masked_reference_feature_count=alignment.masked_reference_feature_count,
     )
 
+
+
+
+def _load_projection_reference_frame(context: InspectionContext) -> np.ndarray | None:
+    try:
+        return load_image(resolve_storage_path(context.reference_image.image_path))
+    except Exception:
+        return None
 
 def _can_project_segments(
     *,

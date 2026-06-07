@@ -6,13 +6,15 @@ from uuid import UUID
 import numpy as np
 from infra.storage.file_storage import resolve_storage_path
 from modules.core.standards.reference_constants import (
-    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
-    SUPERPOINT_OFFLINE_MAX_SIDE,
+    SUPERPOINT_REFERENCE_GRID_COLS,
+    SUPERPOINT_REFERENCE_GRID_ROWS,
+    SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+    SUPERPOINT_REFERENCE_MAX_SIDE,
 )
 from modules.core.standards.reference_features import ImageFeatures
 
 _DESCRIPTOR_DIM = 256
-_FEATURES_PROFILE_VERSION = 2
+_FEATURES_PROFILE_VERSION = 5
 
 
 def features_rel_path(standard_id: UUID, image_id: UUID) -> str:
@@ -31,8 +33,11 @@ def save_features(features: ImageFeatures, rel_path: str) -> None:
         image_width=np.int32(features.image_width),
         image_height=np.int32(features.image_height),
         profile_version=np.int32(_FEATURES_PROFILE_VERSION),
-        max_side=np.int32(SUPERPOINT_OFFLINE_MAX_SIDE or 0),
-        max_keypoints=np.int32(SUPERPOINT_OFFLINE_MAX_KEYPOINTS),
+        feature_profile="reference",
+        max_side=np.int32(SUPERPOINT_REFERENCE_MAX_SIDE or 0),
+        max_keypoints=np.int32(SUPERPOINT_REFERENCE_MAX_KEYPOINTS),
+        selection_grid_rows=np.int32(SUPERPOINT_REFERENCE_GRID_ROWS),
+        selection_grid_cols=np.int32(SUPERPOINT_REFERENCE_GRID_COLS),
     )
 
 
@@ -108,11 +113,15 @@ def _metadata_is_current(data: np.lib.npyio.NpzFile) -> bool:
         profile_version = int(data["profile_version"])
         max_side = int(data["max_side"])
         max_keypoints = int(data["max_keypoints"])
+        selection_grid_rows = int(data["selection_grid_rows"])
+        selection_grid_cols = int(data["selection_grid_cols"])
     except Exception:
         return False
 
     return (
         profile_version == _FEATURES_PROFILE_VERSION
-        and max_side == int(SUPERPOINT_OFFLINE_MAX_SIDE or 0)
-        and max_keypoints == SUPERPOINT_OFFLINE_MAX_KEYPOINTS
+        and max_side == int(SUPERPOINT_REFERENCE_MAX_SIDE or 0)
+        and max_keypoints == SUPERPOINT_REFERENCE_MAX_KEYPOINTS
+        and selection_grid_rows == SUPERPOINT_REFERENCE_GRID_ROWS
+        and selection_grid_cols == SUPERPOINT_REFERENCE_GRID_COLS
     )

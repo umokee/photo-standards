@@ -41,6 +41,17 @@ class LocalProjectionData:
     frame_points: np.ndarray | None
     frame_size: tuple[int, int] | None = None
     frame: np.ndarray | None = None
+    reference_frame: np.ndarray | None = None
+    reference_feature_count: int | None = None
+    frame_feature_count: int | None = None
+    frame_max_keypoints: int | None = None
+    frame_keypoint_grid: tuple[int, int] | None = None
+    masked_alignment_used: bool = False
+    original_reference_feature_count: int | None = None
+    masked_reference_feature_count: int | None = None
+    original_reference_keypoints: np.ndarray | None = None
+    masked_reference_keypoints: np.ndarray | None = None
+    frame_keypoints: np.ndarray | None = None
 
     @property
     def has_local_points(self) -> bool:
@@ -70,6 +81,11 @@ class FrameAlignment:
     reason: str | None = None
     reference_feature_count: int | None = None
     frame_feature_count: int | None = None
+    frame_max_keypoints: int | None = None
+    frame_keypoint_grid: tuple[int, int] | None = None
+    masked_alignment_used: bool = False
+    original_reference_feature_count: int | None = None
+    masked_reference_feature_count: int | None = None
     reference_size: tuple[int, int] | None = None
     frame_size: tuple[int, int] | None = None
 
@@ -96,6 +112,18 @@ class FrameAlignment:
             "median_error": self.median_error,
             "reference_feature_count": self.reference_feature_count,
             "frame_feature_count": self.frame_feature_count,
+            "frame_max_keypoints": self.frame_max_keypoints,
+            "frame_keypoint_grid": (
+                {
+                    "rows": self.frame_keypoint_grid[0],
+                    "cols": self.frame_keypoint_grid[1],
+                }
+                if self.frame_keypoint_grid is not None
+                else None
+            ),
+            "masked_alignment_used": self.masked_alignment_used,
+            "original_reference_feature_count": self.original_reference_feature_count,
+            "masked_reference_feature_count": self.masked_reference_feature_count,
             "reference_size": (
                 {
                     "width": self.reference_size[0],
@@ -139,10 +167,78 @@ def project_polygon_adaptive(
     if local_projected:
         return local_projected
 
-    if data.global_homography is None:
+    if data.global_homography is not None:
+        return _project_polygon_global(polygon, data.global_homography)
+
+    return _project_polygon_scene_affine(polygon, data=data)
+
+
+def _project_polygon_scene_affine(
+    polygon: PolygonPoints,
+    *,
+    data: LocalProjectionData,
+) -> PolygonPoints:
+    reference_points = _as_points(data.reference_points)
+    frame_points = _as_points(data.frame_points)
+    polygon_array = _as_polygon_array(polygon)
+
+    if reference_points is None or frame_points is None or polygon_array is None:
+        return []
+    if len(reference_points) != len(frame_points) or len(reference_points) < 12:
         return []
 
-    return _project_polygon_global(polygon, data.global_homography)
+    try:
+        affine, inliers = cv2.estimateAffinePartial2D(
+            reference_points,
+            frame_points,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=_LOCAL_RANSAC_REPROJ_THRESHOLD * 1.2,
+            maxIters=1200,
+            confidence=0.995,
+            refineIters=10,
+        )
+    except cv2.error:
+        return []
+
+    if affine is None or inliers is None:
+        return []
+    if affine.shape != (2, 3) or not np.isfinite(affine).all():
+        return []
+
+    inlier_mask = inliers.reshape(-1).astype(bool)
+    inlier_count = int(inlier_mask.sum())
+    if inlier_count < 10:
+        return []
+
+    inlier_ratio = inlier_count / max(len(reference_points), 1)
+    if inlier_ratio < 0.42:
+        return []
+
+    if not _affine_scale_ok(affine):
+        return []
+
+    if not _reprojection_quality_ok(
+        reference_points=reference_points[inlier_mask],
+        frame_points=frame_points[inlier_mask],
+        transform=affine,
+        perspective=False,
+    ):
+        return []
+
+    projected = cv2.transform(
+        polygon_array.reshape(-1, 1, 2),
+        affine.astype(np.float32),
+    ).reshape(-1, 2)
+
+    if not _projected_polygon_ok(
+        source_polygon=polygon_array,
+        projected=projected,
+        data=data,
+        require_global_consistency=False,
+    ):
+        return []
+
+    return _to_points(projected)
 
 
 def alignment_message(alignment: FrameAlignment) -> str:

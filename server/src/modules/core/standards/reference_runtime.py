@@ -16,7 +16,7 @@ from app.observability import log_event
 from modules.core.standards.reference_constants import (
     LIGHTGLUE_TORCH_WEIGHTS_PATH,
     MAX_LIGHTGLUE_MATCH_PAIRS,
-    SUPERPOINT_REALTIME_MAX_KEYPOINTS,
+    SUPERPOINT_VIDEO_MAX_KEYPOINTS,
     SUPERPOINT_TORCH_WEIGHTS_PATH,
 )
 
@@ -38,7 +38,7 @@ class TorchReferenceRuntime:
         return f"torch_{self.device_kind}"
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=4)
 def get_reference_runtime(max_keypoints: int | None = None) -> TorchReferenceRuntime:
     requested_device = settings.ALIGNMENT_DEVICE
 
@@ -168,7 +168,7 @@ def warmup_reference_matching() -> None:
 
     try:
         runtime = get_reference_runtime(
-            max_keypoints=SUPERPOINT_REALTIME_MAX_KEYPOINTS
+            max_keypoints=SUPERPOINT_VIDEO_MAX_KEYPOINTS
         )
     except Exception as exc:
         log_event(

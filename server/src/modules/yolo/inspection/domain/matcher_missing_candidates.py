@@ -115,6 +115,7 @@ def append_missing_projection_candidate(
     item.update(
         {
             "bbox": _bbox_debug(bbox),
+            "polygon": _polygon_debug(polygon),
             "area_score_vs_expected_slot": _round_debug(
                 bbox_area_similarity(bbox, expected_item.bbox)
             ),
@@ -353,6 +354,12 @@ def _bbox_debug(bbox: BBox | None) -> dict[str, float] | None:
         "w": _round_debug(max(0.0, x2 - x1)),
         "h": _round_debug(max(0.0, y2 - y1)),
     }
+
+
+def _polygon_debug(polygon: list[list[float]] | None) -> list[list[float]] | None:
+    if polygon is None:
+        return None
+    return [[_round_debug(x), _round_debug(y)] for x, y in polygon]
 
 
 def _round_debug(value: float) -> float:

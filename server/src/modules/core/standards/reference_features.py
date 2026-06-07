@@ -8,8 +8,10 @@ import numpy as np
 import torch
 from modules.core.standards.reference_constants import (
     SUPERPOINT_INPUT_STRIDE,
-    SUPERPOINT_REALTIME_MAX_KEYPOINTS,
-    SUPERPOINT_REALTIME_MAX_SIDE,
+    SUPERPOINT_VIDEO_GRID_COLS,
+    SUPERPOINT_VIDEO_GRID_ROWS,
+    SUPERPOINT_VIDEO_MAX_KEYPOINTS,
+    SUPERPOINT_VIDEO_MAX_SIDE,
 )
 from modules.core.standards.reference_runtime import compute_superpoint_features
 
@@ -29,11 +31,17 @@ class ImageFeatures:
 def compute_features(
     image: np.ndarray,
     *,
-    max_side: int | None = SUPERPOINT_REALTIME_MAX_SIDE,
-    max_keypoints: int = SUPERPOINT_REALTIME_MAX_KEYPOINTS,
+    max_side: int | None = SUPERPOINT_VIDEO_MAX_SIDE,
+    max_keypoints: int = SUPERPOINT_VIDEO_MAX_KEYPOINTS,
+    selection_grid: tuple[int, int] | None = (
+        SUPERPOINT_VIDEO_GRID_ROWS,
+        SUPERPOINT_VIDEO_GRID_COLS,
+    ),
 ) -> ImageFeatures:
     h0, w0 = image.shape[:2]
     tensor, scale_x, scale_y = _preprocess(image, max_side)
+    processed_height = int(tensor.shape[-2])
+    processed_width = int(tensor.shape[-1])
 
     features = compute_superpoint_features(
         torch.from_numpy(tensor),
@@ -68,6 +76,8 @@ def compute_features(
 
     if scores is not None:
         scores = np.asarray(scores, dtype=np.float32).reshape(-1)
+        if scores.shape[0] != keypoints.shape[0]:
+            scores = None
 
     if keypoints.shape[0] != descriptors.shape[0]:
         raise RuntimeError(
@@ -75,13 +85,17 @@ def compute_features(
             f"{keypoints.shape} / {descriptors.shape}"
         )
 
-    if scores is not None and keypoints.shape[0] > max_keypoints:
-        top_idx = np.argpartition(-scores, max_keypoints)[:max_keypoints]
-        keypoints = keypoints[top_idx]
-        descriptors = descriptors[top_idx]
-    elif keypoints.shape[0] > max_keypoints:
-        keypoints = keypoints[:max_keypoints]
-        descriptors = descriptors[:max_keypoints]
+    selected_idx = _select_keypoint_indices(
+        keypoints=keypoints,
+        scores=scores,
+        max_keypoints=max_keypoints,
+        selection_grid=selection_grid,
+        image_width=processed_width,
+        image_height=processed_height,
+    )
+    if selected_idx is not None:
+        keypoints = keypoints[selected_idx]
+        descriptors = descriptors[selected_idx]
 
     if scale_x != 1.0 or scale_y != 1.0:
         keypoints[:, 0] *= scale_x
@@ -100,6 +114,78 @@ def load_image(path: Path) -> np.ndarray:
     if image is None:
         raise FileNotFoundError(f"Не удалось прочитать изображение: {path}")
     return image
+
+
+def _select_keypoint_indices(
+    *,
+    keypoints: np.ndarray,
+    scores: np.ndarray | None,
+    max_keypoints: int,
+    selection_grid: tuple[int, int] | None,
+    image_width: int,
+    image_height: int,
+) -> np.ndarray | None:
+    count = int(keypoints.shape[0])
+    if count <= max_keypoints:
+        return None
+
+    score_order = _score_order(scores=scores, count=count)
+    if selection_grid is None:
+        return score_order[:max_keypoints]
+
+    rows, cols = selection_grid
+    if rows <= 0 or cols <= 0 or image_width <= 0 or image_height <= 0:
+        return score_order[:max_keypoints]
+
+    cell_count = rows * cols
+    quota_per_cell = max(1, max_keypoints // cell_count)
+
+    xs = np.clip(keypoints[:, 0], 0.0, float(max(image_width - 1, 0)))
+    ys = np.clip(keypoints[:, 1], 0.0, float(max(image_height - 1, 0)))
+    cell_x = np.minimum((xs * cols / max(float(image_width), 1.0)).astype(np.int32), cols - 1)
+    cell_y = np.minimum((ys * rows / max(float(image_height), 1.0)).astype(np.int32), rows - 1)
+    cell_ids = cell_y * cols + cell_x
+
+    selected: list[int] = []
+    selected_mask = np.zeros(count, dtype=bool)
+
+    for cell_id in range(cell_count):
+        cell_indices = np.flatnonzero(cell_ids == cell_id)
+        if cell_indices.size == 0:
+            continue
+
+        if scores is not None:
+            safe_scores = np.nan_to_num(scores[cell_indices], nan=-np.inf)
+            ranked_cell = cell_indices[np.argsort(-safe_scores, kind="stable")]
+        else:
+            ranked_cell = cell_indices
+
+        take = ranked_cell[:quota_per_cell]
+        selected.extend(int(index) for index in take)
+        selected_mask[take] = True
+
+    if len(selected) < max_keypoints:
+        for index in score_order:
+            index_int = int(index)
+            if selected_mask[index_int]:
+                continue
+            selected.append(index_int)
+            selected_mask[index_int] = True
+            if len(selected) >= max_keypoints:
+                break
+
+    if not selected:
+        return score_order[:max_keypoints]
+
+    return np.asarray(selected[:max_keypoints], dtype=np.int64)
+
+
+def _score_order(*, scores: np.ndarray | None, count: int) -> np.ndarray:
+    if scores is None:
+        return np.arange(count, dtype=np.int64)
+
+    safe_scores = np.nan_to_num(scores, nan=-np.inf)
+    return np.argsort(-safe_scores, kind="stable").astype(np.int64, copy=False)
 
 
 def _round_to_stride(value: int) -> int:

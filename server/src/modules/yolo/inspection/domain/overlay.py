@@ -13,6 +13,7 @@ COLOR_OK = (93, 155, 58)
 COLOR_MISSING = (70, 70, 184)
 COLOR_EXTRA = (0, 122, 200)
 COLOR_UNMATCHED = (48, 154, 209)
+COLOR_UNCONFIRMED = (96, 96, 176)
 
 MIN_LABEL_FONT_SIZE = 16
 MAX_LABEL_FONT_SIZE = 34
@@ -92,23 +93,26 @@ def _render_polygon_overlay(
     label_padding = _label_padding(label_font_size)
 
     normal_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
+    unconfirmed_items: list[tuple[list[list[float]], tuple[int, int, int], str]] = []
 
     for match in matches:
-        polygon = _polygon_for_render(
+        render_item = _polygon_for_render(
             match,
             polygon_transform=polygon_transform,
             frame_shape=frame_shape,
         )
-        if polygon is None:
+        if render_item is None:
             continue
 
-        normal_items.append(
-            (
-                polygon,
-                _color_for_status(match.status),
-                _label_for_match(match),
+        polygon, unconfirmed = render_item
+        if unconfirmed:
+            unconfirmed_items.append(
+                (polygon, COLOR_UNCONFIRMED, _unconfirmed_label_for_match(match))
             )
-        )
+        else:
+            normal_items.append(
+                (polygon, _color_for_status(match.status), _label_for_match(match))
+            )
 
     if normal_items:
         _draw_normal_polygon_items(
@@ -119,15 +123,29 @@ def _render_polygon_overlay(
             label_padding=label_padding,
         )
 
+    if unconfirmed_items:
+        _draw_unconfirmed_polygon_items(
+            output,
+            unconfirmed_items,
+            thickness=max(2, thickness - 1),
+            label_font_size=label_font_size,
+            label_padding=label_padding,
+        )
+
 
 def _polygon_for_render(
     match: SegmentMatch,
     *,
     polygon_transform: np.ndarray | None,
     frame_shape: tuple[int, int],
-) -> list[list[float]] | None:
+) -> tuple[list[list[float]], bool] | None:
+    unconfirmed = False
     if match.status == "missing":
         polygon = match.expected_polygon
+        unconfirmed = _is_unconfirmed_missing_projection(match)
+        if polygon is None:
+            polygon = _debug_shadow_polygon(match)
+            unconfirmed = polygon is not None
     elif match.status == "ok":
         polygon = match.detected_polygon or match.expected_polygon
     elif match.status in ("extra", "unmatched"):
@@ -135,12 +153,15 @@ def _polygon_for_render(
     else:
         return None
 
-    return _prepare_polygon_for_render(
+    prepared = _prepare_polygon_for_render(
         polygon,
         polygon_transform=polygon_transform,
         frame_shape=frame_shape,
         relaxed_expected=match.status == "missing",
     )
+    if prepared is None:
+        return None
+    return prepared, unconfirmed
 
 
 def _prepare_polygon_for_render(
@@ -236,6 +257,70 @@ def _label_for_match(match: SegmentMatch) -> str:
         return f"{name} {int(match.confidence * 100)}%"
 
     return name
+
+
+def _unconfirmed_label_for_match(match: SegmentMatch) -> str:
+    name = match.name
+    if len(name) > 22:
+        name = name[:21] + "…"
+    return f"{name} · зона?"
+
+
+def _is_unconfirmed_missing_projection(match: SegmentMatch) -> bool:
+    if match.status != "missing" or not isinstance(match.debug, dict):
+        return False
+
+    safety = str(match.debug.get("missing_polygon_projection_safety") or "")
+    if safety == "unsafe_hidden":
+        return True
+
+    action = str(match.debug.get("missing_polygon_candidate_recommended_action") or "")
+    if action in {
+        "keep_hidden_or_require_more_evidence",
+        "prefer_uncertain_or_hidden_in_ui",
+        "render_as_unconfirmed_expected_zone",
+    }:
+        return True
+
+    projection = str(
+        match.debug.get("missing_polygon_projection")
+        or match.debug.get("projection")
+        or ""
+    )
+    return projection in {
+        "expected_slot",
+        "expected_slot_global_fallback",
+        "expected_slot_global_fallback_hidden_release",
+        "expected_slot_agreement_hidden_release",
+        "none",
+    }
+
+
+def _debug_shadow_polygon(match: SegmentMatch) -> list[list[float]] | None:
+    if not isinstance(match.debug, dict):
+        return None
+    if not match.debug.get("missing_polygon_hidden_shadow_available"):
+        return None
+    return _debug_polygon_points(match.debug.get("missing_polygon_hidden_shadow_polygon"))
+
+
+def _debug_polygon_points(value: object) -> list[list[float]] | None:
+    if not isinstance(value, list) or len(value) < 3:
+        return None
+
+    points: list[list[float]] = []
+    for point in value:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            return None
+        try:
+            x = float(point[0])
+            y = float(point[1])
+        except (TypeError, ValueError):
+            return None
+        if not np.isfinite([x, y]).all():
+            return None
+        points.append([x, y])
+    return points
 
 
 def _label_anchor(polygon: list[list[float]]) -> tuple[int, int]:
@@ -454,6 +539,34 @@ def _line_thickness(frame_shape: tuple[int, int]) -> int:
 
 def _label_padding(font_size: int) -> int:
     return max(4, round(font_size * 0.28))
+
+
+def _draw_unconfirmed_polygon_items(
+    output: np.ndarray,
+    items: list[tuple[list[list[float]], tuple[int, int, int], str]],
+    *,
+    thickness: int,
+    label_font_size: int,
+    label_padding: int,
+) -> None:
+    for polygon, color, label in items:
+        pts = np.array(polygon, dtype=np.int32).reshape(-1, 1, 2)
+        cv2.polylines(
+            output,
+            [pts],
+            isClosed=True,
+            color=color,
+            thickness=thickness,
+            lineType=cv2.LINE_AA,
+        )
+        _draw_label(
+            output,
+            label,
+            _label_anchor(polygon),
+            color,
+            font_size=label_font_size,
+            padding=label_padding,
+        )
 
 
 def _draw_normal_polygon_items(

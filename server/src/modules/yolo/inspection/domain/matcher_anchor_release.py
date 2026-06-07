@@ -210,6 +210,21 @@ def _try_missing_anchor_release(
         if bool(is_inlier)
     ]
     source_counts = trusted_anchor_source_counts(inlier_anchors)
+    matched_detection_anchor_count = sum(
+        1 for anchor in inlier_anchors if anchor.source == "matched_detection"
+    )
+    update_anchor_release_debug(
+        reject_debug,
+        matched_detection_anchor_count=matched_detection_anchor_count,
+        inlier_source_counts=source_counts,
+    )
+    if matched_detection_anchor_count <= 0:
+        return reject(
+            "anchor_release_rejected_no_matched_detection_anchor",
+            matched_detection_anchor_count=matched_detection_anchor_count,
+            inlier_source_counts=source_counts,
+        )
+
     weak_slot_anchor_count = sum(
         1 for anchor in inlier_anchors if anchor.source == "weak_local_global_slot_hint"
     )

@@ -9,8 +9,10 @@ from uuid import UUID
 import numpy as np
 from app.config import settings
 from modules.core.standards.reference_constants import (
-    SUPERPOINT_REALTIME_MAX_KEYPOINTS,
-    SUPERPOINT_REALTIME_MAX_SIDE,
+    SUPERPOINT_VIDEO_GRID_COLS,
+    SUPERPOINT_VIDEO_GRID_ROWS,
+    SUPERPOINT_VIDEO_MAX_KEYPOINTS,
+    SUPERPOINT_VIDEO_MAX_SIDE,
 )
 from modules.yolo.inspection.adapters.context import InspectionContext
 from modules.yolo.inspection.adapters.entities import build_matches_from_details
@@ -198,8 +200,12 @@ class RealtimeFrameProcessor:
                 expected_segments=self._expected_segments,
                 profile_enabled=profile_enabled,
                 executor=self._executor,
-                alignment_max_side=SUPERPOINT_REALTIME_MAX_SIDE,
-                alignment_max_keypoints=SUPERPOINT_REALTIME_MAX_KEYPOINTS,
+                alignment_max_side=SUPERPOINT_VIDEO_MAX_SIDE,
+                alignment_max_keypoints=SUPERPOINT_VIDEO_MAX_KEYPOINTS,
+                alignment_selection_grid=(
+                    SUPERPOINT_VIDEO_GRID_ROWS,
+                    SUPERPOINT_VIDEO_GRID_COLS,
+                ),
                 yolo_conf=settings.YOLO_REALTIME_CONF_THRESHOLD,
             )
 

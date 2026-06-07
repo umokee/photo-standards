@@ -12,9 +12,15 @@ from infra.storage.file_storage import resolve_storage_path
 from modules.core.standards.reference_constants import (
     MIN_INLIERS_FOR_ALIGNMENT,
     MIN_RAW_MATCHES,
-    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
     RANSAC_REPROJECTION_THRESHOLD,
-    SUPERPOINT_OFFLINE_MAX_SIDE,
+    SUPERPOINT_PHOTO_GRID_COLS,
+    SUPERPOINT_PHOTO_GRID_ROWS,
+    SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    SUPERPOINT_PHOTO_MAX_SIDE,
+    SUPERPOINT_REFERENCE_GRID_COLS,
+    SUPERPOINT_REFERENCE_GRID_ROWS,
+    SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+    SUPERPOINT_REFERENCE_MAX_SIDE,
 )
 from modules.core.standards.reference_features import (
     ImageFeatures,
@@ -27,6 +33,7 @@ from modules.yolo.inspection.domain.alignment import (
     AlignmentStatus,
     FrameAlignment,
 )
+from modules.yolo.inspection.domain.reference_masking import mask_reference_polygons
 
 logger = structlog.get_logger(__name__)
 
@@ -41,8 +48,12 @@ def align_frame(
     context: InspectionContext,
     frame: np.ndarray,
     config: AlignmentValidationConfig | None = None,
-    max_side: int | None = SUPERPOINT_OFFLINE_MAX_SIDE,
-    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    max_side: int | None = SUPERPOINT_PHOTO_MAX_SIDE,
+    max_keypoints: int = SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    selection_grid: tuple[int, int] | None = (
+        SUPERPOINT_PHOTO_GRID_ROWS,
+        SUPERPOINT_PHOTO_GRID_COLS,
+    ),
 ) -> FrameAlignment:
     config = config or AlignmentValidationConfig.industrial()
 
@@ -57,6 +68,10 @@ def align_frame(
                 frame,
                 max_side=max_side,
                 max_keypoints=max_keypoints,
+                selection_grid=selection_grid,
+            )
+            masked_reference_features = _try_masked_reference_features(
+                context=context,
             )
             torch_alignment = align_with_features(
                 context=context,
@@ -64,6 +79,9 @@ def align_frame(
                 frame_shape=frame.shape[:2],
                 config=config,
                 max_keypoints=max_keypoints,
+                selection_grid=selection_grid,
+                reference_features=masked_reference_features,
+                masked_alignment_used=masked_reference_features is not None,
             )
 
             if torch_alignment.is_success:
@@ -126,11 +144,19 @@ def align_with_features(
     frame_features: ImageFeatures,
     frame_shape: tuple[int, int],
     config: AlignmentValidationConfig,
-    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    max_keypoints: int = SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    selection_grid: tuple[int, int] | None = None,
+    reference_features: ImageFeatures | None = None,
+    masked_alignment_used: bool = False,
 ) -> FrameAlignment:
     frame_height, frame_width = frame_shape
+    active_reference_features = reference_features or context.reference_features
+    original_reference_feature_count = context.reference_features.count
+    masked_reference_feature_count = (
+        active_reference_features.count if masked_alignment_used else None
+    )
 
-    if context.reference_features.count < 10 or frame_features.count < 10:
+    if active_reference_features.count < 10 or frame_features.count < 10:
         reason = "not enough keypoints before matching"
         _log_alignment_failure(
             context=context,
@@ -149,10 +175,16 @@ def align_with_features(
             context=context,
             frame_features=frame_features,
             frame_shape=frame_shape,
+            frame_max_keypoints=max_keypoints,
+            frame_keypoint_grid=selection_grid,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     matched = match_features(
-        context.reference_features,
+        active_reference_features,
         frame_features,
         max_keypoints=max_keypoints,
     )
@@ -175,6 +207,12 @@ def align_with_features(
             context=context,
             frame_features=frame_features,
             frame_shape=frame_shape,
+            frame_max_keypoints=max_keypoints,
+            frame_keypoint_grid=selection_grid,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     reference_points, frame_points = matched
@@ -188,7 +226,13 @@ def align_with_features(
         reference_points=reference_points,
         frame_points=frame_points,
         config=config,
-        method="torch",
+        method="torch_masked" if masked_alignment_used else "torch",
+        max_keypoints=max_keypoints,
+        selection_grid=selection_grid,
+        reference_features=active_reference_features,
+        masked_alignment_used=masked_alignment_used,
+        original_reference_feature_count=original_reference_feature_count,
+        masked_reference_feature_count=masked_reference_feature_count,
     )
 
 
@@ -293,9 +337,16 @@ def _build_alignment_from_points(
     frame_points: np.ndarray,
     config: AlignmentValidationConfig,
     method: str,
+    max_keypoints: int | None = None,
+    selection_grid: tuple[int, int] | None = None,
     min_raw_matches: int = MIN_RAW_MATCHES,
     min_inliers: int = MIN_INLIERS_FOR_ALIGNMENT,
+    reference_features: ImageFeatures | None = None,
+    masked_alignment_used: bool = False,
+    original_reference_feature_count: int | None = None,
+    masked_reference_feature_count: int | None = None,
 ) -> FrameAlignment:
+    active_reference_features = reference_features or context.reference_features
     raw_match_count = int(reference_points.shape[0])
 
     if raw_match_count < min_raw_matches:
@@ -321,6 +372,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     homography, mask, ransac_threshold = _find_best_homography(
@@ -351,6 +408,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     if homography.shape != (3, 3) or not np.isfinite(homography).all():
@@ -376,6 +439,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     inlier_mask = mask.reshape(-1).astype(bool)
@@ -407,6 +476,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     reference_inliers = reference_points[inlier_mask]
@@ -414,8 +489,8 @@ def _build_alignment_from_points(
 
     inliers_ok, inliers_reason = validate_inliers_distribution(
         reference_inliers,
-        width=context.reference_features.image_width,
-        height=context.reference_features.image_height,
+        width=active_reference_features.image_width,
+        height=active_reference_features.image_height,
         config=config,
     )
     if not inliers_ok:
@@ -443,6 +518,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     reproj_ok, median_error, reproj_reason = validate_reprojection_error(
@@ -478,12 +559,18 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     quad_ok, quad_reason = validate_projected_quad(
         homography,
-        reference_width=context.reference_features.image_width,
-        reference_height=context.reference_features.image_height,
+        reference_width=active_reference_features.image_width,
+        reference_height=active_reference_features.image_height,
         frame_width=frame_width,
         frame_height=frame_height,
         config=config,
@@ -515,6 +602,12 @@ def _build_alignment_from_points(
             frame_shape=frame_shape,
             reference_matches=reference_points,
             frame_matches=frame_points,
+            frame_keypoint_grid=selection_grid,
+            frame_max_keypoints=max_keypoints,
+            reference_features=active_reference_features,
+            masked_alignment_used=masked_alignment_used,
+            original_reference_feature_count=original_reference_feature_count,
+            masked_reference_feature_count=masked_reference_feature_count,
         )
 
     return FrameAlignment(
@@ -530,11 +623,16 @@ def _build_alignment_from_points(
         method=method,
         stage="success",
         reason=None,
-        reference_feature_count=context.reference_features.count,
+        reference_feature_count=active_reference_features.count,
         frame_feature_count=frame_features.count,
+        frame_max_keypoints=max_keypoints,
+        frame_keypoint_grid=selection_grid,
+        masked_alignment_used=masked_alignment_used,
+        original_reference_feature_count=original_reference_feature_count,
+        masked_reference_feature_count=masked_reference_feature_count,
         reference_size=(
-            context.reference_features.image_width,
-            context.reference_features.image_height,
+            active_reference_features.image_width,
+            active_reference_features.image_height,
         ),
         frame_size=(frame_width, frame_height),
     )
@@ -605,17 +703,27 @@ def _failed(
     frame_features: ImageFeatures | None = None,
     frame_shape: tuple[int, int] | None = None,
     frame_feature_count: int | None = None,
+    frame_max_keypoints: int | None = None,
+    frame_keypoint_grid: tuple[int, int] | None = None,
     reference_matches: np.ndarray | None = None,
     frame_matches: np.ndarray | None = None,
+    reference_features: ImageFeatures | None = None,
+    masked_alignment_used: bool = False,
+    original_reference_feature_count: int | None = None,
+    masked_reference_feature_count: int | None = None,
 ) -> FrameAlignment:
     reference_size = None
     reference_feature_count = None
 
-    if context is not None:
-        reference_feature_count = context.reference_features.count
+    active_reference_features = reference_features
+    if active_reference_features is None and context is not None:
+        active_reference_features = context.reference_features
+
+    if active_reference_features is not None:
+        reference_feature_count = active_reference_features.count
         reference_size = (
-            context.reference_features.image_width,
-            context.reference_features.image_height,
+            active_reference_features.image_width,
+            active_reference_features.image_height,
         )
 
     if frame_features is not None:
@@ -640,6 +748,11 @@ def _failed(
         reason=reason,
         reference_feature_count=reference_feature_count,
         frame_feature_count=frame_feature_count,
+        frame_max_keypoints=frame_max_keypoints,
+        frame_keypoint_grid=frame_keypoint_grid,
+        masked_alignment_used=masked_alignment_used,
+        original_reference_feature_count=original_reference_feature_count,
+        masked_reference_feature_count=masked_reference_feature_count,
         reference_size=reference_size,
         frame_size=frame_size,
     )
@@ -657,6 +770,55 @@ def _as_match_points(points: np.ndarray | None) -> np.ndarray | None:
         return None
 
     return array
+
+
+def _try_masked_reference_features(
+    *,
+    context: InspectionContext,
+) -> ImageFeatures | None:
+    polygons = _selected_reference_polygons(context)
+    if not polygons:
+        return None
+
+    try:
+        reference_image = _load_reference_image(context.reference_image.image_path)
+        masked_reference = mask_reference_polygons(reference_image, polygons)
+        return compute_features(
+            masked_reference,
+            max_side=SUPERPOINT_REFERENCE_MAX_SIDE,
+            max_keypoints=SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+            selection_grid=(
+                SUPERPOINT_REFERENCE_GRID_ROWS,
+                SUPERPOINT_REFERENCE_GRID_COLS,
+            ),
+        )
+    except Exception as exc:
+        throttled_log(
+            logger,
+            "warning",
+            "inspection.alignment.masked_reference_failed",
+            key=f"masked-reference:{context.reference_image.id}",
+            standard_id=context.standard.id,
+            reference_image_id=context.reference_image.id,
+            error_type=type(exc).__name__,
+            reason=str(exc),
+        )
+        return None
+
+
+def _selected_reference_polygons(context: InspectionContext) -> list[list[list[float]]]:
+    selected_ids = {item.id for item in context.selected_classes}
+    if not selected_ids:
+        return []
+
+    polygons: list[list[list[float]]] = []
+    for annotation in context.reference_image.annotations:
+        if annotation.segment_class_id not in selected_ids:
+            continue
+        for polygon in annotation.points or []:
+            if len(polygon) >= 3:
+                polygons.append(polygon)
+    return polygons
 
 
 @lru_cache(maxsize=128)
@@ -684,6 +846,7 @@ def _log_alignment_failure(
     median_error: float | None = None,
     selected_ransac_reprojection_threshold: float | None = None,
     reason: str | None = None,
+    frame_max_keypoints: int | None = None,
 ) -> None:
     frame_height, frame_width = frame_shape
 
@@ -704,6 +867,7 @@ def _log_alignment_failure(
             context.reference_features.image_height,
         ),
         frame_feature_count=frame_features.count,
+        frame_max_keypoints=frame_max_keypoints,
         raw_match_count=raw_match_count,
         raw_match_threshold=MIN_RAW_MATCHES,
         inlier_count=inlier_count,
@@ -824,7 +988,7 @@ def match_features(
     reference: ImageFeatures,
     frame: ImageFeatures,
     *,
-    max_keypoints: int = SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+    max_keypoints: int = SUPERPOINT_PHOTO_MAX_KEYPOINTS,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     if reference.count < 10 or frame.count < 10:
         return None

@@ -16,7 +16,23 @@ from uuid import uuid4
 import cv2
 import numpy as np
 from app.config import settings
+from modules.core.standards.reference_constants import (
+    SUPERPOINT_PHOTO_GRID_COLS,
+    SUPERPOINT_PHOTO_GRID_ROWS,
+    SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+    SUPERPOINT_PHOTO_MAX_SIDE,
+    SUPERPOINT_REFERENCE_GRID_COLS,
+    SUPERPOINT_REFERENCE_GRID_ROWS,
+    SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+    SUPERPOINT_REFERENCE_MAX_SIDE,
+)
+from modules.core.standards.reference_features import compute_features
+from modules.yolo.inspection.adapters.features import (
+    AlignmentValidationConfig,
+    align_with_features,
+)
 from modules.yolo.inspection.domain.matcher_thresholds import thresholds as _thresholds
+from modules.yolo.inspection.domain.reference_masking import mask_reference_polygons
 from shapely.errors import GEOSException
 from shapely.geometry import Polygon
 from shapely.validation import make_valid
@@ -45,7 +61,8 @@ _ensure_optional_storage_import()
 
 from modules.yolo.inspection.domain.alignment import LocalProjectionData, project_polygon
 from modules.yolo.inspection.domain.matcher import match_segments
-from modules.yolo.inspection.domain.types import ExpectedSegment, YoloDetection
+from modules.yolo.inspection.domain.polygon_transfer_v2 import transfer_missing_segments_v2
+from modules.yolo.inspection.domain.types import ExpectedSegment, SegmentMatch, YoloDetection
 
 CanvasSize = tuple[int, int]
 Point = tuple[float, float]
@@ -196,6 +213,70 @@ class SyntheticObjectMetric:
     major_length_ratio: float | None
     closer_to_distractor: bool
     notes: list[str]
+    v2_scene_diag_version: str | None = None
+    v2_scene_match_total: int = 0
+    v2_scene_match_cells: int = 0
+    v2_scene_match_span_x: float | None = None
+    v2_scene_match_span_y: float | None = None
+    v2_scene_match_hull_fraction: float | None = None
+    v2_scene_match_top_count: int = 0
+    v2_scene_match_bottom_count: int = 0
+    v2_scene_match_left_count: int = 0
+    v2_scene_match_right_count: int = 0
+    v2_scene_match_max_cell_fraction: float | None = None
+    v2_scene_model_source: str | None = None
+    v2_scene_model_inlier_total: int = 0
+    v2_scene_model_inlier_cells: int = 0
+    v2_scene_model_inlier_span_x: float | None = None
+    v2_scene_model_inlier_span_y: float | None = None
+    v2_scene_model_inlier_hull_fraction: float | None = None
+    v2_scene_model_inlier_top_count: int = 0
+    v2_scene_model_inlier_bottom_count: int = 0
+    v2_scene_model_inlier_left_count: int = 0
+    v2_scene_model_inlier_right_count: int = 0
+    v2_scene_model_inlier_max_cell_fraction: float | None = None
+    v2_scene_model_p90_error: float | None = None
+    v2_candidate_count: int = 0
+    v2_candidate_crop_count: int = 0
+    v2_candidate_ecc_attempts: int = 0
+    v2_candidate_ecc_successes: int = 0
+    v2_candidate_score: float | None = None
+    v2_candidate_selection_score: float | None = None
+    v2_candidate_crop_mode: str | None = None
+    v2_candidate_start_mode: str | None = None
+    v2_shift_factor: float | None = None
+    v2_center_factor: float | None = None
+    v2_ecc_score: float | None = None
+    v2_phase_response: float | None = None
+    v2_ring_fraction: float | None = None
+    v2_max_other_overlap: float | None = None
+    reference_keypoints_total: int = 0
+    frame_keypoints_total: int = 0
+    frame_max_keypoints: int = 0
+    frame_keypoint_grid_rows: int = 0
+    frame_keypoint_grid_cols: int = 0
+    lightglue_reference_matches_total: int = 0
+    lightglue_frame_matches_total: int = 0
+    masked_alignment_used: bool = False
+    original_reference_keypoints_total: int = 0
+    masked_reference_keypoints_total: int = 0
+    masked_lightglue_matches_total: int = 0
+    slot_local_lightglue_attempted: bool = False
+    slot_local_lightglue_accepted: bool = False
+    slot_local_lightglue_reject_reason: str | None = None
+    slot_local_lightglue_mode: str | None = None
+    slot_local_lightglue_reference_keypoints: int = 0
+    slot_local_lightglue_frame_keypoints: int = 0
+    slot_local_lightglue_max_keypoints: int = 0
+    slot_local_lightglue_grid_rows: int = 0
+    slot_local_lightglue_grid_cols: int = 0
+    slot_local_lightglue_raw_matches: int = 0
+    slot_local_lightglue_inliers: int = 0
+    slot_local_lightglue_inlier_ratio: float | None = None
+    slot_local_lightglue_median_error: float | None = None
+    slot_local_lightglue_area_score: float | None = None
+    slot_local_lightglue_center_factor: float | None = None
+    slot_local_lightglue_max_other_overlap: float | None = None
     hidden_shadow_available: bool = False
     hidden_shadow_projection: str | None = None
     hidden_shadow_fallback_source: str | None = None
@@ -366,11 +447,23 @@ class SyntheticResult:
     gt_distance_px: float
     image_path: str
     notes: list[str]
+    keypoints_image_path: str | None = None
     scenario_kind: str = "single"
     object_count: int = 1
     object_shapes: list[str] | None = None
     object_failures: int = 0
     object_metrics: list[dict[str, Any]] | None = None
+    reference_keypoints_total: int = 0
+    frame_keypoints_total: int = 0
+    frame_max_keypoints: int = 0
+    frame_keypoint_grid_rows: int = 0
+    frame_keypoint_grid_cols: int = 0
+    lightglue_reference_matches_total: int = 0
+    lightglue_frame_matches_total: int = 0
+    masked_alignment_used: bool = False
+    original_reference_keypoints_total: int = 0
+    masked_reference_keypoints_total: int = 0
+    masked_lightglue_matches_total: int = 0
 
 
 @dataclass(slots=True)
@@ -445,6 +538,13 @@ def _run_lightglue_synthetic_suite(*, args: argparse.Namespace, output_dir: Path
             index=index,
             scene=scene,
             images_dir=images_dir,
+            feature_source=args.feature_source,
+            projection_pipeline=args.projection_pipeline,
+            synthetic_yolo_anchor_pose=args.synthetic_yolo_anchor_pose,
+            synthetic_yolo_anchor_noise_px=args.synthetic_yolo_anchor_noise_px,
+            synthetic_yolo_anchor_dropout=args.synthetic_yolo_anchor_dropout,
+            synthetic_yolo_anchor_min_anchors=args.synthetic_yolo_anchor_min_anchors,
+            synthetic_yolo_anchor_ransac_px=args.synthetic_yolo_anchor_ransac_px,
         )
         results.append(result)
 
@@ -466,10 +566,24 @@ def _run_lightglue_synthetic_suite(*, args: argparse.Namespace, output_dir: Path
                 index=start_index + offset,
                 scene=scene,
                 images_dir=images_dir,
+                feature_source=args.feature_source,
+                projection_pipeline=args.projection_pipeline,
+                synthetic_yolo_anchor_pose=args.synthetic_yolo_anchor_pose,
+                synthetic_yolo_anchor_noise_px=args.synthetic_yolo_anchor_noise_px,
+                synthetic_yolo_anchor_dropout=args.synthetic_yolo_anchor_dropout,
+                synthetic_yolo_anchor_min_anchors=args.synthetic_yolo_anchor_min_anchors,
+                synthetic_yolo_anchor_ransac_px=args.synthetic_yolo_anchor_ransac_px,
             )
             results.append(result)
 
     summary = _build_summary(results)
+    summary["feature_source"] = args.feature_source
+    summary["projection_pipeline"] = args.projection_pipeline
+    summary["synthetic_yolo_anchor_pose"] = bool(args.synthetic_yolo_anchor_pose)
+    summary["synthetic_yolo_anchor_noise_px"] = float(args.synthetic_yolo_anchor_noise_px)
+    summary["synthetic_yolo_anchor_dropout"] = float(args.synthetic_yolo_anchor_dropout)
+    summary["synthetic_yolo_anchor_min_anchors"] = int(args.synthetic_yolo_anchor_min_anchors)
+    summary["synthetic_yolo_anchor_ransac_px"] = float(args.synthetic_yolo_anchor_ransac_px)
     _write_json(output_dir / "summary.json", summary)
     _write_json(output_dir / "results.json", _serialize_results(results))
     _write_html_report(
@@ -482,7 +596,10 @@ def _run_lightglue_synthetic_suite(*, args: argparse.Namespace, output_dir: Path
         "synthetic_context_test "
         f"cases={summary['total']} single={summary['single_cases']} multi={summary['multi_cases']} "
         f"objects={summary['total_expected_objects']} passed={summary['passed']} failed={summary['failed']} "
-        f"pass_rate={summary['pass_rate']:.1f}% safety={summary['safety_rate']:.1f}%"
+        f"pass_rate={summary['pass_rate']:.1f}% safety={summary['safety_rate']:.1f}% "
+        f"feature_source={summary.get('feature_source', 'real')} "
+        f"projection_pipeline={summary.get('projection_pipeline', 'legacy')} "
+        f"synthetic_yolo_anchor_pose={summary.get('synthetic_yolo_anchor_pose', False)}"
     )
     print(f"report={output_dir / 'report.html'}")
     print(f"summary={output_dir / 'summary.json'}")
@@ -493,8 +610,9 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Synthetic visual stress test for context-ring missing polygon transfer. "
-            "Runtime YOLO is not run; report-only detector fixtures estimate where "
-            "YOLO confirmation could help or create false-positive risk."
+            "By default the generated images are processed by the real "
+            "SuperPoint/LightGlue feature extractor and matcher before match_segments. "
+            "Runtime YOLO is not run unless --real-yolo-synthetic is used."
         )
     )
     parser.add_argument(
@@ -530,6 +648,61 @@ def _parse_args() -> argparse.Namespace:
         "--fail-on-fail",
         action="store_true",
         help="Return exit code 1 when at least one synthetic case fails.",
+    )
+    parser.add_argument(
+        "--feature-source",
+        choices=("real",),
+        default="real",
+        help=(
+            "Only real mode is supported here: generated images are passed through "
+            "the real SuperPoint/LightGlue feature extraction and matching pipeline "
+            "before calling match_segments. The old generated-pair geometry fixture "
+            "was intentionally removed from this end-to-end script."
+        ),
+    )
+    parser.add_argument(
+        "--projection-pipeline",
+        choices=("legacy", "v2"),
+        default="legacy",
+        help=(
+            "legacy = current matcher/fallback stack; v2 = experimental "
+            "registration-first context-only polygon transfer without YOLO."
+        ),
+    )
+    parser.add_argument(
+        "--synthetic-yolo-anchor-pose",
+        action="store_true",
+        help=(
+            "Synthetic V4 oracle for the next real pipeline: for every missing "
+            "object in a multi-object scene, generate noisy YOLO-like detections "
+            "from the other objects, estimate product pose with RANSAC, and "
+            "project the current missing slot from that pose. This tests the "
+            "object-anchor pose idea without training YOLO in the loop."
+        ),
+    )
+    parser.add_argument(
+        "--synthetic-yolo-anchor-noise-px",
+        type=float,
+        default=1.5,
+        help="Gaussian corner jitter applied to synthetic YOLO anchor polygons.",
+    )
+    parser.add_argument(
+        "--synthetic-yolo-anchor-dropout",
+        type=float,
+        default=0.06,
+        help="Probability that a visible synthetic YOLO anchor detection is missing.",
+    )
+    parser.add_argument(
+        "--synthetic-yolo-anchor-min-anchors",
+        type=int,
+        default=2,
+        help="Minimum number of other visible object anchors required to trust V4 pose.",
+    )
+    parser.add_argument(
+        "--synthetic-yolo-anchor-ransac-px",
+        type=float,
+        default=6.0,
+        help="RANSAC reprojection threshold for synthetic YOLO-anchor pose.",
     )
     parser.add_argument(
         "--real-yolo-synthetic",
@@ -1235,12 +1408,511 @@ def _build_multi_scene(scenario: SyntheticMultiScenario) -> _SyntheticMultiScene
     )
 
 
+def _build_case_projection_data(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+    *,
+    feature_source: str,
+) -> LocalProjectionData:
+    if feature_source != "real":
+        raise ValueError(
+            "synthetic_context_test now supports only feature_source='real'. "
+            "Generated fake match-pairs were removed from this end-to-end test."
+        )
+
+    return _real_feature_projection_data(scene)
+
+
+def _match_synthetic_expected_segments(
+    expected: list[ExpectedSegment],
+    *,
+    projection_data: LocalProjectionData,
+    frame_size: tuple[int, int],
+    projection_pipeline: str,
+) -> list[SegmentMatch]:
+    if projection_pipeline == "v2":
+        return transfer_missing_segments_v2(
+            expected,
+            projection_data=projection_data,
+            frame_size=frame_size,
+        )
+
+    return match_segments(
+        expected,
+        [],
+        projection_data.global_homography,
+        frame_size=frame_size,
+        projection_data=projection_data,
+    )
+
+
+def _scene_reference_polygons(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+) -> list[PolygonPoints]:
+    if isinstance(scene, _SyntheticMultiScene):
+        return [obj.reference_polygon for obj in scene.objects]
+    return [scene.reference_polygon]
+
+
+def _real_feature_projection_data(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+) -> LocalProjectionData:
+    return _real_feature_projection_data_for_target(scene, scene.target_image)
+
+
+def _real_feature_projection_data_for_target(
+    scene: _SyntheticScene | _SyntheticMultiScene,
+    target_image: np.ndarray,
+) -> LocalProjectionData:
+    reference_selection_grid = (
+        SUPERPOINT_REFERENCE_GRID_ROWS,
+        SUPERPOINT_REFERENCE_GRID_COLS,
+    )
+    photo_selection_grid = (SUPERPOINT_PHOTO_GRID_ROWS, SUPERPOINT_PHOTO_GRID_COLS)
+    reference_polygons = _scene_reference_polygons(scene)
+    masked_reference_image = mask_reference_polygons(
+        scene.reference_image,
+        reference_polygons,
+    )
+    original_reference_features = compute_features(
+        scene.reference_image,
+        max_side=SUPERPOINT_REFERENCE_MAX_SIDE,
+        max_keypoints=SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+        selection_grid=reference_selection_grid,
+    )
+    masked_reference_features = compute_features(
+        masked_reference_image,
+        max_side=SUPERPOINT_REFERENCE_MAX_SIDE,
+        max_keypoints=SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+        selection_grid=reference_selection_grid,
+    )
+    frame_features = compute_features(
+        target_image,
+        max_side=SUPERPOINT_PHOTO_MAX_SIDE,
+        max_keypoints=SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+        selection_grid=photo_selection_grid,
+    )
+    context = types.SimpleNamespace(
+        standard=types.SimpleNamespace(id="synthetic-standard"),
+        reference_image=types.SimpleNamespace(id="synthetic-reference"),
+        reference_features=original_reference_features,
+        selected_classes=[],
+    )
+    alignment = align_with_features(
+        context=context,
+        frame_features=frame_features,
+        frame_shape=target_image.shape[:2],
+        config=AlignmentValidationConfig.industrial(),
+        max_keypoints=SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+        selection_grid=photo_selection_grid,
+        reference_features=masked_reference_features,
+        masked_alignment_used=True,
+    )
+    return LocalProjectionData(
+        global_homography=alignment.homography if alignment.is_success else None,
+        reference_points=alignment.reference_matches,
+        frame_points=alignment.frame_matches,
+        frame_size=(target_image.shape[1], target_image.shape[0]),
+        frame=target_image,
+        reference_frame=scene.reference_image,
+        reference_feature_count=masked_reference_features.count,
+        frame_feature_count=frame_features.count,
+        frame_max_keypoints=SUPERPOINT_PHOTO_MAX_KEYPOINTS,
+        frame_keypoint_grid=photo_selection_grid,
+        masked_alignment_used=True,
+        original_reference_feature_count=original_reference_features.count,
+        masked_reference_feature_count=masked_reference_features.count,
+        original_reference_keypoints=original_reference_features.keypoints,
+        masked_reference_keypoints=masked_reference_features.keypoints,
+        frame_keypoints=frame_features.keypoints,
+    )
+
+
+
+def _match_synthetic_expected_segments_with_yolo_anchor_pose(
+    expected: list[ExpectedSegment],
+    *,
+    annotation_to_object: dict[Any, _SyntheticObjectInstance],
+    scene: _SyntheticMultiScene,
+    noise_px: float,
+    dropout: float,
+    min_anchor_objects: int,
+    ransac_px: float,
+) -> list[SegmentMatch]:
+    """Project every missing slot from other synthetic YOLO object anchors.
+
+    This deliberately does not match the missing object's local crop.  For each
+    expected object we pretend that YOLO detected the other visible objects in
+    the product, estimate a planar pose with RANSAC, and then project the current
+    reference slot.  It is an oracle-style synthetic bridge for the next real
+    pipeline where YOLO/segmentation detections become pose anchors.
+    """
+
+    matches: list[SegmentMatch] = []
+    dropout = min(max(float(dropout), 0.0), 0.95)
+    min_anchor_objects = max(1, int(min_anchor_objects))
+    ransac_px = max(1.0, float(ransac_px))
+    noise_px = max(0.0, float(noise_px))
+
+    for item in expected:
+        target_obj = annotation_to_object[item.annotation_id]
+        rng = np.random.default_rng(
+            int(scene.scenario.seed) * 104729 + int(target_obj.index) * 1009 + 17
+        )
+        anchor_objects: list[_SyntheticObjectInstance] = []
+        for anchor in scene.objects:
+            if anchor.index == target_obj.index:
+                continue
+            if dropout > 0.0 and float(rng.random()) < dropout:
+                continue
+            anchor_objects.append(anchor)
+
+        if len(anchor_objects) < min_anchor_objects:
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="too_few_anchor_objects",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                    ),
+                )
+            )
+            continue
+
+        reference_points, frame_points = _synthetic_yolo_anchor_pose_points(
+            anchor_objects,
+            noise_px=noise_px,
+            rng=rng,
+        )
+        if len(reference_points) < 4 or len(frame_points) < 4:
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="too_few_anchor_points",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                        point_count=len(reference_points),
+                    ),
+                )
+            )
+            continue
+
+        pose = _estimate_synthetic_yolo_anchor_pose(
+            reference_points,
+            frame_points,
+            ransac_px=ransac_px,
+        )
+        if pose is None:
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="pose_estimation_failed",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                        point_count=len(reference_points),
+                    ),
+                )
+            )
+            continue
+
+        matrix, model_source, inliers, median_error = pose
+        inlier_ratio = float(inliers / max(1, len(reference_points)))
+        if inliers < max(8, min_anchor_objects * 4):
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="too_few_pose_inliers",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                        point_count=len(reference_points),
+                        inliers=inliers,
+                        inlier_ratio=inlier_ratio,
+                        median_error=median_error,
+                        model_source=model_source,
+                    ),
+                )
+            )
+            continue
+        if inlier_ratio < 0.50:
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="low_pose_inlier_ratio",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                        point_count=len(reference_points),
+                        inliers=inliers,
+                        inlier_ratio=inlier_ratio,
+                        median_error=median_error,
+                        model_source=model_source,
+                    ),
+                )
+            )
+            continue
+        if not math.isfinite(median_error) or median_error > max(5.0, ransac_px * 0.95):
+            matches.append(
+                _synthetic_yolo_anchor_pose_match(
+                    item,
+                    status="missing",
+                    polygon=None,
+                    debug=_synthetic_yolo_anchor_pose_debug(
+                        accepted=False,
+                        reason="pose_error_too_large",
+                        anchor_count=len(anchor_objects),
+                        min_anchor_count=min_anchor_objects,
+                        point_count=len(reference_points),
+                        inliers=inliers,
+                        inlier_ratio=inlier_ratio,
+                        median_error=median_error,
+                        model_source=model_source,
+                    ),
+                )
+            )
+            continue
+
+        projected_polygon = project_polygon(item.reference_polygon, matrix)
+        matches.append(
+            _synthetic_yolo_anchor_pose_match(
+                item,
+                status="missing",
+                polygon=projected_polygon,
+                debug=_synthetic_yolo_anchor_pose_debug(
+                    accepted=True,
+                    reason="v4_yolo_anchor_pose_confirmed",
+                    anchor_count=len(anchor_objects),
+                    min_anchor_count=min_anchor_objects,
+                    point_count=len(reference_points),
+                    inliers=inliers,
+                    inlier_ratio=inlier_ratio,
+                    median_error=median_error,
+                    model_source=model_source,
+                ),
+            )
+        )
+
+    return matches
+
+
+def _synthetic_yolo_anchor_pose_points(
+    anchor_objects: Sequence[_SyntheticObjectInstance],
+    *,
+    noise_px: float,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    reference_points: list[list[float]] = []
+    frame_points: list[list[float]] = []
+    for anchor in anchor_objects:
+        ref_poly = np.asarray(anchor.reference_polygon, dtype=np.float32).reshape(-1, 2)
+        frame_poly = np.asarray(anchor.ground_truth_polygon, dtype=np.float32).reshape(-1, 2)
+        if len(ref_poly) != len(frame_poly) or len(ref_poly) < 3:
+            continue
+        if noise_px > 0:
+            jitter = rng.normal(0.0, noise_px, size=frame_poly.shape).astype(np.float32)
+            frame_poly = frame_poly + jitter
+        ref_center = np.mean(ref_poly, axis=0, keepdims=True)
+        frame_center = np.mean(frame_poly, axis=0, keepdims=True)
+        ref_augmented = np.concatenate([ref_poly, ref_center], axis=0)
+        frame_augmented = np.concatenate([frame_poly, frame_center], axis=0)
+        reference_points.extend(ref_augmented.astype(float).tolist())
+        frame_points.extend(frame_augmented.astype(float).tolist())
+    if not reference_points:
+        return np.empty((0, 2), dtype=np.float32), np.empty((0, 2), dtype=np.float32)
+    return (
+        np.asarray(reference_points, dtype=np.float32).reshape(-1, 2),
+        np.asarray(frame_points, dtype=np.float32).reshape(-1, 2),
+    )
+
+
+def _estimate_synthetic_yolo_anchor_pose(
+    reference_points: np.ndarray,
+    frame_points: np.ndarray,
+    *,
+    ransac_px: float,
+) -> tuple[np.ndarray, str, int, float] | None:
+    if len(reference_points) < 4 or len(frame_points) < 4:
+        return None
+
+    homography, homography_mask = cv2.findHomography(
+        reference_points,
+        frame_points,
+        cv2.RANSAC,
+        ransac_px,
+        maxIters=2000,
+        confidence=0.995,
+    )
+    if homography is not None and homography_mask is not None:
+        homography = np.asarray(homography, dtype=np.float32).reshape(3, 3)
+        if np.all(np.isfinite(homography)) and abs(float(homography[2, 2])) > 1e-6:
+            homography = homography / float(homography[2, 2])
+            inlier_mask = np.asarray(homography_mask, dtype=bool).reshape(-1)
+            inliers = int(np.count_nonzero(inlier_mask))
+            median_error = _pose_reprojection_median_error(
+                homography,
+                reference_points,
+                frame_points,
+                inlier_mask,
+            )
+            return homography, "homography", inliers, median_error
+
+    affine, affine_mask = cv2.estimateAffinePartial2D(
+        reference_points,
+        frame_points,
+        method=cv2.RANSAC,
+        ransacReprojThreshold=ransac_px,
+        maxIters=2000,
+        confidence=0.995,
+        refineIters=20,
+    )
+    if affine is None or affine_mask is None:
+        return None
+    affine = np.asarray(affine, dtype=np.float32).reshape(2, 3)
+    if not np.all(np.isfinite(affine)):
+        return None
+    matrix = np.eye(3, dtype=np.float32)
+    matrix[:2, :] = affine
+    inlier_mask = np.asarray(affine_mask, dtype=bool).reshape(-1)
+    inliers = int(np.count_nonzero(inlier_mask))
+    median_error = _pose_reprojection_median_error(
+        matrix,
+        reference_points,
+        frame_points,
+        inlier_mask,
+    )
+    return matrix, "similarity_affine", inliers, median_error
+
+
+def _pose_reprojection_median_error(
+    matrix: np.ndarray,
+    reference_points: np.ndarray,
+    frame_points: np.ndarray,
+    inlier_mask: np.ndarray,
+) -> float:
+    if len(reference_points) == 0:
+        return float("inf")
+    points_h = np.concatenate(
+        [
+            reference_points.astype(np.float32),
+            np.ones((len(reference_points), 1), dtype=np.float32),
+        ],
+        axis=1,
+    )
+    projected = (np.asarray(matrix, dtype=np.float32).reshape(3, 3) @ points_h.T).T
+    denom = projected[:, 2:3]
+    finite = np.abs(denom[:, 0]) > 1e-6
+    projected_xy = np.empty_like(reference_points, dtype=np.float32)
+    projected_xy[:] = np.nan
+    projected_xy[finite] = projected[finite, :2] / denom[finite]
+    errors = np.linalg.norm(projected_xy - frame_points.astype(np.float32), axis=1)
+    if len(inlier_mask) == len(errors) and np.any(inlier_mask):
+        errors = errors[inlier_mask]
+    errors = errors[np.isfinite(errors)]
+    if len(errors) == 0:
+        return float("inf")
+    return float(np.median(errors))
+
+
+def _synthetic_yolo_anchor_pose_match(
+    item: ExpectedSegment,
+    *,
+    status: str,
+    polygon: PolygonPoints | None,
+    debug: dict[str, Any],
+) -> SegmentMatch:
+    return SegmentMatch(
+        annotation_id=item.annotation_id,
+        segment_class_id=item.segment_class_id,
+        class_key=item.class_key,
+        name=item.name,
+        hue=item.hue,
+        status=status,
+        iou=None,
+        confidence=None,
+        expected_polygon=polygon,
+        detected_polygon=None,
+        detected_bbox=None,
+        debug=debug,
+    )
+
+
+def _synthetic_yolo_anchor_pose_debug(
+    *,
+    accepted: bool,
+    reason: str,
+    anchor_count: int,
+    min_anchor_count: int,
+    point_count: int = 0,
+    inliers: int = 0,
+    inlier_ratio: float | None = None,
+    median_error: float | None = None,
+    model_source: str | None = None,
+) -> dict[str, Any]:
+    projection = "v4_yolo_anchor_pose" if accepted else "v2_unconfirmed"
+    debug: dict[str, Any] = {
+        "projection": projection,
+        "reason_code": reason,
+        "missing_polygon_projection": projection,
+        "missing_polygon_projection_safety": "confirmed" if accepted else "unsafe_hidden",
+        "missing_polygon_hidden_reason": None if accepted else reason,
+        "missing_polygon_feature_support": int(anchor_count),
+        "missing_polygon_feature_total": int(point_count),
+        "missing_polygon_candidate_count": int(anchor_count),
+        "missing_polygon_inliers": int(inliers),
+        "missing_polygon_median_error": median_error,
+        "v4_yolo_anchor_pose_attempted": True,
+        "v4_yolo_anchor_pose_accepted": bool(accepted),
+        "v4_yolo_anchor_pose_reason": reason,
+        "v4_yolo_anchor_pose_anchor_count": int(anchor_count),
+        "v4_yolo_anchor_pose_min_anchor_count": int(min_anchor_count),
+        "v4_yolo_anchor_pose_point_count": int(point_count),
+        "v4_yolo_anchor_pose_inliers": int(inliers),
+        "v4_yolo_anchor_pose_inlier_ratio": inlier_ratio,
+        "v4_yolo_anchor_pose_median_error": median_error,
+        "v4_yolo_anchor_pose_model_source": model_source,
+    }
+    return debug
+
+
 def _run_case(
     *,
     index: int,
     scene: _SyntheticScene,
     images_dir: Path,
+    feature_source: str,
+    projection_pipeline: str,
+    synthetic_yolo_anchor_pose: bool = False,
+    synthetic_yolo_anchor_noise_px: float = 1.5,
+    synthetic_yolo_anchor_dropout: float = 0.06,
+    synthetic_yolo_anchor_min_anchors: int = 2,
+    synthetic_yolo_anchor_ransac_px: float = 6.0,
 ) -> SyntheticResult:
+    # The single-object synthetic cases cannot build pose from other objects.
+    # Keep these arguments accepted so the same CLI can run single + multi suites.
+    del (
+        synthetic_yolo_anchor_pose,
+        synthetic_yolo_anchor_noise_px,
+        synthetic_yolo_anchor_dropout,
+        synthetic_yolo_anchor_min_anchors,
+        synthetic_yolo_anchor_ransac_px,
+    )
     expected = [
         ExpectedSegment(
             annotation_id=uuid4(),
@@ -1251,19 +1923,15 @@ def _run_case(
             reference_polygon=scene.reference_polygon,
         )
     ]
-    projection_data = LocalProjectionData(
-        global_homography=scene.approximate_homography,
-        reference_points=scene.reference_points,
-        frame_points=scene.frame_points,
-        frame_size=_CANVAS_SIZE,
-        frame=scene.target_image,
+    projection_data = _build_case_projection_data(
+        scene,
+        feature_source=feature_source,
     )
-    matches = match_segments(
+    matches = _match_synthetic_expected_segments(
         expected,
-        [],
-        scene.approximate_homography,
-        frame_size=_CANVAS_SIZE,
         projection_data=projection_data,
+        frame_size=_CANVAS_SIZE,
+        projection_pipeline=projection_pipeline,
     )
     match = matches[0] if matches else None
     predicted_polygon = match.expected_polygon if match is not None else None
@@ -1318,6 +1986,10 @@ def _run_case(
         distractor_polygons=scene.distractor_polygons,
         support=support,
     )
+    feature_telemetry_fields = _feature_telemetry_metric_fields(
+        debug,
+        projection_data=projection_data,
+    )
 
     notes = _case_notes(
         scene=scene,
@@ -1367,6 +2039,7 @@ def _run_case(
     panel = _render_case_panel(
         index=index,
         scene=scene,
+        projection_data=projection_data,
         predicted_polygon=predicted_polygon,
         result_status="PASS" if passed else "FAIL",
         metrics={
@@ -1374,11 +2047,28 @@ def _run_case(
             "drift": f"{center_drift:.1f}px",
             "area": f"{area_ratio:.2f}x",
             "support": f"{support}/{total}",
+            "matches": str(_projection_match_count(projection_data)),
+            "tilt": _scenario_tilt_label(scene.scenario),
             "projection": projection,
         },
         notes=notes,
     )
     cv2.imwrite(str(image_path), panel)
+
+    keypoints_image_path = images_dir / f"case_{index:03d}_{_safe_name(scene.scenario.name)}_keypoints.png"
+    keypoints_panel = _render_keypoint_diagnostic_panel(
+        index=index,
+        name=scene.scenario.name,
+        scenario_kind="single",
+        reference_image=scene.reference_image,
+        target_image=scene.target_image,
+        projection_data=projection_data,
+        reference_polygons=[scene.reference_polygon],
+        target_polygons=[scene.ground_truth_polygon],
+        predicted_polygons=[predicted_polygon] if predicted_polygon else [],
+        result_status="PASS" if passed else "FAIL",
+    )
+    cv2.imwrite(str(keypoints_image_path), keypoints_panel)
 
     return SyntheticResult(
         index=index,
@@ -1421,7 +2111,29 @@ def _run_case(
         gt_distance_px=float(gt_distance),
         image_path=str(image_path.relative_to(image_path.parent.parent)),
         notes=notes,
+        keypoints_image_path=str(keypoints_image_path.relative_to(keypoints_image_path.parent.parent)),
         object_failures=0 if passed else 1,
+        reference_keypoints_total=feature_telemetry_fields["reference_keypoints_total"],
+        frame_keypoints_total=feature_telemetry_fields["frame_keypoints_total"],
+        frame_max_keypoints=feature_telemetry_fields["frame_max_keypoints"],
+        frame_keypoint_grid_rows=feature_telemetry_fields["frame_keypoint_grid_rows"],
+        frame_keypoint_grid_cols=feature_telemetry_fields["frame_keypoint_grid_cols"],
+        lightglue_reference_matches_total=feature_telemetry_fields[
+            "lightglue_reference_matches_total"
+        ],
+        lightglue_frame_matches_total=feature_telemetry_fields[
+            "lightglue_frame_matches_total"
+        ],
+        masked_alignment_used=feature_telemetry_fields["masked_alignment_used"],
+        original_reference_keypoints_total=feature_telemetry_fields[
+            "original_reference_keypoints_total"
+        ],
+        masked_reference_keypoints_total=feature_telemetry_fields[
+            "masked_reference_keypoints_total"
+        ],
+        masked_lightglue_matches_total=feature_telemetry_fields[
+            "masked_lightglue_matches_total"
+        ],
         object_metrics=[
             asdict(
                 SyntheticObjectMetric(
@@ -1449,6 +2161,7 @@ def _run_case(
                     ),
                     closer_to_distractor=closer_to_distractor,
                     notes=notes,
+                    **feature_telemetry_fields,
                     **hidden_shadow_fields,
                     **fallback_fields,
                     **candidate_oracle_fields,
@@ -1465,6 +2178,13 @@ def _run_multi_case(
     index: int,
     scene: _SyntheticMultiScene,
     images_dir: Path,
+    feature_source: str,
+    projection_pipeline: str,
+    synthetic_yolo_anchor_pose: bool = False,
+    synthetic_yolo_anchor_noise_px: float = 1.5,
+    synthetic_yolo_anchor_dropout: float = 0.06,
+    synthetic_yolo_anchor_min_anchors: int = 2,
+    synthetic_yolo_anchor_ransac_px: float = 6.0,
 ) -> SyntheticResult:
     expected: list[ExpectedSegment] = []
     annotation_to_object: dict[Any, _SyntheticObjectInstance] = {}
@@ -1482,20 +2202,27 @@ def _run_multi_case(
             )
         )
 
-    projection_data = LocalProjectionData(
-        global_homography=scene.approximate_homography,
-        reference_points=scene.reference_points,
-        frame_points=scene.frame_points,
-        frame_size=_CANVAS_SIZE,
-        frame=scene.target_image,
+    projection_data = _build_case_projection_data(
+        scene,
+        feature_source=feature_source,
     )
-    matches = match_segments(
-        expected,
-        [],
-        scene.approximate_homography,
-        frame_size=_CANVAS_SIZE,
-        projection_data=projection_data,
-    )
+    if synthetic_yolo_anchor_pose:
+        matches = _match_synthetic_expected_segments_with_yolo_anchor_pose(
+            expected,
+            annotation_to_object=annotation_to_object,
+            scene=scene,
+            noise_px=synthetic_yolo_anchor_noise_px,
+            dropout=synthetic_yolo_anchor_dropout,
+            min_anchor_objects=synthetic_yolo_anchor_min_anchors,
+            ransac_px=synthetic_yolo_anchor_ransac_px,
+        )
+    else:
+        matches = _match_synthetic_expected_segments(
+            expected,
+            projection_data=projection_data,
+            frame_size=_CANVAS_SIZE,
+            projection_pipeline=projection_pipeline,
+        )
     matches_by_annotation = {match.annotation_id: match for match in matches}
 
     object_metrics: list[SyntheticObjectMetric] = []
@@ -1561,6 +2288,11 @@ def _run_multi_case(
             distractor_polygons=obj.distractor_polygons,
             support=support,
         )
+        feature_telemetry_fields = _feature_telemetry_metric_fields(
+            debug,
+            projection_data=projection_data,
+        )
+        v2_metric_fields = _v2_metric_fields(debug)
 
         used_context_refinement = _projection_uses_context_refinement(projection)
         notes = _case_notes(
@@ -1630,6 +2362,8 @@ def _run_multi_case(
             ),
             closer_to_distractor=closer_to_distractor,
             notes=notes,
+            **v2_metric_fields,
+            **feature_telemetry_fields,
             **hidden_shadow_fields,
             **fallback_fields,
             **candidate_oracle_fields,
@@ -1653,11 +2387,16 @@ def _run_multi_case(
     unsafe_hidden = any(metric.unsafe_hidden for metric in object_metrics)
     projection = _projection_summary([metric.projection for metric in object_metrics])
     status = "missing" if all(metric.status == "missing" for metric in object_metrics) else "mixed"
+    case_feature_telemetry_fields = _feature_telemetry_metric_fields(
+        {},
+        projection_data=projection_data,
+    )
 
     image_path = images_dir / f"case_{index:03d}_{_safe_name(scene.scenario.name)}.png"
     panel = _render_multi_case_panel(
         index=index,
         scene=scene,
+        projection_data=projection_data,
         predicted_by_object=predicted_by_object,
         result_status="PASS" if passed else "FAIL",
         metrics={
@@ -1665,11 +2404,28 @@ def _run_multi_case(
             "mean IoU": f"{(float(np.mean(finite_ious)) if finite_ious else 0.0):.3f}",
             "max drift": f"{(float(np.max(finite_drifts)) if finite_drifts else float('inf')):.1f}px",
             "hidden": str(sum(1 for metric in object_metrics if metric.unsafe_hidden)),
+            "matches": str(_projection_match_count(projection_data)),
+            "tilt": _scenario_tilt_label(scene.scenario),
             "projection": projection,
         },
         notes=all_notes,
     )
     cv2.imwrite(str(image_path), panel)
+
+    keypoints_image_path = images_dir / f"case_{index:03d}_{_safe_name(scene.scenario.name)}_keypoints.png"
+    keypoints_panel = _render_keypoint_diagnostic_panel(
+        index=index,
+        name=scene.scenario.name,
+        scenario_kind="multi",
+        reference_image=scene.reference_image,
+        target_image=scene.target_image,
+        projection_data=projection_data,
+        reference_polygons=[obj.reference_polygon for obj in scene.objects],
+        target_polygons=[obj.ground_truth_polygon for obj in scene.objects],
+        predicted_polygons=[poly for poly in predicted_by_object.values() if poly],
+        result_status="PASS" if passed else "FAIL",
+    )
+    cv2.imwrite(str(keypoints_image_path), keypoints_panel)
 
     return SyntheticResult(
         index=index,
@@ -1700,11 +2456,33 @@ def _run_multi_case(
         gt_distance_px=float(np.max(finite_drifts)) if finite_drifts else float("inf"),
         image_path=str(image_path.relative_to(image_path.parent.parent)),
         notes=all_notes[:12],
+        keypoints_image_path=str(keypoints_image_path.relative_to(keypoints_image_path.parent.parent)),
         scenario_kind="multi",
         object_count=len(scene.objects),
         object_shapes=[obj.object_shape for obj in scene.objects],
         object_failures=sum(1 for metric in object_metrics if not metric.passed),
         object_metrics=[asdict(metric) for metric in object_metrics],
+        reference_keypoints_total=case_feature_telemetry_fields["reference_keypoints_total"],
+        frame_keypoints_total=case_feature_telemetry_fields["frame_keypoints_total"],
+        frame_max_keypoints=case_feature_telemetry_fields["frame_max_keypoints"],
+        frame_keypoint_grid_rows=case_feature_telemetry_fields["frame_keypoint_grid_rows"],
+        frame_keypoint_grid_cols=case_feature_telemetry_fields["frame_keypoint_grid_cols"],
+        lightglue_reference_matches_total=case_feature_telemetry_fields[
+            "lightglue_reference_matches_total"
+        ],
+        lightglue_frame_matches_total=case_feature_telemetry_fields[
+            "lightglue_frame_matches_total"
+        ],
+        masked_alignment_used=case_feature_telemetry_fields["masked_alignment_used"],
+        original_reference_keypoints_total=case_feature_telemetry_fields[
+            "original_reference_keypoints_total"
+        ],
+        masked_reference_keypoints_total=case_feature_telemetry_fields[
+            "masked_reference_keypoints_total"
+        ],
+        masked_lightglue_matches_total=case_feature_telemetry_fields[
+            "masked_lightglue_matches_total"
+        ],
     )
 
 
@@ -2387,6 +3165,187 @@ def _object_crop_verification_metric_fields(
         "crop_verification_sources": [str(row["source"]) for row in scored_rows],
     }
 
+def _feature_telemetry_metric_fields(
+    debug: dict[str, Any],
+    *,
+    projection_data: Any | None = None,
+) -> dict[str, Any]:
+    reference_points = getattr(projection_data, "reference_points", None)
+    frame_points = getattr(projection_data, "frame_points", None)
+
+    return {
+        "reference_keypoints_total": _int_debug(
+            debug.get("reference_keypoints_total"),
+            getattr(projection_data, "reference_feature_count", None),
+        ),
+        "frame_keypoints_total": _int_debug(
+            debug.get("frame_keypoints_total"),
+            getattr(projection_data, "frame_feature_count", None),
+        ),
+        "frame_max_keypoints": _int_debug(
+            debug.get("frame_max_keypoints"),
+            getattr(projection_data, "frame_max_keypoints", None),
+        ),
+        "frame_keypoint_grid_rows": _int_debug(
+            debug.get("frame_keypoint_grid_rows"),
+            (getattr(projection_data, "frame_keypoint_grid", None) or (None, None))[0],
+        ),
+        "frame_keypoint_grid_cols": _int_debug(
+            debug.get("frame_keypoint_grid_cols"),
+            (getattr(projection_data, "frame_keypoint_grid", None) or (None, None))[1],
+        ),
+        "lightglue_reference_matches_total": _int_debug(
+            debug.get("lightglue_reference_matches_total"),
+            len(reference_points) if reference_points is not None else None,
+        ),
+        "lightglue_frame_matches_total": _int_debug(
+            debug.get("lightglue_frame_matches_total"),
+            len(frame_points) if frame_points is not None else None,
+        ),
+        "masked_alignment_used": bool(debug.get("masked_alignment_used")),
+        "original_reference_keypoints_total": _int_debug(
+            debug.get("original_reference_keypoints_total"),
+            getattr(projection_data, "original_reference_feature_count", None),
+        ),
+        "masked_reference_keypoints_total": _int_debug(
+            debug.get("masked_reference_keypoints_total"),
+            getattr(projection_data, "masked_reference_feature_count", None),
+        ),
+        "masked_lightglue_matches_total": _int_debug(
+            debug.get("masked_lightglue_matches_total"),
+            len(reference_points)
+            if bool(getattr(projection_data, "masked_alignment_used", False))
+            and reference_points is not None
+            else None,
+        ),
+        "slot_local_lightglue_attempted": bool(
+            debug.get("slot_local_lightglue_attempted")
+        ),
+        "slot_local_lightglue_accepted": bool(
+            debug.get("slot_local_lightglue_accepted")
+        ),
+        "slot_local_lightglue_reject_reason": (
+            str(debug.get("slot_local_lightglue_reject_reason"))
+            if debug.get("slot_local_lightglue_reject_reason") is not None
+            else None
+        ),
+        "slot_local_lightglue_mode": (
+            str(debug.get("slot_local_lightglue_mode"))
+            if debug.get("slot_local_lightglue_mode") is not None
+            else None
+        ),
+        "slot_local_lightglue_reference_keypoints": _int_debug(
+            debug.get("slot_local_lightglue_reference_keypoints")
+        ),
+        "slot_local_lightglue_frame_keypoints": _int_debug(
+            debug.get("slot_local_lightglue_frame_keypoints")
+        ),
+        "slot_local_lightglue_max_keypoints": _int_debug(
+            debug.get("slot_local_lightglue_max_keypoints")
+        ),
+        "slot_local_lightglue_grid_rows": _int_debug(
+            debug.get("slot_local_lightglue_grid_rows")
+        ),
+        "slot_local_lightglue_grid_cols": _int_debug(
+            debug.get("slot_local_lightglue_grid_cols")
+        ),
+        "slot_local_lightglue_raw_matches": _int_debug(
+            debug.get("slot_local_lightglue_raw_matches")
+        ),
+        "slot_local_lightglue_inliers": _int_debug(
+            debug.get("slot_local_lightglue_inliers")
+        ),
+        "slot_local_lightglue_inlier_ratio": _float_or_none(
+            debug.get("slot_local_lightglue_inlier_ratio")
+        ),
+        "slot_local_lightglue_median_error": _float_or_none(
+            debug.get("slot_local_lightglue_median_error")
+        ),
+        "slot_local_lightglue_area_score": _float_or_none(
+            debug.get("slot_local_lightglue_area_score")
+        ),
+        "slot_local_lightglue_center_factor": _float_or_none(
+            debug.get("slot_local_lightglue_center_factor")
+        ),
+        "slot_local_lightglue_max_other_overlap": _float_or_none(
+            debug.get("slot_local_lightglue_max_other_overlap")
+        ),
+    }
+
+
+def _v2_metric_fields(debug: dict[str, Any]) -> dict[str, Any]:
+    def text_or_none(value: Any) -> str | None:
+        return str(value) if value is not None else None
+
+    return {
+        "v2_scene_diag_version": text_or_none(debug.get("v2_scene_diag_version")),
+        "v2_scene_match_total": _int_debug(debug.get("v2_scene_match_total")),
+        "v2_scene_match_cells": _int_debug(debug.get("v2_scene_match_cells")),
+        "v2_scene_match_span_x": _float_or_none(debug.get("v2_scene_match_span_x")),
+        "v2_scene_match_span_y": _float_or_none(debug.get("v2_scene_match_span_y")),
+        "v2_scene_match_hull_fraction": _float_or_none(
+            debug.get("v2_scene_match_hull_fraction")
+        ),
+        "v2_scene_match_top_count": _int_debug(debug.get("v2_scene_match_top_count")),
+        "v2_scene_match_bottom_count": _int_debug(
+            debug.get("v2_scene_match_bottom_count")
+        ),
+        "v2_scene_match_left_count": _int_debug(debug.get("v2_scene_match_left_count")),
+        "v2_scene_match_right_count": _int_debug(debug.get("v2_scene_match_right_count")),
+        "v2_scene_match_max_cell_fraction": _float_or_none(
+            debug.get("v2_scene_match_max_cell_fraction")
+        ),
+        "v2_scene_model_source": text_or_none(debug.get("v2_scene_model_source")),
+        "v2_scene_model_inlier_total": _int_debug(
+            debug.get("v2_scene_model_inlier_total")
+        ),
+        "v2_scene_model_inlier_cells": _int_debug(
+            debug.get("v2_scene_model_inlier_cells")
+        ),
+        "v2_scene_model_inlier_span_x": _float_or_none(
+            debug.get("v2_scene_model_inlier_span_x")
+        ),
+        "v2_scene_model_inlier_span_y": _float_or_none(
+            debug.get("v2_scene_model_inlier_span_y")
+        ),
+        "v2_scene_model_inlier_hull_fraction": _float_or_none(
+            debug.get("v2_scene_model_inlier_hull_fraction")
+        ),
+        "v2_scene_model_inlier_top_count": _int_debug(
+            debug.get("v2_scene_model_inlier_top_count")
+        ),
+        "v2_scene_model_inlier_bottom_count": _int_debug(
+            debug.get("v2_scene_model_inlier_bottom_count")
+        ),
+        "v2_scene_model_inlier_left_count": _int_debug(
+            debug.get("v2_scene_model_inlier_left_count")
+        ),
+        "v2_scene_model_inlier_right_count": _int_debug(
+            debug.get("v2_scene_model_inlier_right_count")
+        ),
+        "v2_scene_model_inlier_max_cell_fraction": _float_or_none(
+            debug.get("v2_scene_model_inlier_max_cell_fraction")
+        ),
+        "v2_scene_model_p90_error": _float_or_none(debug.get("v2_scene_model_p90_error")),
+        "v2_candidate_count": _int_debug(debug.get("v2_candidate_count")),
+        "v2_candidate_crop_count": _int_debug(debug.get("v2_candidate_crop_count")),
+        "v2_candidate_ecc_attempts": _int_debug(debug.get("v2_candidate_ecc_attempts")),
+        "v2_candidate_ecc_successes": _int_debug(debug.get("v2_candidate_ecc_successes")),
+        "v2_candidate_score": _float_or_none(debug.get("v2_candidate_score")),
+        "v2_candidate_selection_score": _float_or_none(
+            debug.get("v2_candidate_selection_score")
+        ),
+        "v2_candidate_crop_mode": text_or_none(debug.get("v2_candidate_crop_mode")),
+        "v2_candidate_start_mode": text_or_none(debug.get("v2_candidate_start_mode")),
+        "v2_shift_factor": _float_or_none(debug.get("v2_shift_factor")),
+        "v2_center_factor": _float_or_none(debug.get("v2_center_factor")),
+        "v2_ecc_score": _float_or_none(debug.get("v2_ecc_score")),
+        "v2_phase_response": _float_or_none(debug.get("v2_phase_response")),
+        "v2_ring_fraction": _float_or_none(debug.get("v2_ring_fraction")),
+        "v2_max_other_overlap": _float_or_none(debug.get("v2_max_other_overlap")),
+    }
+
+
 def _hidden_shadow_metric_fields(
     debug: dict[str, Any],
     *,
@@ -2516,10 +3475,38 @@ def _case_notes(
         major_length_ratio=major_length_ratio,
         weak_context=weak_context,
     )
+    slot_local_quality_ok = _slot_local_projection_quality_ok(
+        projection=projection,
+        iou=iou,
+        center_drift=center_drift,
+        area_ratio=area_ratio,
+        axis_angle_error_deg=axis_angle_error_deg,
+        major_length_ratio=major_length_ratio,
+        weak_context=weak_context,
+    )
+    anchor_pose_quality_ok = _anchor_pose_projection_quality_ok(
+        projection=projection,
+        iou=iou,
+        center_drift=center_drift,
+        area_ratio=area_ratio,
+        axis_angle_error_deg=axis_angle_error_deg,
+        major_length_ratio=major_length_ratio,
+        weak_context=weak_context,
+    )
 
-    if iou < min_iou and not shape_aware_ok:
+    if (
+        iou < min_iou
+        and not shape_aware_ok
+        and not slot_local_quality_ok
+        and not anchor_pose_quality_ok
+    ):
         notes.append(f"IoU с ground truth ниже порога: {iou:.3f} < {min_iou:.2f}")
-    if center_drift > max_drift and not shape_aware_ok:
+    if (
+        center_drift > max_drift
+        and not shape_aware_ok
+        and not slot_local_quality_ok
+        and not anchor_pose_quality_ok
+    ):
         notes.append(f"центр expected-зоны уехал слишком далеко: {center_drift:.1f}px > {max_drift:.1f}px")
     if area_ratio < 0.55 or area_ratio > 1.75:
         notes.append(f"площадь полигона изменилась слишком сильно: {area_ratio:.2f}x")
@@ -2543,7 +3530,12 @@ def _case_notes(
         major_length_ratio=major_length_ratio,
     )
 
-    if not weak_context and not used_context_refinement and not fallback_quality_ok:
+    if (
+        not weak_context
+        and not used_context_refinement
+        and not fallback_quality_ok
+        and not anchor_pose_quality_ok
+    ):
         notes.append("достаточно контекста, но context_feature_affine не сработал")
     context_affine_quality_ok = _context_affine_refinement_quality_ok(
         projection=projection,
@@ -2558,10 +3550,72 @@ def _case_notes(
         and used_context_refinement
         and not conservative_rescue_ok
         and not context_affine_quality_ok
+        and not slot_local_quality_ok
     ):
         notes.append("при слабом контексте refinement сработал, хотя безопаснее fallback")
 
     return notes
+
+
+def _slot_local_projection_quality_ok(
+    *,
+    projection: str,
+    iou: float,
+    center_drift: float,
+    area_ratio: float,
+    axis_angle_error_deg: float | None,
+    major_length_ratio: float | None,
+    weak_context: bool,
+) -> bool:
+    if projection != "slot_local_lightglue":
+        return False
+    if not math.isfinite(iou) or not math.isfinite(center_drift):
+        return False
+
+    min_iou = 0.42 if weak_context else 0.55
+    max_drift = 38.0 if weak_context else 28.0
+    if iou < min_iou or center_drift > max_drift:
+        return False
+    if area_ratio < 0.58 or area_ratio > 1.65:
+        return False
+    if axis_angle_error_deg is not None and axis_angle_error_deg > 18.0:
+        return False
+    if major_length_ratio is not None and not (0.62 <= major_length_ratio <= 1.45):
+        return False
+    return True
+
+
+def _anchor_pose_projection_quality_ok(
+    *,
+    projection: str,
+    iou: float,
+    center_drift: float,
+    area_ratio: float,
+    axis_angle_error_deg: float | None,
+    major_length_ratio: float | None,
+    weak_context: bool,
+) -> bool:
+    if projection != "v4_yolo_anchor_pose":
+        return False
+    if not math.isfinite(iou) or not math.isfinite(center_drift):
+        return False
+
+    # Anchor-pose projection is not a context_feature_affine refinement.
+    # It is a separate pose source built from synthetic YOLO anchors, so the
+    # synthetic scorer must judge it by resulting geometry, not by whether the
+    # context-affine branch ran.  This mirrors the runtime intent: if a robust
+    # pose source projects the slot accurately, the missing zone is valid.
+    min_iou = 0.42 if weak_context else 0.55
+    max_drift = 38.0 if weak_context else 28.0
+    if iou < min_iou or center_drift > max_drift:
+        return False
+    if area_ratio < 0.58 or area_ratio > 1.65:
+        return False
+    if axis_angle_error_deg is not None and axis_angle_error_deg > 18.0:
+        return False
+    if major_length_ratio is not None and not (0.62 <= major_length_ratio <= 1.45):
+        return False
+    return True
 
 
 def _context_affine_refinement_quality_ok(
@@ -2662,6 +3716,7 @@ def _projection_uses_context_refinement(projection: str) -> bool:
         "expected_slot_context_translation_rescue",
         "expected_slot_scene_translation_rescue",
         "expected_slot_global_translation_rescue",
+        "slot_local_lightglue",
     }
 
 
@@ -2794,16 +3849,15 @@ def _draw_reference_scene_multi(
         color = _object_color(obj.index)
         _draw_polygon(image, obj.reference_polygon, color, fill=True, alpha=0.72)
         _draw_polygon(image, obj.reference_polygon, (20, 40, 160), thickness=2)
-        _draw_context_ring(image, obj.reference_polygon)
-        cv2.putText(
-            image,
-            f"{obj.index + 1}:{obj.object_shape}",
-            _poly_label_point(obj.reference_polygon),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.42,
-            (245, 245, 245),
-            1,
-        )
+        # Keep context search windows out of the synthetic source image.
+        # They are diagnostic overlays only: drawing them into the reference
+        # creates many SuperPoint keypoints that cannot exist in the target
+        # frame, so global LightGlue collapses in multi-object scenes.
+        # Do not draw object labels into the synthetic source image.
+        # They are report annotations, not real product features; if they stay in
+        # the reference only, SuperPoint/LightGlue sees many unmatched text
+        # keypoints around every missing polygon and multi-scene alignment
+        # collapses to a handful of pairs.
     return image
 
 
@@ -2901,10 +3955,266 @@ def _object_color(index: int) -> tuple[int, int, int]:
     return palette[index % len(palette)]
 
 
+def _as_points_array(points: np.ndarray | None) -> np.ndarray:
+    if points is None:
+        return np.empty((0, 2), dtype=np.float32)
+    array = np.asarray(points, dtype=np.float32)
+    if array.size == 0:
+        return np.empty((0, 2), dtype=np.float32)
+    return array.reshape(-1, 2)
+
+
+def _count_points_inside_polygons(
+    points: np.ndarray | None,
+    polygons: Sequence[PolygonPoints],
+) -> int:
+    array = _as_points_array(points)
+    if len(array) == 0 or not polygons:
+        return 0
+    polygon_arrays = [
+        np.asarray(poly, dtype=np.float32).reshape(-1, 1, 2)
+        for poly in polygons
+        if len(poly) >= 3
+    ]
+    if not polygon_arrays:
+        return 0
+    count = 0
+    for x, y in array:
+        if any(cv2.pointPolygonTest(poly, (float(x), float(y)), False) >= 0 for poly in polygon_arrays):
+            count += 1
+    return count
+
+
+def _count_points_in_context_windows(
+    points: np.ndarray | None,
+    polygons: Sequence[PolygonPoints],
+) -> int:
+    array = _as_points_array(points)
+    if len(array) == 0 or not polygons:
+        return 0
+    windows: list[tuple[float, float, float, float]] = []
+    for poly in polygons:
+        if len(poly) < 3:
+            continue
+        windows.append(
+            _expand_bbox(
+                _bbox_from_polygon(poly),
+                factor=_thresholds.missing_polygon_context_expansion,
+            )
+        )
+    if not windows:
+        return 0
+    count = 0
+    for x, y in array:
+        xf = float(x)
+        yf = float(y)
+        if any(x1 <= xf <= x2 and y1 <= yf <= y2 for x1, y1, x2, y2 in windows):
+            count += 1
+    return count
+
+
+def _draw_keypoint_diagnostic_base(
+    image: np.ndarray,
+    *,
+    polygons: Sequence[PolygonPoints],
+    polygon_color: tuple[int, int, int],
+    show_context_windows: bool,
+) -> None:
+    for polygon in polygons:
+        if show_context_windows:
+            _draw_context_ring(image, polygon)
+        _draw_polygon(image, polygon, polygon_color, thickness=2)
+
+
+def _draw_keypoints_with_count(
+    image: np.ndarray,
+    points: np.ndarray | None,
+    *,
+    color: tuple[int, int, int],
+    label: str,
+    polygons: Sequence[PolygonPoints],
+    y: int,
+) -> None:
+    array = _as_points_array(points)
+    _draw_points(image, array, color, radius=1)
+    inside = _count_points_inside_polygons(array, polygons)
+    in_context = _count_points_in_context_windows(array, polygons)
+    cv2.putText(
+        image,
+        f"{label}: all={len(array)} | inside expected={inside} | inside context windows={in_context}",
+        (18, y),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.52,
+        _TEXT_COLOR,
+        1,
+    )
+
+
+def _render_keypoint_diagnostic_panel(
+    *,
+    index: int,
+    name: str,
+    scenario_kind: str,
+    reference_image: np.ndarray,
+    target_image: np.ndarray,
+    projection_data: LocalProjectionData,
+    reference_polygons: Sequence[PolygonPoints],
+    target_polygons: Sequence[PolygonPoints],
+    predicted_polygons: Sequence[PolygonPoints],
+    result_status: str,
+) -> np.ndarray:
+    width, height = _CANVAS_SIZE
+    header_h = 74
+    footer_h = 80
+    gutter = 12
+    panel_w = width
+    panel_count = 4
+    canvas = np.full(
+        (height + header_h + footer_h, panel_w * panel_count + gutter * (panel_count - 1), 3),
+        _PANEL_BG,
+        dtype=np.uint8,
+    )
+
+    masked_reference = mask_reference_polygons(reference_image, list(reference_polygons))
+    panels = [
+        reference_image.copy(),
+        masked_reference.copy(),
+        target_image.copy(),
+        target_image.copy(),
+    ]
+
+    original_reference_keypoints = _as_points_array(projection_data.original_reference_keypoints)
+    masked_reference_keypoints = _as_points_array(projection_data.masked_reference_keypoints)
+    frame_keypoints = _as_points_array(projection_data.frame_keypoints)
+    matched_reference_points = _as_points_array(projection_data.reference_points)
+    matched_frame_points = _as_points_array(projection_data.frame_points)
+
+    _draw_keypoint_diagnostic_base(
+        panels[0],
+        polygons=reference_polygons,
+        polygon_color=_PREDICTED_COLOR,
+        show_context_windows=True,
+    )
+    _draw_keypoints_with_count(
+        panels[0],
+        original_reference_keypoints,
+        color=(0, 255, 255),
+        label="original reference SuperPoint",
+        polygons=reference_polygons,
+        y=28,
+    )
+
+    _draw_keypoint_diagnostic_base(
+        panels[1],
+        polygons=reference_polygons,
+        polygon_color=_PREDICTED_COLOR,
+        show_context_windows=True,
+    )
+    _draw_keypoints_with_count(
+        panels[1],
+        masked_reference_keypoints,
+        color=(90, 255, 90),
+        label="masked reference SuperPoint",
+        polygons=reference_polygons,
+        y=28,
+    )
+
+    for polygon in target_polygons:
+        _draw_polygon(panels[2], polygon, _GT_COLOR, thickness=2)
+        _draw_polygon(panels[3], polygon, _GT_COLOR, thickness=1)
+    for polygon in predicted_polygons:
+        _draw_polygon(panels[2], polygon, _PREDICTED_COLOR, thickness=2)
+        _draw_polygon(panels[3], polygon, _PREDICTED_COLOR, thickness=2)
+    _draw_keypoints_with_count(
+        panels[2],
+        frame_keypoints,
+        color=(255, 220, 90),
+        label="target frame SuperPoint",
+        polygons=target_polygons,
+        y=28,
+    )
+
+    _draw_points(panels[0], matched_reference_points, _CONTEXT_COLOR, radius=2)
+    _draw_points(panels[3], matched_frame_points, _CONTEXT_COLOR, radius=2)
+    _draw_feature_vectors_for_points(
+        panels[3],
+        reference_points=matched_reference_points,
+        frame_points=matched_frame_points,
+        homography=projection_data.global_homography,
+        color=_CONTEXT_COLOR,
+        max_lines=360,
+    )
+    cv2.putText(
+        panels[3],
+        f"post-LightGlue matched pairs: {_projection_match_count(projection_data)}",
+        (18, 28),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.52,
+        _TEXT_COLOR,
+        1,
+    )
+
+    labels = [
+        "1 GLOBAL REF BEFORE MASK: all SuperPoint points",
+        "2 GLOBAL REF AFTER MASK: points sent to global LightGlue",
+        "3 GLOBAL TARGET BEFORE MATCH: all target points",
+        "4 GLOBAL MATCHES ONLY: not per-object slot-local",
+    ]
+    for panel_index, panel in enumerate(panels):
+        x = panel_index * (panel_w + gutter)
+        canvas[header_h : header_h + height, x : x + panel_w] = panel
+        cv2.putText(
+            canvas,
+            labels[panel_index],
+            (x + 14, header_h + 24),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.56,
+            _TEXT_COLOR,
+            2,
+        )
+
+    status_color = _PASS_COLOR if result_status == "PASS" else _FAIL_COLOR
+    cv2.putText(
+        canvas,
+        f"#{index:03d} {name} - keypoint diagnostic - {result_status}",
+        (18, 32),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.78,
+        status_color,
+        2,
+    )
+    cv2.putText(
+        canvas,
+        f"{scenario_kind} | panels 1-4 are GLOBAL diagnostics; slot-local object matches are in HTML table below",
+        (18, 58),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.50,
+        _TEXT_COLOR,
+        1,
+    )
+    footer = (
+        f"orig_ref={len(original_reference_keypoints)} | masked_ref={len(masked_reference_keypoints)} | "
+        f"frame={len(frame_keypoints)} | global_matched_pairs={_projection_match_count(projection_data)} | "
+        f"masked_alignment={projection_data.masked_alignment_used}"
+    )
+    cv2.putText(canvas, footer, (18, header_h + height + 32), cv2.FONT_HERSHEY_SIMPLEX, 0.58, _TEXT_COLOR, 1)
+    cv2.putText(
+        canvas,
+        "Panel 4 is global LightGlue evidence only. For object-level failures use the slot-local debug table below the case.",
+        (18, header_h + height + 62),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.50,
+        _TEXT_COLOR,
+        1,
+    )
+    return canvas
+
+
 def _render_multi_case_panel(
     *,
     index: int,
     scene: _SyntheticMultiScene,
+    projection_data: LocalProjectionData,
     predicted_by_object: dict[int, PolygonPoints | None],
     result_status: str,
     metrics: dict[str, str],
@@ -2940,36 +4250,34 @@ def _render_multi_case_panel(
             _draw_polygon(panels[2], predicted, _PREDICTED_COLOR, thickness=3)
         for distractor in obj.distractor_polygons:
             _draw_polygon(panels[2], distractor, _DISTRACTOR_COLOR, thickness=2)
+        _draw_prediction_error_overlay(
+            panels[2],
+            ground_truth=obj.ground_truth_polygon,
+            predicted=predicted,
+            label=f"obj{obj.index}",
+        )
         _draw_polygon(panels[3], obj.ground_truth_polygon, _GT_COLOR, thickness=1)
         if predicted:
             _draw_polygon(panels[3], predicted, _PREDICTED_COLOR, thickness=2)
+        _draw_prediction_error_overlay(
+            panels[3],
+            ground_truth=obj.ground_truth_polygon,
+            predicted=predicted,
+            label=f"obj{obj.index}",
+        )
 
-    _draw_points(panels[0], scene.context_reference_points, _CONTEXT_COLOR, radius=2)
-    _draw_points(panels[0], scene.object_bad_reference_points, _OBJECT_BAD_COLOR, radius=2)
-    _draw_points(panels[2], scene.context_frame_points, _CONTEXT_COLOR, radius=2)
-    _draw_points(panels[2], scene.object_bad_frame_points, _OBJECT_BAD_COLOR, radius=2)
-    _draw_feature_vectors_for_points(
-        panels[3],
-        reference_points=scene.context_reference_points,
-        frame_points=scene.context_frame_points,
-        homography=scene.approximate_homography,
-        color=_CONTEXT_COLOR,
-        max_lines=150,
-    )
-    _draw_feature_vectors_for_points(
-        panels[3],
-        reference_points=scene.object_bad_reference_points,
-        frame_points=scene.object_bad_frame_points,
-        homography=scene.approximate_homography,
-        color=_OBJECT_BAD_COLOR,
-        max_lines=110,
+    _draw_real_projection_matches(
+        panels=panels,
+        projection_data=projection_data,
+        max_points=260,
+        max_vectors=180,
     )
 
     labels = [
         "REFERENCE: multiple annotated expected objects",
         "TARGET: all objects removed + ground truth",
         "PREDICTION: all missing expected zones",
-        "FEATURES: global->actual displacement",
+        "REAL MATCHES: LightGlue global->actual",
     ]
     for panel_index, panel in enumerate(panels):
         x = panel_index * (panel_w + gutter)
@@ -2988,7 +4296,7 @@ def _render_multi_case_panel(
         _TEXT_COLOR,
         1,
     )
-    legend = "red=predicted zones | green=GT zones | orange=distractors | cyan=context | purple=bad object matches"
+    legend = "red=predicted zones | green=GT zones | orange=distractors | cyan=real LightGlue matches"
     cv2.putText(canvas, legend, (18, header_h + height + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.52, _TEXT_COLOR, 1)
     metric_text = " | ".join(f"{key}: {value}" for key, value in metrics.items())
     cv2.putText(canvas, metric_text[:260], (18, header_h + height + 52), cv2.FONT_HERSHEY_SIMPLEX, 0.55, _TEXT_COLOR, 1)
@@ -2999,15 +4307,101 @@ def _render_multi_case_panel(
     return canvas
 
 
+def _projection_match_count(projection_data: LocalProjectionData) -> int:
+    reference_points = projection_data.reference_points
+    frame_points = projection_data.frame_points
+    if reference_points is None or frame_points is None:
+        return 0
+    return int(min(len(reference_points), len(frame_points)))
+
+
+def _limited_point_pairs(
+    reference_points: np.ndarray | None,
+    frame_points: np.ndarray | None,
+    *,
+    limit: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if reference_points is None or frame_points is None:
+        empty = np.empty((0, 2), dtype=np.float32)
+        return empty, empty
+    count = int(min(len(reference_points), len(frame_points)))
+    if count <= 0:
+        empty = np.empty((0, 2), dtype=np.float32)
+        return empty, empty
+    ref = np.asarray(reference_points[:count], dtype=np.float32).reshape(-1, 2)
+    frm = np.asarray(frame_points[:count], dtype=np.float32).reshape(-1, 2)
+    if count <= limit:
+        return ref, frm
+    step = max(1, int(math.ceil(count / max(1, limit))))
+    return ref[::step][:limit], frm[::step][:limit]
+
+
+def _draw_real_projection_matches(
+    *,
+    panels: list[np.ndarray],
+    projection_data: LocalProjectionData,
+    max_points: int,
+    max_vectors: int,
+) -> None:
+    reference_points, frame_points = _limited_point_pairs(
+        projection_data.reference_points,
+        projection_data.frame_points,
+        limit=max(max_points, max_vectors),
+    )
+    if len(reference_points) == 0 or len(frame_points) == 0:
+        cv2.putText(
+            panels[3],
+            "NO REAL LIGHTGLUE MATCHES",
+            (18, 48),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.72,
+            _FAIL_COLOR,
+            2,
+        )
+        return
+
+    _draw_points(panels[0], reference_points[:max_points], _CONTEXT_COLOR, radius=2)
+    _draw_points(panels[2], frame_points[:max_points], _CONTEXT_COLOR, radius=2)
+    _draw_feature_vectors_for_points(
+        panels[3],
+        reference_points=reference_points[:max_vectors],
+        frame_points=frame_points[:max_vectors],
+        homography=projection_data.global_homography,
+        color=_CONTEXT_COLOR,
+        max_lines=max_vectors,
+    )
+    cv2.putText(
+        panels[3],
+        f"real LightGlue matches: {_projection_match_count(projection_data)}",
+        (18, 48),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.64,
+        _TEXT_COLOR,
+        2,
+    )
+
+
 def _draw_feature_vectors_for_points(
     image: np.ndarray,
     *,
     reference_points: np.ndarray,
     frame_points: np.ndarray,
-    homography: np.ndarray,
+    homography: np.ndarray | None,
     color: tuple[int, int, int],
     max_lines: int,
 ) -> None:
+    if homography is None:
+        _draw_points(image, frame_points, color, radius=2)
+        cv2.putText(
+            image,
+            "homography failed: showing frame-side real matches only",
+            (18, 74),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.50,
+            _FAIL_COLOR,
+            1,
+        )
+        return
     approx = _transform_points(reference_points, homography)
     _draw_vector_set(image, approx, frame_points, color, max_lines=max_lines)
 
@@ -3023,15 +4417,8 @@ def _draw_reference_scene(
     _draw_stable_context(image)
     _draw_polygon(image, object_polygon, (70, 120, 235), fill=True, alpha=0.82)
     _draw_polygon(image, object_polygon, (20, 40, 160), thickness=2)
-    cv2.putText(
-        image,
-        f"reference {object_shape}",
-        (246, 158),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.48,
-        (240, 240, 240),
-        1,
-    )
+    # Keep synthetic source images label-free: text is a diagnostic overlay only,
+    # otherwise global feature matching learns reference-only glyphs.
     return image
 
 
@@ -3130,6 +4517,29 @@ def _target_distractor_polygons(
     return polygons
 
 
+def _scenario_projective_terms(scenario: Any) -> tuple[float, float]:
+    perspective = float(getattr(scenario, "perspective", 0.0) or 0.0)
+    if abs(perspective) <= 1e-12:
+        return 0.0, 0.0
+
+    # The old synthetic transform always leaned in the same direction.  That made
+    # the test visually repetitive and allowed accidental overfitting to one
+    # projective skew.  Use the seed to cover eight stable tilt directions while
+    # preserving the existing perspective magnitude in every scenario.
+    bucket = int(abs(int(getattr(scenario, "seed", 0) or 0))) % 8
+    direction = math.radians(bucket * 45.0)
+    return perspective * math.cos(direction), perspective * math.sin(direction)
+
+
+def _scenario_tilt_label(scenario: Any) -> str:
+    tx, ty = _scenario_projective_terms(scenario)
+    magnitude = float(math.hypot(tx, ty))
+    if magnitude <= 1e-12:
+        return "0°/0"
+    angle = (math.degrees(math.atan2(ty, tx)) + 360.0) % 360.0
+    return f"{angle:.0f}°/{magnitude:.5f}"
+
+
 def _build_homography(
     scenario: SyntheticScenario,
     *,
@@ -3140,11 +4550,12 @@ def _build_homography(
     cos_a = math.cos(angle) * scenario.scale
     sin_a = math.sin(angle) * scenario.scale
     cx, cy = width * 0.5, height * 0.5
+    perspective_x, perspective_y = _scenario_projective_terms(scenario)
     affine = np.asarray(
         [
             [cos_a, -sin_a, cx + scenario.shift_x - cos_a * cx + sin_a * cy],
             [sin_a, cos_a, cy + scenario.shift_y - sin_a * cx - cos_a * cy],
-            [scenario.perspective, -scenario.perspective * 0.45, 1.0],
+            [perspective_x, perspective_y, 1.0],
         ],
         dtype=np.float32,
     )
@@ -3262,10 +4673,84 @@ def _transform_points(points: np.ndarray, homography: np.ndarray) -> np.ndarray:
     return transformed.astype(np.float32)
 
 
+
+def _polygon_center_xy(polygon: PolygonPoints | None) -> tuple[float, float] | None:
+    if not polygon or len(polygon) < 3:
+        return None
+    points = np.asarray(polygon, dtype=np.float32).reshape(-1, 2)
+    if not np.isfinite(points).all():
+        return None
+    return float(np.mean(points[:, 0])), float(np.mean(points[:, 1]))
+
+
+def _draw_prediction_error_overlay(
+    image: np.ndarray,
+    *,
+    ground_truth: PolygonPoints | None,
+    predicted: PolygonPoints | None,
+    label: str = "pred-vs-gt",
+) -> None:
+    gt_center = _polygon_center_xy(ground_truth)
+    predicted_center = _polygon_center_xy(predicted)
+    if gt_center is None:
+        return
+
+    gx, gy = int(round(gt_center[0])), int(round(gt_center[1]))
+    cv2.circle(image, (gx, gy), 7, _GT_COLOR, -1)
+    cv2.circle(image, (gx, gy), 10, (20, 20, 20), 2)
+    cv2.putText(
+        image,
+        "GT",
+        (gx + 10, gy - 8),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.52,
+        _GT_COLOR,
+        2,
+    )
+
+    if predicted_center is None:
+        cv2.putText(
+            image,
+            f"{label}: projection hidden / not confirmed",
+            (18, 58),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.56,
+            _FAIL_COLOR,
+            2,
+        )
+        return
+
+    px, py = int(round(predicted_center[0])), int(round(predicted_center[1]))
+    cv2.circle(image, (px, py), 7, _PREDICTED_COLOR, -1)
+    cv2.circle(image, (px, py), 10, (20, 20, 20), 2)
+    cv2.putText(
+        image,
+        "PRED",
+        (px + 10, py + 18),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.52,
+        _PREDICTED_COLOR,
+        2,
+    )
+    cv2.arrowedLine(image, (gx, gy), (px, py), _TEXT_COLOR, 2, tipLength=0.08)
+    drift = float(np.hypot(predicted_center[0] - gt_center[0], predicted_center[1] - gt_center[1]))
+    mx = int(round((gx + px) * 0.5))
+    my = int(round((gy + py) * 0.5))
+    cv2.putText(
+        image,
+        f"drift={drift:.1f}px",
+        (max(10, mx - 42), max(24, my - 10)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.50,
+        _TEXT_COLOR,
+        2,
+    )
+
 def _render_case_panel(
     *,
     index: int,
     scene: _SyntheticScene,
+    projection_data: LocalProjectionData,
     predicted_polygon: PolygonPoints | None,
     result_status: str,
     metrics: dict[str, str],
@@ -3292,8 +4777,6 @@ def _render_case_panel(
 
     _draw_context_ring(panels[0], scene.reference_polygon)
     _draw_polygon(panels[0], scene.reference_polygon, _PREDICTED_COLOR, thickness=3)
-    _draw_points(panels[0], scene.context_reference_points, _CONTEXT_COLOR, radius=2)
-    _draw_points(panels[0], scene.object_bad_reference_points, _OBJECT_BAD_COLOR, radius=2)
 
     _draw_polygon(panels[1], scene.ground_truth_polygon, _GT_COLOR, thickness=3)
     for distractor in scene.distractor_polygons:
@@ -3304,21 +4787,36 @@ def _render_case_panel(
         _draw_polygon(panels[2], predicted_polygon, _PREDICTED_COLOR, thickness=3)
     for distractor in scene.distractor_polygons:
         _draw_polygon(panels[2], distractor, _DISTRACTOR_COLOR, thickness=2)
-    _draw_points(panels[2], scene.context_frame_points, _CONTEXT_COLOR, radius=2)
-    _draw_points(panels[2], scene.object_bad_frame_points, _OBJECT_BAD_COLOR, radius=2)
+    _draw_prediction_error_overlay(
+        panels[2],
+        ground_truth=scene.ground_truth_polygon,
+        predicted=predicted_polygon,
+        label="case",
+    )
 
     _draw_polygon(panels[3], scene.ground_truth_polygon, _GT_COLOR, thickness=2)
     if predicted_polygon:
         _draw_polygon(panels[3], predicted_polygon, _PREDICTED_COLOR, thickness=2)
     for distractor in scene.distractor_polygons:
         _draw_polygon(panels[3], distractor, _DISTRACTOR_COLOR, thickness=2)
-    _draw_feature_vectors(panels[3], scene)
+    _draw_prediction_error_overlay(
+        panels[3],
+        ground_truth=scene.ground_truth_polygon,
+        predicted=predicted_polygon,
+        label="case",
+    )
+    _draw_real_projection_matches(
+        panels=panels,
+        projection_data=projection_data,
+        max_points=220,
+        max_vectors=160,
+    )
 
     labels = [
         "REFERENCE: complex object + context ring",
         "TARGET: object removed + ground truth",
         "PREDICTION: missing expected zone",
-        "FEATURES: global->actual displacement",
+        "REAL MATCHES: LightGlue global->actual",
     ]
     for panel_index, panel in enumerate(panels):
         x = panel_index * (panel_w + gutter)
@@ -3328,11 +4826,11 @@ def _render_case_panel(
     status_color = _PASS_COLOR if result_status == "PASS" else _FAIL_COLOR
     title = f"#{index:03d} {scene.scenario.name} - {result_status}"
     cv2.putText(canvas, title, (18, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.82, status_color, 2)
-    cv2.putText(canvas, f"shape={scene.scenario.object_shape} | {scene.scenario.description[:145]}", (18, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.50, _TEXT_COLOR, 1)
+    cv2.putText(canvas, f"shape={scene.scenario.object_shape} | tilt={_scenario_tilt_label(scene.scenario)} | {scene.scenario.description[:120]}", (18, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.50, _TEXT_COLOR, 1)
 
     legend = (
         "red=predicted missing zone | green=ground truth | orange=distractor | "
-        "cyan=context matches | purple=bad object matches"
+        "cyan=real LightGlue matches from compute_features/LightGlue"
     )
     cv2.putText(canvas, legend, (18, header_h + height + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.52, _TEXT_COLOR, 1)
 
@@ -3479,11 +4977,26 @@ def _serialize_results(results: list[SyntheticResult]) -> list[dict[str, Any]]:
     return serialized
 
 
+_REPORT_ONLY_OBJECT_METRIC_PREFIXES = (
+    "candidate_oracle_",
+    "crop_verification_",
+    "yolo_fixture_",
+    "yolo_gt_",
+    "yolo_synthetic_",
+)
+
+
+def _strip_report_only_object_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in metric.items()
+        if not key.startswith(_REPORT_ONLY_OBJECT_METRIC_PREFIXES)
+    }
+
+
 def _enrich_object_metric(metric: dict[str, Any]) -> dict[str, Any]:
-    enriched = dict(metric)
+    enriched = _strip_report_only_object_metric_fields(dict(metric))
     enriched.update(_result_policy_metric_fields(enriched))
-    enriched.update(_yolo_synthetic_metric_fields(enriched))
-    enriched.update(_yolo_synthetic_fixture_metric_fields(enriched))
     return enriched
 
 
@@ -3507,9 +5020,14 @@ def _result_policy_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
     elif _metric_bool(metric, "unsafe_hidden"):
         status = "hidden_for_safety"
         confidence = "high"
-        action = "show_missing_with_safety_note"
-        user_label = "Деталь скрыта как небезопасная"
-        reason = hidden_reason
+        if _metric_bool(metric, "hidden_shadow_available"):
+            action = "show_unconfirmed_shadow_with_safety_note"
+            user_label = "Зона найдена, контур не подтверждён"
+            reason = _metric_text(metric, "hidden_shadow_reason", hidden_reason)
+        else:
+            action = "show_missing_with_safety_note"
+            user_label = "Деталь скрыта как небезопасная"
+            reason = hidden_reason
     elif _metric_bool(metric, "hidden_shadow_would_pass") and not _metric_bool(
         metric,
         "hidden_shadow_dangerous",
@@ -3528,9 +5046,14 @@ def _result_policy_metric_fields(metric: dict[str, Any]) -> dict[str, Any]:
     elif projection == "none":
         status = "missing_no_projection"
         confidence = "low"
-        action = "show_missing_without_overlay"
-        user_label = "Деталь не найдена"
-        reason = _metric_text(metric, "none_reason", diagnostic)
+        if _metric_bool(metric, "hidden_shadow_available"):
+            action = "show_unconfirmed_shadow_with_safety_note"
+            user_label = "Зона найдена, контур не подтверждён"
+            reason = _metric_text(metric, "hidden_shadow_reason", diagnostic)
+        else:
+            action = "show_missing_without_overlay"
+            user_label = "Деталь не найдена"
+            reason = _metric_text(metric, "none_reason", diagnostic)
     else:
         status = "rejected_geometry"
         confidence = _result_policy_geometry_confidence(metric)
@@ -5120,6 +6643,59 @@ def _metric_diagnostic_row(metric: dict[str, Any]) -> dict[str, Any]:
             _metric_int(metric, "fallback_slot_feature_total"),
         ),
         "support_bucket": _metric_support_bucket(metric),
+        "reference_keypoints_total": _metric_int(metric, "reference_keypoints_total"),
+        "frame_keypoints_total": _metric_int(metric, "frame_keypoints_total"),
+        "frame_max_keypoints": _metric_int(metric, "frame_max_keypoints"),
+        "frame_keypoint_grid": (
+            f"{_metric_int(metric, 'frame_keypoint_grid_rows')}x"
+            f"{_metric_int(metric, 'frame_keypoint_grid_cols')}"
+        ),
+        "lightglue_reference_matches_total": _metric_int(
+            metric,
+            "lightglue_reference_matches_total",
+        ),
+        "lightglue_frame_matches_total": _metric_int(
+            metric,
+            "lightglue_frame_matches_total",
+        ),
+        "masked_alignment_used": _metric_bool(metric, "masked_alignment_used"),
+        "original_reference_keypoints_total": _metric_int(
+            metric,
+            "original_reference_keypoints_total",
+        ),
+        "masked_reference_keypoints_total": _metric_int(
+            metric,
+            "masked_reference_keypoints_total",
+        ),
+        "masked_lightglue_matches_total": _metric_int(
+            metric,
+            "masked_lightglue_matches_total",
+        ),
+        "slot_local_lightglue_attempted": _metric_bool(
+            metric,
+            "slot_local_lightglue_attempted",
+        ),
+        "slot_local_lightglue_accepted": _metric_bool(
+            metric,
+            "slot_local_lightglue_accepted",
+        ),
+        "slot_local_lightglue_reject_reason": _metric_text(
+            metric,
+            "slot_local_lightglue_reject_reason",
+        ),
+        "slot_local_lightglue_mode": _metric_text(metric, "slot_local_lightglue_mode"),
+        "slot_local_lightglue_keypoints": (
+            f"{_metric_int(metric, 'slot_local_lightglue_reference_keypoints')}/"
+            f"{_metric_int(metric, 'slot_local_lightglue_frame_keypoints')}"
+        ),
+        "slot_local_lightglue_matches": _metric_int(
+            metric,
+            "slot_local_lightglue_raw_matches",
+        ),
+        "slot_local_lightglue_inliers": _metric_int(
+            metric,
+            "slot_local_lightglue_inliers",
+        ),
         "candidate_count": _metric_int(metric, "missing_candidate_count"),
         "inliers": _metric_int(metric, "missing_inliers"),
         "fallback_source": _metric_text(metric, "fallback_source"),
@@ -5181,6 +6757,67 @@ def _metric_diagnostic_row(metric: dict[str, Any]) -> dict[str, Any]:
         "notes": _metric_notes_text(metric),
     }
 
+
+
+def _object_feature_telemetry_stats(metrics: list[dict[str, Any]]) -> dict[str, Any]:
+    def mean_int(name: str) -> float:
+        values = [
+            _metric_int(metric, name)
+            for metric in metrics
+            if _metric_int(metric, name) > 0
+        ]
+        return float(np.mean(values)) if values else 0.0
+
+    slot_attempted = [
+        metric
+        for metric in metrics
+        if _metric_bool(metric, "slot_local_lightglue_attempted")
+    ]
+    slot_accepted = [
+        metric
+        for metric in metrics
+        if _metric_bool(metric, "slot_local_lightglue_accepted")
+    ]
+
+    return {
+        "objects": len(metrics),
+        "mean_reference_keypoints_total": mean_int("reference_keypoints_total"),
+        "mean_frame_keypoints_total": mean_int("frame_keypoints_total"),
+        "mean_frame_max_keypoints": mean_int("frame_max_keypoints"),
+        "mean_lightglue_reference_matches_total": mean_int(
+            "lightglue_reference_matches_total"
+        ),
+        "mean_lightglue_frame_matches_total": mean_int(
+            "lightglue_frame_matches_total"
+        ),
+        "masked_alignment_used": sum(
+            1 for metric in metrics if _metric_bool(metric, "masked_alignment_used")
+        ),
+        "mean_original_reference_keypoints_total": mean_int(
+            "original_reference_keypoints_total"
+        ),
+        "mean_masked_reference_keypoints_total": mean_int(
+            "masked_reference_keypoints_total"
+        ),
+        "mean_masked_lightglue_matches_total": mean_int(
+            "masked_lightglue_matches_total"
+        ),
+        "slot_local_attempted": len(slot_attempted),
+        "slot_local_accepted": len(slot_accepted),
+        "slot_local_accept_rate": (
+            len(slot_accepted) / len(slot_attempted) * 100.0
+            if slot_attempted
+            else 0.0
+        ),
+        "mean_slot_local_reference_keypoints": mean_int(
+            "slot_local_lightglue_reference_keypoints"
+        ),
+        "mean_slot_local_frame_keypoints": mean_int(
+            "slot_local_lightglue_frame_keypoints"
+        ),
+        "mean_slot_local_raw_matches": mean_int("slot_local_lightglue_raw_matches"),
+        "mean_slot_local_inliers": mean_int("slot_local_lightglue_inliers"),
+    }
 
 
 def _object_result_policy_stats(metrics: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -6015,7 +7652,10 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
     single_cases = sum(1 for result in results if result.scenario_kind == "single")
     multi_cases = sum(1 for result in results if result.scenario_kind == "multi")
 
-    object_metrics = _object_metric_dicts(results)
+    object_metrics = [
+        _strip_report_only_object_metric_fields(metric)
+        for metric in _object_metric_dicts(results)
+    ]
     total_expected_objects = len(object_metrics)
     object_failures = sum(1 for metric in object_metrics if not bool(metric.get("passed")))
     object_safety_passed = sum(
@@ -6107,24 +7747,11 @@ def _build_summary(results: list[SyntheticResult]) -> dict[str, Any]:
         "object_candidate_agreement_stats": _object_candidate_agreement_stats(
             object_metrics
         ),
-        "object_candidate_oracle_stats": _object_candidate_oracle_stats(
-            object_metrics
-        ),
-        "object_candidate_oracle_matrix": _object_candidate_oracle_matrix(
-            object_metrics
-        ),
-        "object_crop_verification_stats": _object_crop_verification_stats(object_metrics),
-        "object_crop_verification_matrix": _object_crop_verification_matrix(object_metrics),
         "object_candidate_overlap_stats": _object_candidate_overlap_stats(object_metrics),
         "object_result_policy_stats": _object_result_policy_stats(object_metrics),
-        "object_yolo_synthetic_feasibility_stats": _object_yolo_synthetic_feasibility_stats(
+        "object_feature_telemetry_stats": _object_feature_telemetry_stats(
             object_metrics
         ),
-        "object_yolo_synthetic_fixture_stats": _object_yolo_synthetic_fixture_stats(
-            object_metrics
-        ),
-        "object_yolo_gt_detector_stats": _object_yolo_gt_detector_stats(object_metrics),
-        "object_failure_microscope": _object_failure_microscope(object_metrics),
         "mean_iou": float(np.mean(ious)) if ious else 0.0,
         "min_iou": float(np.min(ious)) if ious else 0.0,
         "mean_center_drift_px": float(np.mean(drifts)) if drifts else 0.0,
@@ -6788,6 +8415,43 @@ def _html_crop_verification_matrix_table(stats: dict[str, dict[str, Any]]) -> st
     """
 
 
+def _html_feature_telemetry_table(stats: dict[str, Any]) -> str:
+    if not stats:
+        return ""
+
+    rows = [
+        ("objects", int(stats.get("objects", 0))),
+        ("mean reference keypoints", f"{float(stats.get('mean_reference_keypoints_total', 0.0)):.1f}"),
+        ("mean frame keypoints", f"{float(stats.get('mean_frame_keypoints_total', 0.0)):.1f}"),
+        ("mean frame max keypoints", f"{float(stats.get('mean_frame_max_keypoints', 0.0)):.1f}"),
+        ("mean LightGlue ref matches", f"{float(stats.get('mean_lightglue_reference_matches_total', 0.0)):.1f}"),
+        ("mean LightGlue frame matches", f"{float(stats.get('mean_lightglue_frame_matches_total', 0.0)):.1f}"),
+        ("masked alignment used", int(stats.get("masked_alignment_used", 0))),
+        ("mean original reference keypoints", f"{float(stats.get('mean_original_reference_keypoints_total', 0.0)):.1f}"),
+        ("mean masked reference keypoints", f"{float(stats.get('mean_masked_reference_keypoints_total', 0.0)):.1f}"),
+        ("mean masked LightGlue matches", f"{float(stats.get('mean_masked_lightglue_matches_total', 0.0)):.1f}"),
+        ("slot-local attempted", int(stats.get("slot_local_attempted", 0))),
+        ("slot-local accepted", int(stats.get("slot_local_accepted", 0))),
+        ("slot-local accept rate", f"{float(stats.get('slot_local_accept_rate', 0.0)):.1f}%"),
+        ("mean slot-local ref/frame keypoints", f"{float(stats.get('mean_slot_local_reference_keypoints', 0.0)):.1f} / {float(stats.get('mean_slot_local_frame_keypoints', 0.0)):.1f}"),
+        ("mean slot-local matches/inliers", f"{float(stats.get('mean_slot_local_raw_matches', 0.0)):.1f} / {float(stats.get('mean_slot_local_inliers', 0.0)):.1f}"),
+    ]
+    body = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(name))}</td>"
+        f"<td>{html.escape(str(value))}</td>"
+        "</tr>"
+        for name, value in rows
+    )
+    return f"""
+      <h2>Feature telemetry</h2>
+      <table>
+        <tr><th>metric</th><th>value</th></tr>
+        {body}
+      </table>
+    """
+
+
 def _html_result_policy_stats_table(stats: dict[str, dict[str, Any]]) -> str:
     if not stats:
         return ""
@@ -7118,6 +8782,87 @@ def _html_fallback_diagnostics_table(
       </table>
     """
 
+def _fmt_debug_float(value: Any) -> str:
+    try:
+        if value is None:
+            return "—"
+        return f"{float(value):.3f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _html_case_slot_local_debug(result: SyntheticResult) -> str:
+    if not result.object_metrics:
+        return ""
+
+    rows = []
+    for raw in result.object_metrics:
+        metric = _enrich_object_metric(dict(raw))
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(metric.get('name') or '—'))}</td>"
+            f"<td>{html.escape(str(metric.get('projection') or '—'))}</td>"
+            f"<td>{'yes' if bool(metric.get('passed')) else 'no'}</td>"
+            f"<td>{int(metric.get('lightglue_reference_matches_total') or 0)}</td>"
+            f"<td>{html.escape(str(metric.get('v2_scene_model_source') or '—'))}</td>"
+            f"<td>{int(metric.get('v2_scene_match_cells') or 0)} / {int(metric.get('v2_scene_model_inlier_cells') or 0)}</td>"
+            f"<td>{int(metric.get('v2_scene_match_bottom_count') or 0)} / {int(metric.get('v2_scene_model_inlier_bottom_count') or 0)}</td>"
+            f"<td>{_fmt_debug_float(metric.get('v2_scene_model_inlier_span_x'))} / {_fmt_debug_float(metric.get('v2_scene_model_inlier_span_y'))}</td>"
+            f"<td>{_fmt_debug_float(metric.get('v2_scene_model_inlier_max_cell_fraction'))}</td>"
+            f"<td>{'yes' if bool(metric.get('none_promoted_to_slot_local_seed')) else 'no'}</td>"
+            f"<td>{html.escape(str(metric.get('none_original_reason') or metric.get('none_reason') or '—'))}</td>"
+            f"<td>{'yes' if bool(metric.get('slot_local_lightglue_attempted')) else 'no'}</td>"
+            f"<td>{'yes' if bool(metric.get('slot_local_lightglue_accepted')) else 'no'}</td>"
+            f"<td>{html.escape(str(metric.get('slot_local_lightglue_mode') or '—'))}</td>"
+            f"<td>{int(metric.get('slot_local_lightglue_raw_matches') or 0)}</td>"
+            f"<td>{int(metric.get('slot_local_lightglue_inliers') or 0)}</td>"
+            f"<td>{html.escape(str(metric.get('slot_local_lightglue_reject_reason') or '—'))}</td>"
+            "</tr>"
+        )
+
+    return f"""
+              <h3>Per-object global/local debug</h3>
+              <table>
+                <tr>
+                  <th>object</th>
+                  <th>projection</th>
+                  <th>pass</th>
+                  <th>global matches</th>
+                  <th>scene model</th>
+                  <th>cells all/inl</th>
+                  <th>bottom all/inl</th>
+                  <th>inlier span x/y</th>
+                  <th>max cell frac</th>
+                  <th>seeded none</th>
+                  <th>none reason</th>
+                  <th>slot tried</th>
+                  <th>slot accepted</th>
+                  <th>slot mode</th>
+                  <th>slot matches</th>
+                  <th>slot inliers</th>
+                  <th>slot reject</th>
+                </tr>
+                {''.join(rows)}
+              </table>
+            """
+
+
+
+def _html_decision_legend() -> str:
+    return """
+      <h2>Как читать один кейс</h2>
+      <table>
+        <tr><th>Элемент</th><th>Что означает</th></tr>
+        <tr><td>Зелёный полигон / GT</td><td>Истинное место отсутствующей детали после синтетической проекции эталона.</td></tr>
+        <tr><td>Красный полигон / PRED</td><td>Куда текущий pipeline перенёс expected-зону. Если его нет — зона скрыта как неподтверждённая.</td></tr>
+        <tr><td>Белая стрелка drift</td><td>Сдвиг центра PRED относительно GT. Это самый быстрый визуальный индикатор ошибки.</td></tr>
+        <tr><td>Оранжевые полигоны</td><td>Похожие distractor-детали. Опасная ошибка — когда PRED ближе к ним, чем к GT.</td></tr>
+        <tr><td>PASS</td><td>IoU, drift, area ratio, ось и защита от distractor прошли пороги.</td></tr>
+        <tr><td>SAFE FAIL</td><td>Точность не прошла, но проекция не уехала на опасный distractor.</td></tr>
+        <tr><td>DANGER</td><td>Полигон лучше скрыть и считать деталь неподтверждённой, чем рисовать уверенную ложную зону.</td></tr>
+      </table>
+    """
+
 def _write_html_report(
     path: Path,
     *,
@@ -7129,6 +8874,15 @@ def _write_html_report(
         status = "PASS" if result.passed else "FAIL"
         safety_status = "SAFE" if result.safety_passed else "DANGER"
         notes = "<br>".join(html.escape(note) for note in result.notes) or "—"
+        keypoints_html = ""
+        if result.keypoints_image_path:
+            keypoints_html = (
+                f'<h3>Global keypoints / global LightGlue diagnostics</h3>'
+                f'<p class="hint">Панель 4 показывает global LightGlue matches, не локальные пары конкретной детали.</p>'
+                f'<img src="{html.escape(result.keypoints_image_path)}" '
+                f'alt="Synthetic keypoints {result.index}">'
+            )
+        object_debug_html = _html_case_slot_local_debug(result)
         cards.append(
             f"""
             <article class="case {'pass' if result.passed else 'fail'}">
@@ -7146,6 +8900,8 @@ def _write_html_report(
                 <tr><th>notes</th><td colspan="3">{notes}</td></tr>
               </table>
               <img src="{html.escape(result.image_path)}" alt="Synthetic case {result.index}">
+              {keypoints_html}
+              {object_debug_html}
             </article>
             """
         )
@@ -7181,6 +8937,8 @@ def _write_html_report(
       <p>YOLO здесь не запускается. Все detections пустые. Тест проверяет только перенос expected/missing зоны по окружающим feature-точкам.</p>
       <p class="hint">Формы теперь сложные: вогнутые, тонкие, ступенчатые и крючкообразные. Четвёртая панель показывает, куда global alignment поставил context-точки и куда они реально сопоставились.</p>
       <p class="hint">В profile=nightmare по умолчанию сначала идут одиночные кейсы, затем такая же пачка multi-object кейсов: несколько разных/одинаковых объектов в одной сцене.</p>
+      <p class="hint">Для каждого кейса пишется отдельная картинка keypoints: первые три панели — global SuperPoint, четвёртая — только global LightGlue pairs. Локальные slot-local пары смотри в таблице под кейсом.</p>
+      <p class="hint">Синтетическая камера теперь наклоняет эталон в 8 направлений по seed, а не только одной фиксированной перспективой. Значение tilt на картинке: направление/сила projective-компоненты.</p>
       <div class="summary">
         <div class="metric">Cases<b>{summary['total']}</b></div>
         <div class="metric">Passed<b>{summary['passed']}</b></div>
@@ -7200,6 +8958,7 @@ def _write_html_report(
         <div class="metric">Max drift<b>{summary['max_center_drift_px']:.1f}px</b></div>
       </div>
       <p>Настройки: edge refinement = <code>{summary['edge_refinement_enabled']}</code>, context expansion = <code>{summary['context_expansion']}</code>, min support = <code>{summary['min_feature_support']}</code>.</p>
+      {_html_decision_legend()}
       {_html_stats_table('Object projection stats', summary.get('object_projection_stats', {}))}
       {_html_stats_table('Object shape stats', summary.get('object_shape_stats', {}))}
       {_html_reason_stats_table('Top object failure reasons', summary.get('object_failure_reason_stats', {}))}
@@ -7221,6 +8980,7 @@ def _write_html_report(
       {_html_crop_verification_stats_table(summary.get('object_crop_verification_stats', {}))}
       {_html_crop_verification_matrix_table(summary.get('object_crop_verification_matrix', {}))}
       {_html_candidate_overlap_table(summary.get('object_candidate_overlap_stats', {}))}
+      {_html_feature_telemetry_table(summary.get('object_feature_telemetry_stats', {}))}
       {_html_result_policy_stats_table(summary.get('object_result_policy_stats', {}))}
       {_html_yolo_synthetic_feasibility_table(summary.get('object_yolo_synthetic_feasibility_stats', {}))}
       {_html_yolo_synthetic_fixture_table(summary.get('object_yolo_synthetic_fixture_stats', {}))}
@@ -8948,13 +10708,7 @@ def _evaluate_real_yolo_scene(
     variant: str,
 ) -> list[dict[str, Any]]:
     expected, annotation_to_object = _real_yolo_expected_segments(scene)
-    projection_data = LocalProjectionData(
-        global_homography=scene.approximate_homography,
-        reference_points=scene.reference_points,
-        frame_points=scene.frame_points,
-        frame_size=_CANVAS_SIZE,
-        frame=target_image,
-    )
+    projection_data = _real_feature_projection_data_for_target(scene, target_image)
     matches = match_segments(
         expected,
         detections,

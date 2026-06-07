@@ -7,11 +7,34 @@ LIGHTGLUE_TORCH_WEIGHTS_PATH = resolve_storage_path("weights/superpoint_lightglu
 
 SUPERPOINT_INPUT_STRIDE = 8
 
-SUPERPOINT_OFFLINE_MAX_SIDE: int | None = 4096
-SUPERPOINT_REALTIME_MAX_SIDE: int = 640
+# Feature budgets are intentionally split by workload.
+#
+# * reference: computed once and cached for the standard image, so it can be dense;
+# * photo: one-off inspection image, allowed to be heavier than realtime;
+# * video: live frame path, must stay small and predictable.
+SUPERPOINT_REFERENCE_MAX_SIDE: int | None = 4096
+SUPERPOINT_PHOTO_MAX_SIDE: int | None = 4096
+SUPERPOINT_VIDEO_MAX_SIDE: int = 640
 
-SUPERPOINT_OFFLINE_MAX_KEYPOINTS = 4096
-SUPERPOINT_REALTIME_MAX_KEYPOINTS = 512
+SUPERPOINT_REFERENCE_MAX_KEYPOINTS = 8192
+SUPERPOINT_PHOTO_MAX_KEYPOINTS = 4096
+SUPERPOINT_VIDEO_MAX_KEYPOINTS = 512
+
+# Grid-balanced keypoint selection keeps high-score features from collapsing
+# into one textured area while keeping the extractor budget predictable.
+SUPERPOINT_REFERENCE_GRID_ROWS = 12
+SUPERPOINT_REFERENCE_GRID_COLS = 12
+SUPERPOINT_PHOTO_GRID_ROWS = 8
+SUPERPOINT_PHOTO_GRID_COLS = 8
+SUPERPOINT_VIDEO_GRID_ROWS = 6
+SUPERPOINT_VIDEO_GRID_COLS = 6
+
+# Backward-compatible aliases. New code should choose the explicit profile above.
+SUPERPOINT_OFFLINE_MAX_SIDE: int | None = SUPERPOINT_REFERENCE_MAX_SIDE
+SUPERPOINT_REALTIME_MAX_SIDE: int = SUPERPOINT_VIDEO_MAX_SIDE
+
+SUPERPOINT_OFFLINE_MAX_KEYPOINTS = SUPERPOINT_REFERENCE_MAX_KEYPOINTS
+SUPERPOINT_REALTIME_MAX_KEYPOINTS = SUPERPOINT_VIDEO_MAX_KEYPOINTS
 
 MIN_REFERENCE_KEYPOINTS = 100
 

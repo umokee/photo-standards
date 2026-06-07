@@ -12,8 +12,10 @@ from infra.storage.file_storage import resolve_storage_path
 from modules.core.standards.models import StandardImage
 from modules.core.standards.reference_features import compute_features, load_image
 from modules.core.standards.reference_constants import (
-    SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
-    SUPERPOINT_OFFLINE_MAX_SIDE,
+    SUPERPOINT_REFERENCE_GRID_COLS,
+    SUPERPOINT_REFERENCE_GRID_ROWS,
+    SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+    SUPERPOINT_REFERENCE_MAX_SIDE,
 )
 from modules.core.standards.reference_storage import (
     features_file_is_compatible,
@@ -39,8 +41,9 @@ async def compute_and_save_features(
     image_array = load_image(image_absolute)
     features = compute_features(
         image_array,
-        max_side=SUPERPOINT_OFFLINE_MAX_SIDE,
-        max_keypoints=SUPERPOINT_OFFLINE_MAX_KEYPOINTS,
+        max_side=SUPERPOINT_REFERENCE_MAX_SIDE,
+        max_keypoints=SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+        selection_grid=(SUPERPOINT_REFERENCE_GRID_ROWS, SUPERPOINT_REFERENCE_GRID_COLS),
     )
 
     rel_path = features_rel_path(
@@ -63,6 +66,10 @@ async def compute_and_save_features(
         image_path=image.image_path,
         features_path=rel_path,
         keypoint_count=features.count,
+        feature_profile="reference",
+        max_side=SUPERPOINT_REFERENCE_MAX_SIDE,
+        max_keypoints=SUPERPOINT_REFERENCE_MAX_KEYPOINTS,
+        selection_grid=f"{SUPERPOINT_REFERENCE_GRID_ROWS}x{SUPERPOINT_REFERENCE_GRID_COLS}",
         alignment_backend=settings.ALIGNMENT_BACKEND,
         alignment_device=settings.ALIGNMENT_DEVICE,
         duration_ms=elapsed_ms(started_at),
