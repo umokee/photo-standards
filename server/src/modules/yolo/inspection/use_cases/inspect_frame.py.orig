@@ -31,7 +31,6 @@ from modules.yolo.inspection.domain.matcher import (
     build_missing_matches,
     match_segments,
     match_segments_by_count,
-    match_segments_yolo_slots,
     summarize,
 )
 from modules.yolo.inspection.domain.overlay import render_overlay
@@ -46,7 +45,6 @@ from modules.yolo.inspection.domain.yolo_anchor_pose import (
 
 VERIFICATION_MODE_ALIGNMENT = "alignment"
 VERIFICATION_MODE_YOLO_COUNT = "yolo_count"
-VERIFICATION_MODE_YOLO_SLOTS = "yolo_slots"
 
 
 @dataclass(slots=True)
@@ -799,63 +797,6 @@ def _compose_frame_result(
             verification_mode=verification_mode,
         )
 
-    if verification_mode == VERIFICATION_MODE_YOLO_SLOTS:
-        projection_data = _build_projection_data(
-            context=context,
-            alignment=alignment,
-            frame=frame,
-        )
-        if profile_enabled:
-            started_at = time.perf_counter()
-            matches = match_segments_yolo_slots(
-                expected,
-                detection_result.detections,
-                alignment.homography,
-                frame_size=(frame.shape[1], frame.shape[0]),
-                projection_data=projection_data,
-            )
-            profile["inspect_matching_ms"] = _elapsed_ms(started_at)
-        else:
-            matches = match_segments_yolo_slots(
-                expected,
-                detection_result.detections,
-                alignment.homography,
-                frame_size=(frame.shape[1], frame.shape[0]),
-                projection_data=projection_data,
-            )
-
-        _, matched, missing = summarize(matches)
-        inspection_status = (
-            inspections_constants.statuses.passed
-            if all_ok(matches, expected_total=len(expected))
-            else inspections_constants.statuses.failed
-        )
-        rendered_frame = None
-        if render:
-            if profile_enabled:
-                started_at = time.perf_counter()
-                rendered_frame = render_overlay(frame, matches, fps=fps)
-                profile["inspect_render_ms"] = _elapsed_ms(started_at)
-            else:
-                rendered_frame = render_overlay(frame, matches, fps=fps)
-
-        return InspectionFrameResult(
-            image_path=image_path,
-            detections=detection_result.detections,
-            expected_segments=expected,
-            matches=matches,
-            total=len(expected),
-            matched=matched,
-            missing=missing,
-            inspection_status=inspection_status,
-            alignment=alignment,
-            alignment_message=alignment_display_message,
-            raw_class_counts=detection_result.raw_class_counts,
-            rendered_frame=rendered_frame,
-            profile=profile,
-            verification_mode=verification_mode,
-        )
-
     alignment, alignment_display_message = _select_effective_alignment(
         context=context,
         expected=expected,
@@ -1140,11 +1081,8 @@ def _can_project_segments(
 
 
 def _verification_mode() -> str:
-    mode = str(settings.INSPECTION_VERIFICATION_MODE or VERIFICATION_MODE_ALIGNMENT)
-    if mode == VERIFICATION_MODE_YOLO_COUNT:
+    if settings.INSPECTION_VERIFICATION_MODE == VERIFICATION_MODE_YOLO_COUNT:
         return VERIFICATION_MODE_YOLO_COUNT
-    if mode == VERIFICATION_MODE_YOLO_SLOTS:
-        return VERIFICATION_MODE_YOLO_SLOTS
     return VERIFICATION_MODE_ALIGNMENT
 
 
