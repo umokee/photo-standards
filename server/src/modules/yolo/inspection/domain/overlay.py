@@ -71,6 +71,7 @@ def render_overlay(
     alignment_message: str | None = None,
     polygon_transform: np.ndarray | None = None,
     debug_projection: bool = True,
+    pose_method: str | None = None,
 ) -> np.ndarray:
     del fps, debug_projection
 
@@ -97,6 +98,21 @@ def render_overlay(
             f"Совмещение: {alignment_message}",
             (16, 52),
             COLOR_MISSING,
+        )
+
+    if pose_method is not None:
+        method_label = (
+            "Фолбэк alignment"
+            if pose_method == "feature_slot_fallback"
+            else "YOLO pose"
+            if pose_method == "yolo_anchor_pose"
+            else f"Метод: {pose_method}"
+        )
+        _draw_label(
+            output,
+            method_label,
+            (16, 88),
+            COLOR_EXTRA,
         )
 
     return output

@@ -100,6 +100,7 @@ def build_pose_pipeline_summary(
         "detail_status_counts": dict(_detail_status_counts(details)),
         "feature_alignment": _feature_alignment_summary(alignment_debug),
         "yolo_anchor_pose": _yolo_anchor_pose_summary(alignment_debug),
+        "pose_arbiter": _pose_arbiter_summary(alignment_debug),
         "next_step_hint": _next_step_hint(
             final_source=final_source,
             yolo_detection_count=yolo_detection_count,
@@ -158,6 +159,14 @@ def _final_pose_reason(
         return "YOLO produced no detections"
     return "pose source is not available in debug payload"
 
+
+def _pose_arbiter_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
+    extra = alignment_debug.get("extra_debug")
+    if isinstance(extra, dict):
+        pose_arbiter = extra.get("pose_arbiter")
+        if isinstance(pose_arbiter, dict):
+            return pose_arbiter
+    return {}
 
 def _feature_alignment_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
     method = _string_value(alignment_debug.get("method"))

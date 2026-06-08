@@ -281,6 +281,30 @@ def match_segments(
         if unmatched is not None:
             detection_index, debug = unmatched
             det = detection_by_index[detection_index]
+            reason_code = str(debug.get("reason_code") or "")
+
+            # v24_1_wrong_class_inside_slot_missing:
+            # If YOLO detects a different class inside the expected slot, the
+            # expected object is still missing. Do not attach the wrong YOLO
+            # mask/polygon/bbox to the expected row; consume the detection so it
+            # also does not become a duplicate extra for the same physical zone.
+            if reason_code == "different_class_detection_inside_projected_slot":
+                wrong_debug = dict(debug)
+                wrong_debug["detected_mask_ignored"] = True
+                wrong_debug["wrong_class_detection_consumed"] = True
+                match = _expected_match(
+                    item,
+                    status="missing",
+                    confidence=det.detection.confidence,
+                    expected_polygon=polygon,
+                    detected_polygon=None,
+                    detected_bbox=None,
+                    debug=wrong_debug,
+                )
+                match.detected_class_in_zone = det.detection.class_key
+                matches.append(match)
+                continue
+
             match = _expected_match(
                 item,
                 status="unmatched",

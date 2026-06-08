@@ -24,6 +24,7 @@ class FrameResult:
     homography: list | None = None
     alignment_debug: dict[str, Any] | None = None
     verification_mode: str = "alignment"
+    pose_method: str | None = None
 
 
 def _status_of(detail: dict[str, Any]) -> str:
@@ -91,6 +92,7 @@ def rebuild_frame_result_from_details(
         homography=result.homography,
         alignment_debug=result.alignment_debug,
         verification_mode=result.verification_mode,
+        pose_method=result.pose_method,
         captured_at=result.captured_at,
         details=details,
     )

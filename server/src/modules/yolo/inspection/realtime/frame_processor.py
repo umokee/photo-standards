@@ -4,6 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -35,6 +36,15 @@ from .frame_result import (
 )
 from .overlay_motion import OverlayMotionTracker
 from .profiler import FrameProfiler
+
+
+def _extract_pose_method(alignment_debug: dict[str, Any] | None) -> str | None:
+    if not alignment_debug or not isinstance(alignment_debug, dict):
+        return None
+    pose_arbiter = alignment_debug.get("extra_debug", {}).get("pose_arbiter") if isinstance(alignment_debug.get("extra_debug"), dict) else None
+    if not pose_arbiter or not isinstance(pose_arbiter, dict):
+        return None
+    return pose_arbiter.get("selected") if isinstance(pose_arbiter, dict) else None
 
 
 @dataclass(slots=True)
@@ -183,6 +193,7 @@ class RealtimeFrameProcessor:
             fps=fps,
             alignment_message=None,
             polygon_transform=polygon_transform,
+            pose_method=result.pose_method,
         )
 
     def _needs_full_pipeline(self) -> bool:
@@ -296,6 +307,7 @@ class RealtimeFrameProcessor:
             ),
             alignment_debug=frame_result.alignment.to_debug_payload(),
             verification_mode=frame_result.verification_mode,
+            pose_method=_extract_pose_method(frame_result.alignment.to_debug_payload()),
             captured_at=datetime.now(UTC),
             details=details,
         )
