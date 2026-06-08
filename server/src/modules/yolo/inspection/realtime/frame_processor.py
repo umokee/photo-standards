@@ -25,7 +25,10 @@ from modules.yolo.inspection.use_cases.inspect_frame import (
     inspect_frame_parallel,
 )
 
-from .constants import INSPECTION_EVERY_N_FRAMES
+from .constants import (
+    EMPTY_SCENE_INSPECTION_EVERY_N_FRAMES,
+    INSPECTION_EVERY_N_FRAMES,
+)
 from .frame_result import (
     FrameResult,
     rebuild_frame_result_from_details,
@@ -49,7 +52,12 @@ class RealtimeFrameProcessor:
     ) -> None:
         self._session_id = session_id
         self._context = context
-        self._inspection_interval = max(1, int(INSPECTION_EVERY_N_FRAMES))
+        self._active_inspection_interval = max(1, int(INSPECTION_EVERY_N_FRAMES))
+        self._empty_scene_inspection_interval = max(
+            self._active_inspection_interval,
+            int(EMPTY_SCENE_INSPECTION_EVERY_N_FRAMES),
+        )
+        self._inspection_interval = self._active_inspection_interval
 
         self._frame_counter = 0
         self._last_full_result: InspectionFrameResult | None = None
@@ -215,17 +223,38 @@ class RealtimeFrameProcessor:
         if frame_result.verification_mode == "yolo_count":
             self._last_full_result = frame_result
             self._motion_tracker.reset(frame)
+            if self._should_slow_down_for_empty_scene(frame_result):
+                self._inspection_interval = self._empty_scene_inspection_interval
+                return frame_result, "empty_scene"
+
+            self._inspection_interval = self._active_inspection_interval
             return frame_result, "yolo_count"
 
-        if frame_result.alignment.is_success:
-            self._last_full_result = frame_result
-            self._motion_tracker.reset(frame)
-            return frame_result, "full_parallel"
-
-        self._last_full_result = None
+        self._last_full_result = frame_result
         self._motion_tracker.reset(frame)
 
+        if self._should_slow_down_for_empty_scene(frame_result):
+            self._inspection_interval = self._empty_scene_inspection_interval
+            return frame_result, "empty_scene"
+
+        self._inspection_interval = self._active_inspection_interval
+
+        if frame_result.alignment.is_success:
+            return frame_result, "full_parallel"
+
         return frame_result, "alignment_failure"
+
+    def _should_slow_down_for_empty_scene(
+        self,
+        frame_result: InspectionFrameResult,
+    ) -> bool:
+        if frame_result.detections:
+            return False
+
+        if frame_result.verification_mode == "yolo_count":
+            return True
+
+        return not frame_result.alignment.is_success
 
     def _build_frame_result(self, frame_result: InspectionFrameResult) -> FrameResult:
         details = [build_result_item(match) for match in frame_result.matches]

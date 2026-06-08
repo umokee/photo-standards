@@ -33,14 +33,14 @@ from modules.yolo.inspection.domain.matcher import (
     match_segments_by_count,
     summarize,
 )
-from modules.yolo.inspection.domain.yolo_anchor_pose import (
-    estimate_yolo_anchor_alignment,
-)
 from modules.yolo.inspection.domain.overlay import render_overlay
 from modules.yolo.inspection.domain.types import (
     ExpectedSegment,
     SegmentMatch,
     YoloDetection,
+)
+from modules.yolo.inspection.domain.yolo_anchor_pose import (
+    estimate_yolo_anchor_alignment,
 )
 
 VERIFICATION_MODE_ALIGNMENT = "alignment"
@@ -299,7 +299,7 @@ def inspect_frame_parallel(
             alignment_future = active_executor.submit(
                 _timed_align_frame,
                 context,
-                frame.copy(),
+                frame,
                 alignment_max_side,
                 alignment_max_keypoints,
                 alignment_selection_grid,
@@ -307,7 +307,7 @@ def inspect_frame_parallel(
             detection_future = active_executor.submit(
                 _timed_detect_segments,
                 context,
-                frame.copy(),
+                frame,
                 yolo_conf,
             )
 
@@ -536,8 +536,6 @@ def _choose_auto_pose_candidate(
     anchor_strong: bool,
     disagreement_px: float | None,
 ) -> tuple[FrameAlignment, str, str]:
-    # If LightGlue/fallback cannot project a scene, the accepted YOLO-anchor
-    # pose is the only usable candidate.
     if not fallback_can_project or not fallback_alignment.is_success:
         return (
             anchor_alignment,
@@ -545,9 +543,6 @@ def _choose_auto_pose_candidate(
             "fallback_unavailable_yolo_anchor_used",
         )
 
-    # If both are usable but disagree a lot, prefer the strong LightGlue pose.
-    # This fixes the observed auto regression where a noisy accepted YOLO pose
-    # overrode an actually better feature fallback.
     if disagreement_px is not None and disagreement_px > 14.0:
         if fallback_strong:
             return (
@@ -562,17 +557,15 @@ def _choose_auto_pose_candidate(
                 "both_candidates_weak_or_disagree_keep_safer_fallback",
             )
 
-    # If YOLO is clearly strong and either fallback is weak or both agree,
-    # prefer YOLO-anchor pose for multi-object missing cases.
-    if anchor_strong and (not fallback_strong or disagreement_px is None or disagreement_px <= 8.0):
+    if anchor_strong and (
+        not fallback_strong or disagreement_px is None or disagreement_px <= 8.0
+    ):
         return (
             anchor_alignment,
             "Совмещение по видимым YOLO-объектам",
             "yolo_anchor_strong_and_consistent",
         )
 
-    # Default safe auto behavior: do not let a merely accepted YOLO candidate
-    # replace a projectable LightGlue fallback.
     return (
         fallback_alignment,
         fallback_message,
@@ -603,10 +596,14 @@ def _is_strong_yolo_anchor_pose(
     if payload and payload.get("accepted") is False:
         return False
 
-    anchor_count = _int_payload(payload, "anchor_count", alignment.reference_feature_count)
+    anchor_count = _int_payload(
+        payload, "anchor_count", alignment.reference_feature_count
+    )
     inlier_anchors = _int_payload(payload, "inlier_anchor_count", None)
     point_ratio = _float_payload(payload, "point_inlier_ratio", None)
-    median_error = _float_payload(payload, "median_center_error_px", alignment.median_error)
+    median_error = _float_payload(
+        payload, "median_center_error_px", alignment.median_error
+    )
     p90_error = _float_payload(payload, "p90_center_error_px", None)
     spread = _float_payload(payload, "anchor_spread_score", None)
     condition = _float_payload(payload, "homography_condition", None)
@@ -655,7 +652,9 @@ def _int_payload(payload: dict[str, object], key: str, default: object) -> int |
         return None
 
 
-def _float_payload(payload: dict[str, object], key: str, default: object) -> float | None:
+def _float_payload(
+    payload: dict[str, object], key: str, default: object
+) -> float | None:
     value = payload.get(key, default)
     try:
         if value is None:
@@ -740,8 +739,6 @@ def _merge_alignment_extra_debug(
     try:
         alignment.extra_debug = merged
     except (AttributeError, TypeError):
-        # Older FrameAlignment without extra_debug: keep the arbiter fail-safe,
-        # only the debug attachment is skipped.
         return
 
 
@@ -1062,13 +1059,12 @@ def _build_projection_data(
     )
 
 
-
-
 def _load_projection_reference_frame(context: InspectionContext) -> np.ndarray | None:
     try:
         return load_image(resolve_storage_path(context.reference_image.image_path))
     except Exception:
         return None
+
 
 def _can_project_segments(
     *,

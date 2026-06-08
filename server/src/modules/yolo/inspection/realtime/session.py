@@ -373,7 +373,7 @@ class _RealtimeFrameState:
             if self._latest_jpeg is not None and self._latest_jpeg_version == version:
                 return None, version
 
-            return self._latest_rendered.copy(), version
+            return self._latest_rendered, version
 
 
 def _encode_jpeg(frame: np.ndarray) -> bytes | None:
