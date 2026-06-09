@@ -5,7 +5,6 @@ from .alignment import (
     alignment_message,
     failed_alignment,
     project_polygon,
-    project_polygon_adaptive,
 )
 from .matcher import (
     all_ok,
@@ -33,7 +32,6 @@ __all__ = [
     "match_segments",
     "match_segments_by_count",
     "project_polygon",
-    "project_polygon_adaptive",
     "render_overlay",
     "summarize",
 ]

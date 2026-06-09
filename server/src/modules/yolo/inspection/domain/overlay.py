@@ -100,27 +100,16 @@ def render_overlay(
             COLOR_MISSING,
         )
 
-    yolo_slots_label = _yolo_slots_overlay_label(matches)
-    if yolo_slots_label is not None:
-        _draw_label(
-            output,
-            yolo_slots_label,
-            (16, 88),
-            COLOR_EXTRA,
-        )
-
     if pose_method is not None:
         method_label = (
             "Фолбэк alignment"
             if pose_method == "feature_slot_fallback"
-            else "YOLO pose"
-            if pose_method == "yolo_anchor_pose"
             else f"Метод: {pose_method}"
         )
         _draw_label(
             output,
             method_label,
-            (16, 124 if yolo_slots_label is not None else 88),
+            (16, 124 if projection_label is not None else 88),
             COLOR_EXTRA,
         )
 
@@ -290,45 +279,6 @@ def _normalize_transform(transform: np.ndarray) -> np.ndarray | None:
         return None
 
     return matrix.astype(np.float32)
-
-
-
-def _match_source(match: SegmentMatch) -> str | None:
-    debug = match.debug
-    if not isinstance(debug, dict):
-        return None
-    source = debug.get("match_source")
-    return str(source) if source is not None else None
-
-
-def _yolo_slots_overlay_label(matches: list[SegmentMatch]) -> str | None:
-    if not any(
-        isinstance(match.debug, dict)
-        and match.debug.get("verification_mode") == "yolo_slots"
-        for match in matches
-    ):
-        return None
-    expected_matches = [match for match in matches if match.annotation_id is not None]
-    ok_count = sum(
-        1
-        for match in expected_matches
-        if match.status == "ok" and _match_source(match) == "yolo_slot_assignment"
-    )
-    missing_count = sum(1 for match in expected_matches if match.status == "missing")
-    wrong_count = sum(
-        1
-        for match in expected_matches
-        if _match_source(match) == "yolo_slot_wrong_class_consumed"
-    )
-    extra_count = sum(1 for match in matches if match.status == "extra")
-    parts = [f"YOLO-slots: ok {ok_count}", f"missing {missing_count}"]
-    if wrong_count:
-        parts.append(f"wrong {wrong_count}")
-    if extra_count:
-        parts.append(f"extra {extra_count}")
-    return " · ".join(parts)
-
-
 def _color_for_status(status: str) -> tuple[int, int, int]:
     if status == "ok":
         return COLOR_OK
@@ -371,8 +321,6 @@ def _label_for_match(match: SegmentMatch) -> str:
             return f"{name} · лишнее {int(match.confidence * 100)}%"
         return f"{name} · лишнее"
     if match.confidence is not None:
-        if _match_source(match) == "yolo_slot_assignment":
-            return f"{name} · YOLO-slot {int(match.confidence * 100)}%"
         return f"{name} {int(match.confidence * 100)}%"
     return name
 
@@ -380,10 +328,9 @@ def _label_for_match(match: SegmentMatch) -> str:
 def _compact_label_for_match(match: SegmentMatch) -> str | None:
     name = _short_name(match.name, limit=16)
     if match.status == "ok" and match.confidence is not None:
-        prefix = "Y " if _match_source(match) == "yolo_slot_assignment" else ""
-        return f"{prefix}{name} {int(match.confidence * 100)}%"
+        return f"{name} {int(match.confidence * 100)}%"
     if match.status == "ok":
-        return f"Y {name}" if _match_source(match) == "yolo_slot_assignment" else name
+        return name
     return None
 
 

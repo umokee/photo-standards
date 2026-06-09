@@ -26,14 +26,7 @@ _MIN_EXPECTED_SLOT_CONFIDENCE = 0.05
 _MIN_EXTRA_CONFIDENCE = 0.25
 _RELAXED_SAME_CLASS_CENTER_FACTOR = 1.10
 _RELAXED_SAME_CLASS_MIN_IOU = 0.015
-
-_YOLO_SLOT_SEARCH_EXPAND_FACTOR = 0.45
-_YOLO_SLOT_SEARCH_MIN_MARGIN_PX = 18.0
-_YOLO_SLOT_SEARCH_MAX_SIDE_FACTOR = 3.5
-_YOLO_SLOT_MIN_CONFIDENCE = 0.05
-_YOLO_SLOT_WRONG_CLASS_MIN_CONFIDENCE = 0.10
-_YOLO_SLOT_CENTER_FACTOR_LIMIT = 1.65
-_YOLO_SLOT_MIN_SEARCH_IOU = 0.001
+_AMBIGUOUS_SLOT_MIN_SAME_CLASS_COUNT = 2
 
 BBox = tuple[float, float, float, float]
 
@@ -80,7 +73,7 @@ def build_missing_matches(
     transform = _resolve_homography(homography, projection_data)
 
     for item in expected:
-        projected, reason = _project_expected_polygon(
+        projected, reason, projection_debug = _project_expected_polygon(
             item,
             transform,
             frame_size=_resolve_frame_size(frame_size, projection_data),
@@ -91,18 +84,21 @@ def build_missing_matches(
                 item,
                 status="missing",
                 expected_polygon=None if unconfirmed else projected,
-                debug=_missing_debug(
-                    projection="feature_lightglue_homography"
-                    if projected
-                    else "unconfirmed_hidden",
-                    safety="unsafe_hidden" if unconfirmed else "confirmed",
-                    reason=reason or "no_matching_detection",
-                    reason_code=(
-                        "scene_pose_unconfirmed"
-                        if unconfirmed
-                        else "no_matching_detection"
+                debug=_with_projection_debug(
+                        _missing_debug(
+                            projection="feature_lightglue_homography"
+                            if projected
+                            else "unconfirmed_hidden",
+                            safety="unsafe_hidden" if unconfirmed else "confirmed",
+                            reason=reason or "no_matching_detection",
+                            reason_code=(
+                                "scene_pose_unconfirmed"
+                                if unconfirmed
+                                else "no_matching_detection"
+                            ),
+                        ),
+                        projection_debug=projection_debug,
                     ),
-                ),
             )
         )
 
@@ -132,25 +128,25 @@ def match_segments(
 
     projected: list[_ProjectedSlot] = []
     hidden_expected: list[
-        tuple[int, ExpectedSegment, list[list[float]] | None, str]
+        tuple[int, ExpectedSegment, list[list[float]] | None, str, dict[str, Any]]
     ] = []
     for index, item in enumerate(expected):
-        polygon, reason = _project_expected_polygon(
+        polygon, reason, projection_debug = _project_expected_polygon(
             item,
             transform,
             frame_size=resolved_frame_size,
         )
         if polygon is None:
             hidden_expected.append(
-                (index, item, None, reason or "scene_pose_unconfirmed")
+                (index, item, None, reason or "scene_pose_unconfirmed", projection_debug)
             )
             continue
         bbox = _bbox_from_polygon(polygon)
         if bbox is None:
-            hidden_expected.append((index, item, polygon, "invalid_projected_polygon"))
+            hidden_expected.append((index, item, polygon, "invalid_projected_polygon", projection_debug))
             continue
         projected.append(
-            _ProjectedSlot(index=index, item=item, polygon=polygon, bbox=bbox)
+            _ProjectedSlot(index=index, item=item, polygon=polygon, bbox=bbox, debug=projection_debug)
         )
 
     detection_items = [
@@ -161,6 +157,7 @@ def match_segments(
     ]
     detection_items = [item for item in detection_items if item.bbox is not None]
     detection_items = _dedupe_detection_items(detection_items)
+    ambiguous_slots = _find_ambiguous_same_class_slots(projected, detection_items)
 
     if not projected and not hidden_expected:
         return []
@@ -170,12 +167,13 @@ def match_segments(
             expected,
             transform,
             frame_size=resolved_frame_size,
-            projection_data=projection_data,
             hide_unconfirmed_projection=transform is None,
         )
 
     candidates: list[tuple[float, float, int, int, dict[str, Any]]] = []
     for slot in projected:
+        if slot.index in ambiguous_slots:
+            continue
         for det in detection_items:
             if slot.item.class_key != det.detection.class_key:
                 continue
@@ -196,6 +194,7 @@ def match_segments(
                         det.index,
                         {
                             "match_source": match_source,
+                            "projection": dict(slot.debug or {}),
                             "iou": _round(iou),
                             "center_distance_factor": _round(center_factor),
                             "center_inside_projected_slot": center_inside,
@@ -222,6 +221,45 @@ def match_segments(
     detection_by_index = {item.index: item for item in detection_items}
     matches: list[SegmentMatch] = []
 
+    for slot_index, detection_indices in ambiguous_slots.items():
+        if slot_index in used_expected:
+            continue
+        slot = projected_by_index.get(slot_index)
+        if slot is None:
+            continue
+        existing_indices = [index for index in detection_indices if index in detection_by_index]
+        if len(existing_indices) < _AMBIGUOUS_SLOT_MIN_SAME_CLASS_COUNT:
+            continue
+        best_index = max(
+            existing_indices,
+            key=lambda index: float(detection_by_index[index].detection.confidence or 0.0),
+        )
+        best_det = detection_by_index[best_index]
+        used_expected.add(slot.index)
+        used_detections.update(existing_indices)
+        debug = _with_projection_debug(
+            {
+                "reason": _reason_message("multiple_same_class_detections_inside_projected_slot"),
+                "reason_code": "multiple_same_class_detections_inside_projected_slot",
+                "expected_class_key": slot.item.class_key,
+                "same_class_detection_count": len(existing_indices),
+                "detection_indices": existing_indices,
+                "assignment_policy": "slot_marked_ambiguous_no_silent_ok",
+            },
+            projection_debug=slot.debug,
+        )
+        match = _expected_match(
+            slot.item,
+            status="unmatched",
+            confidence=best_det.detection.confidence,
+            expected_polygon=slot.polygon,
+            detected_polygon=best_det.polygon,
+            detected_bbox=best_det.detection.bbox,
+            debug=debug,
+        )
+        match.detected_class_in_zone = best_det.detection.class_key
+        matches.append(match)
+
     for expected_index, detection_index, iou, debug in chosen:
         slot = projected_by_index[expected_index]
         det = detection_by_index[detection_index]
@@ -234,7 +272,7 @@ def match_segments(
                 expected_polygon=slot.polygon,
                 detected_polygon=det.polygon,
                 detected_bbox=det.detection.bbox,
-                debug=debug,
+                debug=_with_projection_debug(debug, projection_debug=slot.debug),
             )
         )
 
@@ -249,7 +287,7 @@ def match_segments(
     }
 
     unresolved: list[
-        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]
+        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str, dict[str, Any]]
     ] = []
     for slot in projected:
         if slot.index in used_expected:
@@ -261,13 +299,14 @@ def match_segments(
                 slot.polygon,
                 slot.bbox,
                 "no_detection_in_projected_slot",
+                dict(slot.debug or {}),
             )
         )
-    for index, item, polygon, reason in hidden_expected:
+    for index, item, polygon, reason, projection_debug in hidden_expected:
         if index in used_expected:
             continue
         bbox = _bbox_from_polygon(polygon) if polygon is not None else None
-        unresolved.append((index, item, polygon, bbox, reason))
+        unresolved.append((index, item, polygon, bbox, reason, projection_debug))
 
     same_class_assignments = _choose_same_class_unresolved_assignments(
         unresolved,
@@ -278,7 +317,7 @@ def match_segments(
         det_index for det_index, _debug in same_class_assignments.values()
     }
 
-    for expected_index, item, polygon, _bbox, reason in unresolved:
+    for expected_index, item, polygon, _bbox, reason, projection_debug in unresolved:
         if expected_index in used_expected:
             continue
 
@@ -297,7 +336,7 @@ def match_segments(
             # mask/polygon/bbox to the expected row; consume the detection so it
             # also does not become a duplicate extra for the same physical zone.
             if reason_code == "different_class_detection_inside_projected_slot":
-                wrong_debug = dict(debug)
+                wrong_debug = _with_projection_debug(dict(debug), projection_debug=projection_debug)
                 wrong_debug["detected_mask_ignored"] = True
                 wrong_debug["wrong_class_detection_consumed"] = True
                 match = _expected_match(
@@ -320,7 +359,7 @@ def match_segments(
                 expected_polygon=polygon,
                 detected_polygon=det.polygon,
                 detected_bbox=det.detection.bbox,
-                debug=debug,
+                debug=_with_projection_debug(debug, projection_debug=projection_debug),
             )
             match.detected_class_in_zone = det.detection.class_key
             matches.append(match)
@@ -332,22 +371,25 @@ def match_segments(
                 item,
                 status="missing",
                 expected_polygon=polygon,
-                debug=_missing_debug(
-                    projection="feature_lightglue_homography"
-                    if confirmed_projection
-                    else "unconfirmed_hidden",
-                    safety="confirmed" if confirmed_projection else "unsafe_hidden",
-                    reason=(
-                        "no_detection_in_projected_slot"
-                        if confirmed_projection
-                        else reason
+                debug=_with_projection_debug(
+                        _missing_debug(
+                            projection="feature_lightglue_homography"
+                            if confirmed_projection
+                            else "unconfirmed_hidden",
+                            safety="confirmed" if confirmed_projection else "unsafe_hidden",
+                            reason=(
+                                "no_detection_in_projected_slot"
+                                if confirmed_projection
+                                else reason
+                            ),
+                            reason_code=(
+                                "no_detection_in_projected_slot"
+                                if confirmed_projection
+                                else "scene_pose_unconfirmed"
+                            ),
+                        ),
+                        projection_debug=projection_debug,
                     ),
-                    reason_code=(
-                        "no_detection_in_projected_slot"
-                        if confirmed_projection
-                        else "scene_pose_unconfirmed"
-                    ),
-                ),
             )
         )
 
@@ -376,391 +418,39 @@ def match_segments(
     return matches
 
 
-
-def match_segments_yolo_slots(
-    expected: list[ExpectedSegment],
-    detections: list[YoloDetection],
-    homography: np.ndarray | None,
-    *,
-    frame_size: tuple[int, int] | None = None,
-    projection_data: LocalProjectionData | None = None,
-) -> list[SegmentMatch]:
-    """YOLO-first slot verification.
-
-    Alignment is used only to project rough expected search zones. Final ok/missing
-    is decided by assigning YOLO detections to those zones:
-    - same class in square search zone -> ok;
-    - different class in square search zone -> expected remains missing and the
-      wrong detection is consumed so it does not become a misleading extra;
-    - no assigned same-class detection -> missing;
-    - unassigned detections outside expected zones -> extra.
-    """
-    transform = _resolve_homography(homography, projection_data)
-    resolved_frame_size = _resolve_frame_size(frame_size, projection_data)
-
-    projected: list[_ProjectedSlot] = []
-    hidden_expected: list[
-        tuple[int, ExpectedSegment, list[list[float]] | None, str]
-    ] = []
-    for index, item in enumerate(expected):
-        polygon, reason = _project_expected_polygon(
-            item,
-            transform,
-            frame_size=resolved_frame_size,
-        )
-        if polygon is None:
-            hidden_expected.append(
-                (index, item, None, reason or "scene_pose_unconfirmed")
-            )
-            continue
-        bbox = _bbox_from_polygon(polygon)
-        if bbox is None:
-            hidden_expected.append((index, item, polygon, "invalid_projected_polygon"))
-            continue
-        search_bbox = _square_search_bbox(
-            bbox,
-            frame_size=resolved_frame_size,
-        )
-        projected.append(
-            _ProjectedSlot(
-                index=index,
-                item=item,
-                polygon=polygon,
-                bbox=bbox,
-                search_bbox=search_bbox,
-            )
-        )
-
-    detection_items = [
-        _DetectionSlot(
-            index=index, detection=detection, polygon=_detection_polygon(detection)
-        )
-        for index, detection in enumerate(detections)
-    ]
-    detection_items = [item for item in detection_items if item.bbox is not None]
-    detection_items = _dedupe_detection_items(detection_items)
-    detection_by_index = {item.index: item for item in detection_items}
-
-    if not projected and not hidden_expected:
-        return []
-
-    if not projected:
-        matches = [
-            _expected_match(
-                item,
-                status="missing",
-                expected_polygon=polygon,
-                debug=_missing_debug(
-                    projection="unconfirmed_hidden",
-                    safety="unsafe_hidden",
-                    reason=reason,
-                    reason_code="scene_pose_unconfirmed",
-                )
-                | {
-                    "verification_mode": "yolo_slots",
-                    "match_source": "yolo_slots_no_search_zone",
-                },
-            )
-            for _index, item, polygon, reason in hidden_expected
-        ]
-        for det in detection_items:
-            if float(det.detection.confidence or 0.0) < _MIN_EXTRA_CONFIDENCE:
-                continue
-            matches.append(
-                _detection_match(
-                    det.detection,
-                    name="Лишняя деталь",
-                    hue=None,
-                    status="extra",
-                    detected_polygon=det.polygon,
-                    debug={
-                        "verification_mode": "yolo_slots",
-                        "match_source": "yolo_slots_extra_no_projected_slots",
-                        "reason": _reason_message(
-                            "extra_detection_outside_all_expected_slots"
-                        ),
-                        "reason_code": "extra_detection_outside_all_expected_slots",
-                    },
-                )
-            )
-        return matches
-
-    same_class_assignments = _choose_yolo_slot_assignments(
-        projected,
-        detection_items,
-    )
-    used_expected: set[int] = set(same_class_assignments)
-    used_detections: set[int] = {
-        det_index for det_index, _debug in same_class_assignments.values()
-    }
-
-    wrong_class_assignments = _choose_yolo_slot_wrong_class_assignments(
-        projected,
-        detection_items,
-        occupied_expected_indices=used_expected,
-        occupied_detection_indices=used_detections,
-    )
-    consumed_wrong_detections = {
-        det_index for det_index, _debug in wrong_class_assignments.values()
-    }
-
-    projected_by_index = {slot.index: slot for slot in projected}
-    matches: list[SegmentMatch] = []
-
-    for expected_index, (detection_index, debug) in same_class_assignments.items():
-        slot = projected_by_index[expected_index]
-        det = detection_by_index[detection_index]
-        matches.append(
-            _expected_match(
-                slot.item,
-                status="ok",
-                iou=_float_debug(debug, "search_iou"),
-                confidence=det.detection.confidence,
-                expected_polygon=slot.polygon,
-                detected_polygon=det.polygon,
-                detected_bbox=det.detection.bbox,
-                debug=debug,
-            )
-        )
-
-    for slot in projected:
-        if slot.index in same_class_assignments:
-            continue
-
-        wrong = wrong_class_assignments.get(slot.index)
-        if wrong is not None:
-            detection_index, debug = wrong
-            det = detection_by_index[detection_index]
-            match = _expected_match(
-                slot.item,
-                status="missing",
-                confidence=det.detection.confidence,
-                expected_polygon=slot.polygon,
-                detected_polygon=None,
-                detected_bbox=None,
-                debug=debug,
-            )
-            match.detected_class_in_zone = det.detection.class_key
-            matches.append(match)
-            continue
-
-        reason_code = "no_same_class_yolo_detection_in_search_zone"
-        matches.append(
-            _expected_match(
-                slot.item,
-                status="missing",
-                expected_polygon=slot.polygon,
-                debug={
-                    "verification_mode": "yolo_slots",
-                    "match_source": "yolo_slots_missing",
-                    "reason": _reason_message(reason_code),
-                    "reason_code": reason_code,
-                    "search_shape": "expanded_square_bbox",
-                    "search_bbox": _round_bbox(slot.search_bbox),
-                    "projected_bbox": _round_bbox(slot.bbox),
-                },
-            )
-        )
-
-    for _index, item, polygon, reason in hidden_expected:
-        reason_code = "scene_pose_unconfirmed"
-        matches.append(
-            _expected_match(
-                item,
-                status="missing",
-                expected_polygon=polygon,
-                debug=_missing_debug(
-                    projection="unconfirmed_hidden",
-                    safety="unsafe_hidden",
-                    reason=reason,
-                    reason_code=reason_code,
-                )
-                | {
-                    "verification_mode": "yolo_slots",
-                    "match_source": "yolo_slots_no_search_zone",
-                },
-            )
-        )
-
-    occupied_detection_indices = used_detections | consumed_wrong_detections
-    extra_items = _collapse_extra_detections_yolo_slots(
-        detection_items,
-        projected,
-        detection_by_index=detection_by_index,
-        occupied_detection_indices=occupied_detection_indices,
-        expected=expected,
-    )
-    for det, debug, display_item in extra_items:
-        matches.append(
-            _detection_match(
-                det.detection,
-                name=display_item.name if display_item is not None else "Лишняя деталь",
-                hue=display_item.hue if display_item is not None else None,
-                status="extra",
-                detected_polygon=det.polygon,
-                debug=debug,
-            )
-        )
-
-    return matches
-
-
-def _choose_yolo_slot_assignments(
+def _find_ambiguous_same_class_slots(
     projected: list[_ProjectedSlot],
     detection_items: list[_DetectionSlot],
-) -> dict[int, tuple[int, dict[str, Any]]]:
-    candidates: list[tuple[float, int, int, dict[str, Any]]] = []
+) -> dict[int, list[int]]:
+    ambiguous: dict[int, list[int]] = {}
     for slot in projected:
+        same_class_indices: list[int] = []
         for det in detection_items:
             if det.bbox is None:
                 continue
             if det.detection.class_key != slot.item.class_key:
                 continue
-            confidence = float(det.detection.confidence or 0.0)
-            if confidence < _YOLO_SLOT_MIN_CONFIDENCE:
+            if float(det.detection.confidence or 0.0) < _MIN_EXPECTED_SLOT_CONFIDENCE:
                 continue
-            metrics = _yolo_slot_candidate_metrics(slot, det)
-            if metrics is None:
-                continue
-            score, search_iou, center_factor, center_inside = metrics
-            debug = {
-                "verification_mode": "yolo_slots",
-                "match_source": "yolo_slot_assignment",
-                "reason": _reason_message("yolo_slot_same_class_in_search_zone"),
-                "reason_code": "yolo_slot_same_class_in_search_zone",
-                "expected_class_key": slot.item.class_key,
-                "detected_class_key": det.detection.class_key,
-                "search_shape": "expanded_square_bbox",
-                "search_bbox": _round_bbox(slot.search_bbox),
-                "projected_bbox": _round_bbox(slot.bbox),
-                "search_iou": _round(search_iou),
-                "center_distance_factor": _round(center_factor),
-                "center_inside_search_zone": center_inside,
-            }
-            candidates.append((score, slot.index, det.index, debug))
+            if _same_class_detection_in_slot_zone(slot, det):
+                same_class_indices.append(det.index)
 
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    assignments: dict[int, tuple[int, dict[str, Any]]] = {}
-    used_detections: set[int] = set()
-    for _score, expected_index, detection_index, debug in candidates:
-        if expected_index in assignments or detection_index in used_detections:
-            continue
-        assignments[expected_index] = (detection_index, debug)
-        used_detections.add(detection_index)
-    return assignments
+        if len(same_class_indices) >= _AMBIGUOUS_SLOT_MIN_SAME_CLASS_COUNT:
+            ambiguous[slot.index] = same_class_indices
+    return ambiguous
 
 
-def _choose_yolo_slot_wrong_class_assignments(
-    projected: list[_ProjectedSlot],
-    detection_items: list[_DetectionSlot],
-    *,
-    occupied_expected_indices: set[int],
-    occupied_detection_indices: set[int],
-) -> dict[int, tuple[int, dict[str, Any]]]:
-    candidates: list[tuple[float, int, int, dict[str, Any]]] = []
-    for slot in projected:
-        if slot.index in occupied_expected_indices:
-            continue
-        for det in detection_items:
-            if det.index in occupied_detection_indices or det.bbox is None:
-                continue
-            if det.detection.class_key == slot.item.class_key:
-                continue
-            confidence = float(det.detection.confidence or 0.0)
-            if confidence < _YOLO_SLOT_WRONG_CLASS_MIN_CONFIDENCE:
-                continue
-            center = _bbox_center(det.bbox)
-            center_inside = _point_in_bbox(center, slot.search_bbox)
-            search_iou = _bbox_iou(slot.search_bbox, det.bbox)
-            if not center_inside and search_iou < _YOLO_SLOT_MIN_SEARCH_IOU:
-                continue
-            center_factor = _center_distance_factor(slot.search_bbox, det.bbox)
-            score = confidence + search_iou * 2.0 - 0.05 * min(center_factor, 20.0)
-            reason_code = "different_class_detection_inside_yolo_slot_search_zone"
-            debug = {
-                "verification_mode": "yolo_slots",
-                "match_source": "yolo_slot_wrong_class_consumed",
-                "reason": _reason_message(reason_code),
-                "reason_code": reason_code,
-                "expected_class_key": slot.item.class_key,
-                "detected_class_key": det.detection.class_key,
-                "search_shape": "expanded_square_bbox",
-                "search_bbox": _round_bbox(slot.search_bbox),
-                "projected_bbox": _round_bbox(slot.bbox),
-                "search_iou": _round(search_iou),
-                "center_distance_factor": _round(center_factor),
-                "center_inside_search_zone": center_inside,
-                "wrong_class_detection_consumed": True,
-                "detected_mask_ignored": True,
-            }
-            candidates.append((score, slot.index, det.index, debug))
-
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    assignments: dict[int, tuple[int, dict[str, Any]]] = {}
-    used_detections: set[int] = set()
-    for _score, expected_index, detection_index, debug in candidates:
-        if expected_index in assignments or detection_index in used_detections:
-            continue
-        assignments[expected_index] = (detection_index, debug)
-        used_detections.add(detection_index)
-    return assignments
-
-
-def _yolo_slot_candidate_metrics(
-    slot: _ProjectedSlot,
-    det: _DetectionSlot,
-) -> tuple[float, float, float, bool] | None:
+def _same_class_detection_in_slot_zone(slot: _ProjectedSlot, det: _DetectionSlot) -> bool:
     if det.bbox is None:
-        return None
-    center = _bbox_center(det.bbox)
-    center_inside = _point_in_bbox(center, slot.search_bbox)
-    search_iou = _bbox_iou(slot.search_bbox, det.bbox)
-    center_factor = _center_distance_factor(slot.search_bbox, det.bbox)
-    accepted = (
+        return False
+    iou = _bbox_iou(slot.bbox, det.bbox)
+    center_factor = _center_distance_factor(slot.bbox, det.bbox)
+    center_inside = _point_in_bbox(_bbox_center(det.bbox), slot.bbox)
+    return (
         center_inside
-        or search_iou >= _YOLO_SLOT_MIN_SEARCH_IOU
-        or center_factor <= _YOLO_SLOT_CENTER_FACTOR_LIMIT
+        or iou >= _RELAXED_SAME_CLASS_MIN_IOU
+        or center_factor <= _RELAXED_SAME_CLASS_CENTER_FACTOR
     )
-    if not accepted:
-        return None
-    confidence = float(det.detection.confidence or 0.0)
-    score = (
-        confidence
-        + search_iou * 3.0
-        - 0.10 * min(center_factor, 20.0)
-        + (0.35 if center_inside else 0.0)
-    )
-    return score, search_iou, center_factor, center_inside
-
-
-def _collapse_extra_detections_yolo_slots(
-    detection_items: list[_DetectionSlot],
-    projected: list[_ProjectedSlot],
-    *,
-    detection_by_index: dict[int, _DetectionSlot],
-    occupied_detection_indices: set[int],
-    expected: list[ExpectedSegment],
-) -> list[tuple[_DetectionSlot, dict[str, Any], ExpectedSegment | None]]:
-    expected_by_class: dict[str, ExpectedSegment] = {}
-    for item in expected:
-        expected_by_class.setdefault(item.class_key, item)
-
-    collapsed = _collapse_extra_detections(
-        detection_items,
-        projected,
-        detection_by_index=detection_by_index,
-        occupied_detection_indices=occupied_detection_indices,
-        expected=expected,
-    )
-    enriched: list[tuple[_DetectionSlot, dict[str, Any], ExpectedSegment | None]] = []
-    for det, debug, display_item in collapsed:
-        updated = dict(debug)
-        updated["verification_mode"] = "yolo_slots"
-        updated["match_source"] = "yolo_slots_extra"
-        updated["search_shape"] = "expanded_square_bbox"
-        enriched.append((det, updated, display_item or expected_by_class.get(det.detection.class_key)))
-    return enriched
-
 
 def _choose_unmatched_assignments(
     projected: list[_ProjectedSlot],
@@ -842,14 +532,14 @@ def _unmatched_candidate(
 
 def _choose_same_class_unresolved_assignments(
     unresolved: list[
-        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str]
+        tuple[int, ExpectedSegment, list[list[float]] | None, BBox | None, str, dict[str, Any]]
     ],
     detection_items: list[_DetectionSlot],
     *,
     occupied_detection_indices: set[int],
 ) -> dict[int, tuple[int, dict[str, Any]]]:
     candidates: list[tuple[float, int, int, dict[str, Any]]] = []
-    for expected_index, item, _polygon, bbox, reason in unresolved:
+    for expected_index, item, _polygon, bbox, reason, _projection_debug in unresolved:
         for det in detection_items:
             if det.index in occupied_detection_indices:
                 continue
@@ -1114,7 +804,7 @@ def all_ok(matches: list[SegmentMatch], *, expected_total: int | None = None) ->
 
 
 class _ProjectedSlot:
-    __slots__ = ("index", "item", "polygon", "bbox", "search_bbox")
+    __slots__ = ("index", "item", "polygon", "bbox", "debug")
 
     def __init__(
         self,
@@ -1123,13 +813,13 @@ class _ProjectedSlot:
         item: ExpectedSegment,
         polygon: list[list[float]],
         bbox: BBox,
-        search_bbox: BBox | None = None,
+        debug: dict[str, Any] | None = None,
     ) -> None:
         self.index = index
         self.item = item
         self.polygon = polygon
         self.bbox = bbox
-        self.search_bbox = search_bbox or bbox
+        self.debug = debug
 
 
 class _DetectionSlot:
@@ -1206,11 +896,9 @@ def _reason_message(reason_code: str | None) -> str:
         "same_class_detection_near_projected_slot_but_not_matched": "Найден объект этого класса рядом с эталонной зоной, но геометрия слабая",
         "same_class_detection_exists_but_expected_slot_not_confirmed": "Найден объект этого класса, но слот не подтверждён геометрией",
         "different_class_detection_inside_projected_slot": "В эталонной зоне найден объект другого класса",
+        "multiple_same_class_detections_inside_projected_slot": "В эталонной зоне найдено несколько объектов этого класса",
         "extra_detection_outside_all_expected_slots": "YOLO нашёл объект вне всех эталонных зон",
         "invalid_projected_polygon": "Не удалось построить корректный полигон зоны",
-        "yolo_slot_same_class_in_search_zone": "YOLO нашёл нужный класс в зоне поиска слота",
-        "no_same_class_yolo_detection_in_search_zone": "YOLO не нашёл нужный класс в зоне поиска слота",
-        "different_class_detection_inside_yolo_slot_search_zone": "В зоне поиска слота найден объект другого класса",
     }
     return messages.get(str(reason_code or ""), str(reason_code or "unknown"))
 
@@ -1230,6 +918,15 @@ def _missing_debug(
         "reason_code": reason_code,
         "raw_reason": reason,
     }
+def _with_projection_debug(
+    debug: dict[str, Any],
+    *,
+    projection_debug: dict[str, Any] | None,
+) -> dict[str, Any]:
+    updated = dict(debug)
+    if projection_debug:
+        updated["projection"] = dict(projection_debug)
+    return updated
 
 
 def _resolve_homography(
@@ -1259,24 +956,38 @@ def _project_expected_polygon(
     homography: np.ndarray | None,
     *,
     frame_size: tuple[int, int] | None,
-) -> tuple[list[list[float]] | None, str | None]:
+) -> tuple[list[list[float]] | None, str | None, dict[str, Any]]:
+    projection_debug: dict[str, Any] = {}
+
     if homography is None:
-        return None, "scene_pose_unconfirmed"
+        projection_debug["projection_source"] = "none"
+        projection_debug["reason_code"] = "scene_pose_unconfirmed"
+        return None, "scene_pose_unconfirmed", projection_debug
+
     try:
         projected = project_polygon(item.reference_polygon, homography)
     except cv2.error:
-        return None, "projection_failed"
+        projection_debug["projection_source"] = "failed"
+        projection_debug["reason_code"] = "projection_failed"
+        return None, "projection_failed", projection_debug
+
     if len(projected) < _MIN_POLYGON_POINTS or not _polygon_is_finite(projected):
-        return None, "invalid_projected_polygon"
+        projection_debug["projection_source"] = "failed"
+        projection_debug["reason_code"] = "invalid_projected_polygon"
+        return None, "invalid_projected_polygon", projection_debug
+
     bbox = _bbox_from_polygon(projected)
     if bbox is None:
-        return None, "invalid_projected_bbox"
+        projection_debug["projection_source"] = "failed"
+        projection_debug["reason_code"] = "invalid_projected_bbox"
+        return None, "invalid_projected_bbox", projection_debug
 
     reason: str | None = None
     if frame_size is not None and not _bbox_visible(bbox, frame_size):
         reason = "projected_polygon_outside_frame"
-    return _clean_polygon(projected), reason
 
+    projection_debug["projection_source"] = "global_direct"
+    return _clean_polygon(projected), reason, projection_debug
 
 def _detection_polygon(detection: YoloDetection) -> list[list[float]] | None:
     if detection.polygon and len(detection.polygon) >= _MIN_POLYGON_POINTS:
@@ -1347,65 +1058,6 @@ def _containing_slot(
         if best is None or iou > best[0]:
             best = (iou, slot)
     return best[1] if best is not None else None
-
-
-
-def _square_search_bbox(
-    bbox: BBox,
-    *,
-    frame_size: tuple[int, int] | None,
-) -> BBox:
-    x1, y1, x2, y2 = bbox
-    width = max(1.0, x2 - x1)
-    height = max(1.0, y2 - y1)
-    side = max(width, height)
-    margin = max(_YOLO_SLOT_SEARCH_MIN_MARGIN_PX, side * _YOLO_SLOT_SEARCH_EXPAND_FACTOR)
-    side = min(side + margin * 2.0, max(width, height) * _YOLO_SLOT_SEARCH_MAX_SIDE_FACTOR)
-    cx, cy = _bbox_center(bbox)
-    half = side * 0.5
-    search = (cx - half, cy - half, cx + half, cy + half)
-    return _clip_bbox_to_frame(search, frame_size)
-
-
-def _clip_bbox_to_frame(
-    bbox: BBox,
-    frame_size: tuple[int, int] | None,
-) -> BBox:
-    normalized = _normalize_bbox(bbox)
-    if normalized is None:
-        return bbox
-    if frame_size is None:
-        return normalized
-    width, height = float(frame_size[0]), float(frame_size[1])
-    if width <= 1.0 or height <= 1.0:
-        return normalized
-    x1, y1, x2, y2 = normalized
-    clipped = (
-        max(0.0, min(width, x1)),
-        max(0.0, min(height, y1)),
-        max(0.0, min(width, x2)),
-        max(0.0, min(height, y2)),
-    )
-    return _normalize_bbox(clipped) or normalized
-
-
-def _round_bbox(bbox: BBox | None) -> list[float] | None:
-    if bbox is None:
-        return None
-    return [round(float(value), 2) for value in bbox]
-
-
-def _float_debug(debug: dict[str, Any], key: str) -> float | None:
-    try:
-        value = debug.get(key)
-        if value is None:
-            return None
-        out = float(value)
-    except (TypeError, ValueError):
-        return None
-    if not np.isfinite(out):
-        return None
-    return out
 
 
 def _bbox_from_detection(detection: YoloDetection) -> BBox | None:

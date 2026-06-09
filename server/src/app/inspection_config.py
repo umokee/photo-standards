@@ -7,6 +7,5 @@ class InspectionSettingsMixin:
     # Runtime inspection behavior. Detailed matcher thresholds live with the matcher.
     INSPECTION_ALIGNMENT_PROFILE: Literal["balanced", "safe", "debug", "experimental"] = "balanced"
     INSPECTION_DEBUG_PAYLOAD: bool = True
-    INSPECTION_YOLO_ANCHOR_POSE_MODE: Literal["off", "fallback", "prefer", "auto"] = "auto"
     INSPECTION_FAILSAFE_REQUIRE_CONFIRMED_POSE: bool = True
-    INSPECTION_VERIFICATION_MODE: Literal["alignment", "yolo_count", "yolo_slots"] = "alignment"
+    INSPECTION_VERIFICATION_MODE: Literal["alignment", "yolo_count"] = "alignment"

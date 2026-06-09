@@ -66,7 +66,7 @@ def build_pose_pipeline_summary(
     details = list(details or [])
     alignment_debug = alignment_debug if isinstance(alignment_debug, dict) else {}
 
-    mode = str(getattr(settings, "INSPECTION_YOLO_ANCHOR_POSE_MODE", "auto"))
+    mode = "feature_alignment"
     raw_counts = raw_class_counts or {}
     yolo_detection_count = int(sum(_int_value(value) for value in raw_counts.values()))
     method = _string_value(alignment_debug.get("method"))
@@ -99,8 +99,6 @@ def build_pose_pipeline_summary(
         "yolo_detection_count": yolo_detection_count,
         "detail_status_counts": dict(_detail_status_counts(details)),
         "feature_alignment": _feature_alignment_summary(alignment_debug),
-        "yolo_anchor_pose": _yolo_anchor_pose_summary(alignment_debug),
-        "pose_arbiter": _pose_arbiter_summary(alignment_debug),
         "next_step_hint": _next_step_hint(
             final_source=final_source,
             yolo_detection_count=yolo_detection_count,
@@ -108,8 +106,6 @@ def build_pose_pipeline_summary(
             method=method,
         ),
     }
-
-
 def _final_pose_source(
     *,
     verification_mode: str | None,
@@ -122,8 +118,6 @@ def _final_pose_source(
         return "yolo_count"
     if has_scene_unconfirmed:
         return "scene_unconfirmed"
-    if method == "yolo_anchor_pose" and status == "success":
-        return "yolo_anchor_pose"
     if status == "success":
         return "feature_slot_fallback"
     if yolo_detection_count <= 0:
@@ -142,10 +136,8 @@ def _final_pose_reason(
     reason: str,
     yolo_detection_count: int,
 ) -> str:
-    if final_source == "yolo_anchor_pose":
-        return "visible YOLO objects produced an accepted scene pose"
     if final_source == "feature_slot_fallback":
-        return "YOLO-anchor pose was unavailable/not selected; feature/slot fallback produced a pose"
+        return "feature/slot fallback produced a pose"
     if final_source == "yolo_count":
         return "alignment is disabled by verification mode"
     if final_source == "scene_unconfirmed":
@@ -160,19 +152,10 @@ def _final_pose_reason(
     return "pose source is not available in debug payload"
 
 
-def _pose_arbiter_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
-    extra = alignment_debug.get("extra_debug")
-    if isinstance(extra, dict):
-        pose_arbiter = extra.get("pose_arbiter")
-        if isinstance(pose_arbiter, dict):
-            return pose_arbiter
-    return {}
-
 def _feature_alignment_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
     method = _string_value(alignment_debug.get("method"))
-    is_yolo_anchor = method == "yolo_anchor_pose"
     return {
-        "method": None if is_yolo_anchor else method or None,
+        "method": method or None,
         "status": alignment_debug.get("status"),
         "stage": alignment_debug.get("stage"),
         "reason": alignment_debug.get("reason"),
@@ -185,29 +168,6 @@ def _feature_alignment_summary(alignment_debug: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _yolo_anchor_pose_summary(alignment_debug: dict[str, Any]) -> dict[str, Any]:
-    extra = alignment_debug.get("extra_debug")
-    if isinstance(extra, dict):
-        pose = extra.get("yolo_anchor_pose")
-        if isinstance(pose, dict):
-            return pose
-
-    method = _string_value(alignment_debug.get("method"))
-    if method != "yolo_anchor_pose":
-        return {"attempted": False, "accepted": False, "reject_reason": "not_selected"}
-
-    return {
-        "attempted": True,
-        "accepted": alignment_debug.get("status") == "success",
-        "reject_reason": None if alignment_debug.get("status") == "success" else alignment_debug.get("reason"),
-        "raw_point_count": alignment_debug.get("raw_match_count"),
-        "inlier_point_count": alignment_debug.get("inlier_count"),
-        "median_center_error_px": alignment_debug.get("median_error"),
-        "reference_anchor_count": alignment_debug.get("reference_feature_count"),
-        "frame_detection_count": alignment_debug.get("frame_feature_count"),
-    }
-
-
 def _next_step_hint(
     *,
     final_source: str,
@@ -215,12 +175,10 @@ def _next_step_hint(
     status: str,
     method: str,
 ) -> str:
-    if final_source == "yolo_anchor_pose":
-        return "V4 pose is active; inspect missing/presence decisions inside projected slots"
     if final_source == "feature_slot_fallback" and yolo_detection_count <= 0:
         return "YOLO is empty; this result is using the slot/feature fallback as intended"
     if final_source == "feature_slot_fallback":
-        return "YOLO detections exist but V4 pose was not selected; inspect yolo_anchor_pose reject thresholds"
+        return "YOLO detections exist; inspect projected slots and fallback alignment"
     if final_source in {"none_yolo_empty_feature_unconfirmed", "scene_unconfirmed"}:
         return "No confirmed pose; do not draw confident missing polygons, ask for recapture or inspect fallback thresholds"
     if status and status != "success":
