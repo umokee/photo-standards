@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge/badge";
 import Button from "@/components/ui/button/button";
 import Input from "@/components/ui/input/input";
 import { InspectionResultDetails } from "@/page-components/inspections/components/inspection-result-details/inspection-result-details";
@@ -195,7 +194,7 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
         <div className={s.summaryTop}>
           <div className={s.summaryStatus}>
             <span className={s.eyebrow}>Результат</span>
-            <Badge type={meta.badgeType}>{meta.badgeLabel}</Badge>
+            <span className={s.resultStatus} data-tone={meta.badgeType}>{meta.badgeLabel}</span>
           </div>
 
           <div

@@ -315,3 +315,25 @@
 
 
 /* UI clean v21: no technical details, equal result counter, safer right padding. */
+
+/* UI clean v31: result status as plain text, not a badge. */
+.resultStatus {
+  color: $text-sub;
+  font-size: $text-small;
+  font-weight: $fw-semibold;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.resultStatus[data-tone="success"] {
+  color: $primary-text;
+}
+
+.resultStatus[data-tone="warning"] {
+  color: $warning-text;
+}
+
+.resultStatus[data-tone="danger"] {
+  color: $danger-text;
+}
+
