@@ -238,8 +238,12 @@ def _build_standard_segment_class_response(
 
 def _build_standard_segment_class_category_response(
     category: SegmentClassGroup,
+    *,
+    allowed_class_ids: set[UUID] | None = None,
 ) -> StandardSegmentClassCategoryResponse:
     items = sorted(category.segment_classes, key=lambda item: item.name.lower())
+    if allowed_class_ids is not None:
+        items = [item for item in items if item.id in allowed_class_ids]
 
     return StandardSegmentClassCategoryResponse(
         id=category.id,
@@ -275,6 +279,15 @@ def _build_standard_stats_response(
     )
 
 
+def _collect_used_segment_class_ids(standard: Standard) -> set[UUID]:
+    return {
+        annotation.segment_class_id
+        for image in standard.images
+        for annotation in image.annotations
+        if annotation.points
+    }
+
+
 def _build_standard_detail_response(
     standard: Standard,
 ) -> StandardDetailResponse:
@@ -294,6 +307,15 @@ def _build_standard_detail_response(
         ],
         key=lambda item: item.name.lower(),
     )
+    used_segment_class_ids = _collect_used_segment_class_ids(standard)
+    used_categories = [
+        category
+        for category in categories
+        if any(item.id in used_segment_class_ids for item in category.segment_classes)
+    ]
+    used_ungrouped_classes = [
+        item for item in ungrouped_classes if item.id in used_segment_class_ids
+    ]
 
     return StandardDetailResponse(
         id=standard.id,
@@ -309,6 +331,16 @@ def _build_standard_detail_response(
         ],
         ungrouped_segment_classes=[
             _build_standard_segment_class_response(item) for item in ungrouped_classes
+        ],
+        used_segment_class_categories=[
+            _build_standard_segment_class_category_response(
+                item,
+                allowed_class_ids=used_segment_class_ids,
+            )
+            for item in used_categories
+        ],
+        used_ungrouped_segment_classes=[
+            _build_standard_segment_class_response(item) for item in used_ungrouped_classes
         ],
     )
 

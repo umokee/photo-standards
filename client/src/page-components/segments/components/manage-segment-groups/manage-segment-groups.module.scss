@@ -1,5 +1,6 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v23: empty ungrouped area is always visible. */
 .content {
   display: flex;
   flex-direction: column;
@@ -45,6 +46,15 @@
   padding-left: 32px;
   border-top: 1px solid $line-soft;
   background: $surface2;
+}
+
+.emptyClassHint {
+  padding: 8px 32px 10px;
+  border-top: 1px solid $line-soft;
+  background: $surface2;
+  color: $text-hint;
+  font-size: $text-small;
+  line-height: 1.4;
 }
 
 .chevron {

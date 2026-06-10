@@ -44,4 +44,6 @@ export interface StandardDetail {
   images: StandardImage[];
   segment_class_categories: SegmentClassCategory[];
   ungrouped_segment_classes: SegmentClass[];
+  used_segment_class_categories?: SegmentClassCategory[];
+  used_ungrouped_segment_classes?: SegmentClass[];
 }

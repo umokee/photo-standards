@@ -91,9 +91,14 @@ const StandardCardDetail = ({
     setArmedImageId(null);
   }, [showAllImages, standardId]);
 
+  const displayCategories =
+    standard.used_segment_class_categories ?? standard.segment_class_categories;
+  const displayUngroupedClasses =
+    standard.used_ungrouped_segment_classes ?? standard.ungrouped_segment_classes;
+
   const allClasses = [
-    ...standard.segment_class_categories.flatMap((category) => category.segment_classes),
-    ...standard.ungrouped_segment_classes,
+    ...displayCategories.flatMap((category) => category.segment_classes),
+    ...displayUngroupedClasses,
   ];
 
   const visibleImages = showAllImages
@@ -131,6 +136,7 @@ const StandardCardDetail = ({
                 className={clsx(
                   s.imageCard,
                   isAnnotated && s.imageCardAnnotated,
+                  image.is_reference && s.imageCardReference,
                   isArmed && s.imageCardArmed
                 )}
                 onClick={() => handleImageCardClick(image.id)}
@@ -189,7 +195,7 @@ const StandardCardDetail = ({
       </QueryState>
 
       {allClasses.length > 0 && (
-        <SurfaceSection title={"Классы"} transparent>
+        <SurfaceSection title={"Классы"} transparent className={s.classesSection}>
           <div className={s.classes}>
             {allClasses.map((segmentClass) => (
               <Badge key={segmentClass.id} colorDot={segmentClass.hue}>

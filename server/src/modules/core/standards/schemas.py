@@ -89,6 +89,14 @@ class StandardDetailResponse(BaseModel):
     ungrouped_segment_classes: list[StandardSegmentClassResponse] = Field(
         default_factory=list
     )
+    # UI-only view: classes that are actually used by annotations of this standard.
+    # The original fields above must keep returning all group classes for the image editor.
+    used_segment_class_categories: list[StandardSegmentClassCategoryResponse] = Field(
+        default_factory=list
+    )
+    used_ungrouped_segment_classes: list[StandardSegmentClassResponse] = Field(
+        default_factory=list
+    )
 
 
 class StandardMutationResponse(BaseModel):

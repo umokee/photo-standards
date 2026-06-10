@@ -39,7 +39,7 @@ const DeleteGroupModal = ({ id, name }: Props) => {
   return (
     <>
       <Modal.Header>Удалить группу</Modal.Header>
-      <Modal.Body>{`Вы уверены, что хотите удалить <${name}>?`}</Modal.Body>
+      <Modal.Body>{`Вы уверены, что хотите удалить группу «${name}»?`}</Modal.Body>
       <Modal.Footer>
         <Button variant="ghost" onClick={close}>
           Отмена

@@ -1,5 +1,6 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v23: group page cleanup without changing the "+N Открыть" tile behavior. */
 .root {
   display: flex;
   flex-direction: column;
@@ -10,7 +11,7 @@
   overflow: hidden;
 
   &.expanded {
-    border: 1px solid $primary;
+    border-color: $line-strong;
   }
 }
 
@@ -138,7 +139,7 @@
   justify-content: center;
 
   &:hover {
-    border-color: $primary-bd;
+    border-color: $primary;
   }
 
   &:hover .imageCardOverlay {
@@ -147,11 +148,15 @@
 }
 
 .imageCardAnnotated {
-  border: 1px solid $primary;
+  border-color: $line;
+}
+
+.imageCardReference {
+  border-color: $primary;
 }
 
 .imageCardArmed {
-  border-color: $primary;
+  border-color: $primary-bd;
 
   .imageCardOverlay {
     opacity: 1;
@@ -263,6 +268,12 @@
   color: inherit;
 }
 
+.classesSection {
+  padding: 10px 12px;
+  border-color: $line-soft;
+  background: transparent;
+}
+
 .classes {
   display: flex;
   flex-wrap: wrap;
@@ -292,20 +303,6 @@
   background-size: 220% 100%;
 }
 
-.imageCardMore {
-  border-style: dashed;
-  background: $surface2;
-  color: $text-hint;
-  flex-direction: column;
-  gap: $space-1;
-  font: inherit;
-
-  &:hover {
-    background: $card-hover;
-    border-color: $primary;
-    color: $text;
-  }
-}
 
 .imageCardMoreCount {
   font-size: $text-title;
@@ -316,6 +313,40 @@
 .imageCardMoreLabel {
   font-size: $text-small;
   color: inherit;
+}
+
+
+/* UI clean v25: active/reference photo state. */
+.imageCardReference,
+.imageCardArmed {
+  border-color: $primary;
+  outline: 1px solid $primary;
+  outline-offset: -2px;
+}
+
+.imageCardReference .imageCardRef {
+  background: $primary;
+  color: $text-white;
+}
+
+.imageCardAnnotated:not(.imageCardReference):not(.imageCardArmed) {
+  border-color: $line;
+  outline: 0;
+}
+
+/* Keep hover after annotated reset: it must win. */
+.imageCard:hover {
+  border-color: $primary;
+}
+
+.imageCardAnnotated:not(.imageCardReference):not(.imageCardArmed):hover {
+  border-color: $primary;
+}
+
+.imageCardReference:hover,
+.imageCardArmed:hover {
+  border-color: $primary;
+  outline-color: $primary;
 }
 
 @media (max-width: 767px) {

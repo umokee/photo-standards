@@ -42,7 +42,7 @@ const DeleteStandardModal = ({ groupId, id, name }: Props) => {
   return (
     <>
       <Modal.Header>Удалить эталон</Modal.Header>
-      <Modal.Body>{`Вы уверены, что хотите удалить <${name}>?`}</Modal.Body>
+      <Modal.Body>{`Вы уверены, что хотите удалить эталон «${name}»?`}</Modal.Body>
       <Modal.Footer>
         <Button variant="ghost" onClick={close}>
           Отмена

@@ -1,7 +1,6 @@
 import Button from "@/components/ui/button/button";
 import { ColorPicker } from "@/components/ui/color-picker/color-picker";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
-import QueryState from "@/components/ui/query-state/query-state";
 import { GroupDetail } from "@/types/contracts";
 import clsx from "clsx";
 import { ChevronRight, Plus, X } from "lucide-react";
@@ -229,6 +228,12 @@ const UngroupedBlock = ({
           classActions={classActions}
         />
       ))}
+
+      {items.length === 0 && (
+        <div className={s.emptyClassHint}>
+          Классов пока нет. Нажмите +, чтобы добавить класс без категории.
+        </div>
+      )}
     </div>
   );
 };
@@ -275,17 +280,14 @@ const ManageSegmentGroupsModal = ({ group }: Props) => {
     if (ok) close();
   };
 
-  const isEmpty = !categories.length && !ungroupedClasses.length;
-
   return (
     <>
       <Modal.Header>Классы сегментации</Modal.Header>
 
       <Modal.Body>
         <div className={s.content}>
-          <QueryState isEmpty={isEmpty} emptyTitle="Нет классов сегментации">
-            <div className={s.list}>
-              {categories.map((category) => (
+          <div className={s.list}>
+            {categories.map((category) => (
                 <CategoryItem
                   key={category.key}
                   category={category}
@@ -297,15 +299,14 @@ const ManageSegmentGroupsModal = ({ group }: Props) => {
                 />
               ))}
 
-              <UngroupedBlock
+            <UngroupedBlock
                 items={ungroupedClasses}
                 activeColorKey={activeColorKey}
                 toggleColorPicker={toggleColorPicker}
                 closeColorPicker={closeColorPicker}
                 classActions={classActions}
               />
-            </div>
-          </QueryState>
+          </div>
 
           <Button variant="ghost" size="sm" icon={Plus} onClick={categoryActions.add} full>
             Добавить категорию
