@@ -1,11 +1,12 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v30: inspection history controls align with compact cards. */
 .controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: $space-2;
-  margin-top: $space-3;
+  margin-top: $space-2;
 }
 
 @media (max-width: 767px) {

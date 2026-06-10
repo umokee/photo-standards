@@ -31,8 +31,14 @@
 
 .reportSection,
 .reportDisclosure {
-  padding-top: $space-2;
-  border-top: 1px solid $line-soft;
+  display: grid;
+  gap: $space-2;
+  min-width: 0;
+}
+
+.reportSection {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .reportDisclosure {
@@ -66,10 +72,12 @@
 }
 
 .reportCount {
+  min-width: 1.5rem;
   color: $text-hint;
   font-size: $text-small;
   font-weight: $fw-medium;
   line-height: 1.35;
+  text-align: right;
 }
 
 .reportList {
@@ -79,6 +87,14 @@
   overflow: hidden;
   border: 1px solid $line-soft;
   border-radius: $radius;
+  background: $surface;
+}
+
+.reportEmpty {
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  color: $text-hint;
   background: $surface;
 }
 
@@ -96,15 +112,8 @@
   background: transparent;
 }
 
-.rowHistory {
-  padding: $space-3;
-  border: 1px solid $line-soft;
-  border-radius: $radius;
-  background: $surface;
-
-  &::before {
-    display: none;
-  }
+.reportList > .row:last-child {
+  border-bottom: 0;
 }
 
 .rowInteractive {
@@ -174,32 +183,98 @@
 .rowMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: $space-2 $space-3;
+  align-items: center;
+  column-gap: $space-2;
+  row-gap: 0;
   padding-left: 16px;
   color: $text-hint;
-  font-size: $text-small;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.25;
 }
 
-.rowHistory {
-  .rowHead {
-    align-items: center;
-  }
-
-  .name {
-    font-size: $text-small;
-    font-weight: $fw-medium;
-  }
-
-  .rowMeta {
-    padding-left: 20px;
-  }
+.rowMeta span {
+  white-space: nowrap;
 }
 
 .empty {
   padding: $space-3;
   color: $text-hint;
   background: transparent;
+}
+
+.reportDisclosure .row {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.reportDisclosure .rowText {
+  display: none;
+}
+
+.reportDisclosure .rowMeta {
+  padding-left: 16px;
+}
+
+/* UI clean v30: compact rows inside inspection history detail only. */
+.rootHistory .list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid $line-soft;
+  border-radius: $radius;
+  background: $surface;
+}
+
+.rootHistory .row,
+.rowHistory {
+  min-height: 0;
+  padding: 9px 10px;
+  gap: 3px;
+  border: 0;
+  border-bottom: 1px solid $line-soft;
+  border-radius: 0;
+  background: transparent;
+}
+
+.rootHistory .row:last-child,
+.rowHistory:last-child {
+  border-bottom: 0;
+}
+
+.rootHistory .row:hover,
+.rowHistory:hover {
+  background: $card-hover;
+}
+
+.rootHistory .rowHead {
+  align-items: center;
+}
+
+.rootHistory .name,
+.rowHistory .name {
+  font-size: $text-small;
+  font-weight: $fw-medium;
+}
+
+.rootHistory .rowMeta,
+.rowHistory .rowMeta {
+  margin-top: 0;
+  padding-left: 18px;
+  font-size: $text-small;
+  line-height: 1.3;
+}
+
+.rootHistory .rowText,
+.rowHistory .rowText {
+  margin-top: 0;
+  padding-left: 18px;
+  font-size: $text-small;
+  line-height: 1.35;
+}
+
+.rootHistory .rowActive,
+.rowHistory.rowActive {
+  border-left: 0;
+  background: $surface;
 }
 
 @media (max-width: 767px) {
@@ -212,108 +287,4 @@
     width: 100%;
     justify-content: space-between;
   }
-}
-
-.reportSection,
-.reportDisclosure {
-  display: grid;
-  gap: $space-2;
-  min-width: 0;
-}
-
-.reportEmpty {
-  padding: $space-3;
-  border: 1px solid $line-soft;
-  border-radius: $radius;
-  color: $text-hint;
-  background: $surface;
-}
-
-/* UI clean v10: compact report list, no decorative effects. */
-
-.reportList > .row:last-child {
-  border-bottom: 0;
-}
-
-/* UI clean v14: issue-list rows, no decorative chrome. */
-
-/* UI clean v20: consistency cleanup, compact checked rows. */
-.reportDisclosure .row {
-  padding-block: $space-2;
-}
-
-.reportDisclosure .rowText {
-  display: none;
-}
-
-.rowActive {
-  border-left: 0;
-  background: $surface2;
-}
-
-/* UI clean v21: single section divider, no active stripe, compact checked rows. */
-.list {
-  padding-right: $space-1;
-}
-
-.reportSection {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.reportDisclosure {
-  padding-top: $space-3;
-  border-top: 1px solid $line-soft;
-}
-
-.reportCount {
-  min-width: 1.5rem;
-  text-align: right;
-}
-
-.rowActive {
-  border-left: 0;
-  background: $surface2;
-}
-
-.reportDisclosure .row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.reportDisclosure .rowText {
-  display: none;
-}
-
-.reportDisclosure .rowMeta {
-  padding-left: 16px;
-}
-
-/* UI clean v22: restore compact diagnostic metrics without returning technical noise. */
-.rowMeta {
-  align-items: center;
-  column-gap: $space-2;
-  row-gap: 0;
-  color: $text-hint;
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-.rowMeta span {
-  white-space: nowrap;
-}
-
-.reportSection .rowMeta,
-.reportDisclosure .rowMeta {
-  display: flex;
-  padding-left: 16px;
-}
-
-.reportDisclosure .row {
-  padding-top: 9px;
-  padding-bottom: 9px;
-}
-
-.reportDisclosure .rowText {
-  display: none;
 }

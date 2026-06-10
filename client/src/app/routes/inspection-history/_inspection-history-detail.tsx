@@ -1,5 +1,4 @@
 import { Section } from "@/components/layouts/section/section";
-import { Badge } from "@/components/ui/badge/badge";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetInspection } from "@/page-components/inspections/api/get-inspection";
 import { InspectionHistoryDetail } from "@/page-components/inspections/components/inspection-history-detail/inspection-history-detail";
@@ -29,7 +28,7 @@ export function Component() {
       emptyTitle="Проверок по группе не найдено"
       emptyDescription={`Для группы «${selectedGroup.name}» пока нет сохранённых результатов контроля.`}
     >
-      <Section title="Проверки" side={<Badge>{history.length}</Badge>}>
+      <Section title={`Проверки · ${history.length}`}>
         <InspectionHistoryList
           items={history}
           selectedInspectionId={inspectionId}

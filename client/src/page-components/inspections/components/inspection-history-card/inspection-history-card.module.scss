@@ -1,5 +1,6 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v30: final compact inspection history card. */
 .card {
   display: flex;
   flex-direction: column;
@@ -10,27 +11,24 @@
   background: $surface;
   transition:
     border-color 120ms ease,
-    background 120ms ease,
-    box-shadow 120ms ease,
-    transform 120ms ease;
+    background 120ms ease;
 
   &:hover {
-    border-color: $line-soft;
+    border-color: $line-strong;
   }
 }
 
 .cardExpanded {
-  border-color: $primary;
-  box-shadow: 0 0 0 1px $primary-bd;
+  border-color: $line-strong;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: $space-2;
   width: 100%;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 11px 14px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -44,51 +42,28 @@
 
 .headerTop {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: $space-3;
   min-width: 0;
 }
 
-.metaLine {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-2;
+.title {
   min-width: 0;
-  color: $text-hint;
-  font-size: $text-small;
-  line-height: 1.4;
+  overflow: hidden;
+  color: $text;
+  font-size: $text-body;
+  font-weight: $fw-semibold;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status {
   display: flex;
   align-items: center;
-  gap: $space-2;
+  gap: $space-1;
   flex-shrink: 0;
-}
-
-.title {
-  min-width: 0;
-  color: $text;
-  font-size: $text-title;
-  font-weight: $fw-semibold;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metaItem {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  &:not(:last-child)::after {
-    content: "·";
-    margin-left: $space-2;
-    color: $text-off;
-  }
 }
 
 .chevron {
@@ -101,39 +76,31 @@
   }
 }
 
-.summaryRow {
+.metaLine {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: $space-2;
+  gap: $space-1;
   min-width: 0;
-  padding-top: $space-1;
-  border-top: 1px solid $line-soft;
-}
-
-.summaryValue {
-  color: $text;
+  color: $text-hint;
   font-size: $text-small;
-  font-weight: $fw-semibold;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
-.summaryText {
-  color: $text-sub;
-  font-size: $text-small;
-  line-height: 1.3;
-}
+.metaItem {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
-.summaryTextSuccess {
-  color: $primary-hover;
-}
-
-.summaryTextDanger {
-  color: $danger-hover;
+  &:not(:last-child)::after {
+    content: "·";
+    margin-left: $space-1;
+    color: $text-off;
+  }
 }
 
 .body {
-  padding: $space-4;
+  padding: 12px;
   border-top: 1px solid $line;
   background: $surface2;
 }

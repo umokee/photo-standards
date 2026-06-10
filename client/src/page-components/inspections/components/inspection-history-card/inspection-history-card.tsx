@@ -23,14 +23,6 @@ export const InspectionHistoryCard = ({ item, isExpanded, onSelect, detail }: Pr
   const contextMeta = [item.camera_name, item.model_name].filter((value): value is string =>
     Boolean(value)
   );
-  const mismatchCount = Math.max(item.total_segments - item.matched_segments, 0);
-  const noteLabel = item.notes?.trim() ? "Есть примечание" : null;
-  const issueLabel =
-    item.status === "passed"
-      ? "Без замечаний"
-      : mismatchCount > 0
-        ? `Не совпало ${mismatchCount}`
-        : "Есть замечания";
   const metaParts = [
     formatInspectionHistoryDateTime(item.inspected_at),
     inspectionModeLabel(item.mode),

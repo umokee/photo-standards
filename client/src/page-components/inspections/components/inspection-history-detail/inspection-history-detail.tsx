@@ -1,12 +1,10 @@
-import { Section } from "@/components/layouts/section/section";
 import Button from "@/components/ui/button/button";
-import { InfoRow } from "@/components/ui/info-row/info-row";
 import QueryState from "@/components/ui/query-state/query-state";
-import SurfaceSection from "@/components/ui/surface-section/surface-section";
 import { InspectionResultDetails } from "@/page-components/inspections/components/inspection-result-details/inspection-result-details";
 import type { InspectionResult } from "@/types/contracts";
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   formatInspectionHistoryDateTime,
@@ -68,45 +66,27 @@ export const InspectionHistoryDetail = ({ inspection }: Props) => {
 
   return (
     <div className={s.root}>
-      <Section title="Итог проверки" bordered>
-        <div className={s.summaryPanel}>
-          <div className={s.metricsGrid}>
-            <InfoRow
-              label="На месте"
-              value={String(okSegmentResults.length)}
-              layout="column"
-              variant="card"
-              valueTitle={String(okSegmentResults.length)}
-            />
-            <InfoRow
-              label="Отсутствует"
-              value={String(missingSegmentResults.length)}
-              layout="column"
-              variant="card"
-              valueTitle={String(missingSegmentResults.length)}
-            />
-            <InfoRow
-              label="Лишние"
-              value={String(extraSegmentResults.length)}
-              layout="column"
-              variant="card"
-              valueTitle={String(extraSegmentResults.length)}
-            />
-          </div>
+      <section className={s.detailSection}>
+        <SectionHead title="Итог проверки" />
 
-          {alignmentIssue ? (
-            <div className={s.summaryNote}>
-              <strong>Проблема выравнивания:</strong> {alignmentIssue}
-            </div>
-          ) : null}
+        <div className={s.summaryStrip}>
+          <SummaryItem label="На месте" value={okSegmentResults.length} />
+          <SummaryItem label="Отсутствует" value={missingSegmentResults.length} />
+          <SummaryItem label="Лишние" value={extraSegmentResults.length} />
         </div>
-      </Section>
 
-      <Section
-        title="Компоненты"
-        side={
-          okSegmentResults.length ? (
-            <div className={s.sectionActions}>
+        {alignmentIssue ? (
+          <div className={s.summaryNote}>
+            <strong>Проблема выравнивания:</strong> {alignmentIssue}
+          </div>
+        ) : null}
+      </section>
+
+      <section className={s.detailSection}>
+        <SectionHead
+          title="Компоненты"
+          side={
+            okSegmentResults.length ? (
               <Button
                 size="sm"
                 variant="ghost"
@@ -115,11 +95,10 @@ export const InspectionHistoryDetail = ({ inspection }: Props) => {
               >
                 {resolvedOpen ? "Скрыть совпавшие" : "Показать совпавшие"}
               </Button>
-            </div>
-          ) : undefined
-        }
-        bordered
-      >
+            ) : undefined
+          }
+        />
+
         {!inspection.segment_results.length ? (
           <QueryState
             isEmpty
@@ -130,15 +109,15 @@ export const InspectionHistoryDetail = ({ inspection }: Props) => {
         ) : (
           <div className={s.componentSections}>
             {missingSegmentResults.length ? (
-              <SurfaceSection title="Отсутствуют" transparent>
+              <ComponentGroup title="Отсутствуют" count={missingSegmentResults.length}>
                 <InspectionResultDetails details={missingSegmentResults} variant="history" />
-              </SurfaceSection>
+              </ComponentGroup>
             ) : null}
 
             {extraSegmentResults.length ? (
-              <SurfaceSection title="Лишние" transparent>
+              <ComponentGroup title="Лишние" count={extraSegmentResults.length}>
                 <InspectionResultDetails details={extraSegmentResults} variant="history" />
-              </SurfaceSection>
+              </ComponentGroup>
             ) : null}
 
             {!hasIssues ? (
@@ -151,21 +130,23 @@ export const InspectionHistoryDetail = ({ inspection }: Props) => {
             ) : null}
 
             {okSegmentResults.length ? (
-              <SurfaceSection title="Совпавшие" transparent>
+              <ComponentGroup title="Совпавшие" count={okSegmentResults.length}>
                 {resolvedOpen ? (
                   <InspectionResultDetails details={okSegmentResults} variant="history" />
                 ) : (
                   <div className={s.collapsedSummary}>
-                    <span>Совпавшие компоненты скрыты</span>
+                    Совпавшие компоненты скрыты · {okSegmentResults.length}
                   </div>
                 )}
-              </SurfaceSection>
+              </ComponentGroup>
             ) : null}
           </div>
         )}
-      </Section>
+      </section>
 
-      <Section title="Изображения" bordered>
+      <section className={s.detailSection}>
+        <SectionHead title="Изображения" />
+
         <div className={s.imagesGrid}>
           <ImageCard
             title="Результат контроля"
@@ -188,24 +169,63 @@ export const InspectionHistoryDetail = ({ inspection }: Props) => {
             />
           </div>
         </div>
-      </Section>
+      </section>
 
-      <Section title="Контекст проверки">
-        <div className={s.infoGrid}>
+      <section className={s.detailSection}>
+        <SectionHead title="Контекст проверки" />
+
+        <div className={s.factGrid}>
           {contextItems.map(({ label, value }) => (
-            <InfoRow key={label} label={label} value={value} layout="column" variant="card" />
+            <FactItem key={label} label={label} value={value} />
           ))}
-        </div>
 
-        {inspection.notes ? (
-          <div className={s.notesRow}>
-            <InfoRow label="Примечание" value={inspection.notes} layout="column" variant="card" />
-          </div>
-        ) : null}
-      </Section>
+          {inspection.notes ? (
+            <FactItem label="Примечание" value={inspection.notes} wide />
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 };
+
+const SectionHead = ({ title, side }: { title: string; side?: ReactNode }) => (
+  <div className={s.sectionHead}>
+    <span className={s.sectionTitle}>{title}</span>
+    {side ? <div className={s.sectionSide}>{side}</div> : null}
+  </div>
+);
+
+const SummaryItem = ({ label, value }: { label: string; value: number }) => (
+  <div className={s.summaryItem}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+  </div>
+);
+
+const ComponentGroup = ({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: ReactNode;
+}) => (
+  <div className={s.componentGroup}>
+    <div className={s.componentGroupHead}>
+      <span>{title}</span>
+      <span>{count}</span>
+    </div>
+    <div className={s.componentGroupBody}>{children}</div>
+  </div>
+);
+
+const FactItem = ({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) => (
+  <div className={clsx(s.factItem, wide && s.factItemWide)}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+  </div>
+);
 
 const ImageCard = ({
   title,
