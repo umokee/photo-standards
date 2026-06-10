@@ -15,7 +15,7 @@ interface Props {
 export const DeleteStandard = ({ groupId, id, name }: Props) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="danger" size="sm">Уд.</Button>
+      <Button variant="danger" size="sm">Удалить</Button>
     </Modal.Trigger>
     <Modal.Content>
       <DeleteStandardModal groupId={groupId} id={id} name={name} />

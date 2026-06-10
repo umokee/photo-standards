@@ -37,7 +37,7 @@ def _summarize_details(
     fallback_total: int | None = None,
 ) -> tuple[int, int, list[dict[str, Any]], bool]:
     expected_details = [
-        detail for detail in details if _status_of(detail) in {"ok", "missing"}
+        detail for detail in details if detail.get("annotation_id") is not None
     ]
 
     expected_total = len(expected_details)
@@ -50,7 +50,9 @@ def _summarize_details(
     matched = sum(1 for detail in expected_details if _status_of(detail) == "ok")
 
     missing_details = [
-        detail for detail in expected_details if _status_of(detail) == "missing"
+        detail
+        for detail in expected_details
+        if _status_of(detail) in {"missing", "unmatched"}
     ]
 
     has_extra = any(_status_of(detail) == "extra" for detail in details)
@@ -96,4 +98,3 @@ def rebuild_frame_result_from_details(
         captured_at=result.captured_at,
         details=details,
     )
-

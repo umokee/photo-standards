@@ -329,7 +329,6 @@ const ModelCardDetail = ({
               <Button
                 full
                 size="sm"
-                variant="ml"
                 disabled={isActivating}
                 onClick={() => onActivate?.(model.id)}
               >
@@ -341,7 +340,7 @@ const ModelCardDetail = ({
               <Button
                 full
                 size="sm"
-                variant="ghost"
+                variant="danger"
                 disabled={isDeleting}
                 onClick={() => onDelete?.(model.id)}
               >

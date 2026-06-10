@@ -434,7 +434,7 @@ def _compose_frame_result(
         alignment=alignment,
         frame=frame,
     )
-    if _can_project_segments(alignment=alignment, projection_data=projection_data):
+    if alignment.homography is not None:
         if profile_enabled:
             started_at = time.perf_counter()
             matches = match_segments(
@@ -685,22 +685,6 @@ def _load_projection_reference_frame(context: InspectionContext) -> np.ndarray |
         return load_image(resolve_storage_path(context.reference_image.image_path))
     except Exception:
         return None
-
-
-def _can_project_segments(
-    *,
-    alignment: FrameAlignment,
-    projection_data: LocalProjectionData | None,
-) -> bool:
-    if alignment.homography is not None:
-        return True
-
-    if projection_data is None:
-        return False
-
-    return projection_data.has_local_points
-
-
 def _verification_mode() -> str:
     if settings.INSPECTION_VERIFICATION_MODE == VERIFICATION_MODE_YOLO_COUNT:
         return VERIFICATION_MODE_YOLO_COUNT

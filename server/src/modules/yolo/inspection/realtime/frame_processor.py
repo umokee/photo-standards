@@ -330,7 +330,7 @@ class RealtimeFrameProcessor:
             str(detail.get("annotation_id"))
             for detail in completed
             if detail.get("annotation_id")
-            and str(detail.get("status") or "") in {"ok", "missing"}
+            and str(detail.get("status") or "") in {"ok", "missing", "unmatched"}
         }
 
         for item in expected_segments:

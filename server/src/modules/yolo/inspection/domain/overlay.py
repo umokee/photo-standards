@@ -34,8 +34,6 @@ THICKNESS_LINE = 4
 LABEL_FONT_SIZE = 16
 LABEL_PADDING = 4
 
-# v20_overlay_polish: keep problem labels readable first; dense scenes get compact
-# OK labels, stronger polygon halo, and a wider label-placement search.
 MAX_FULL_OK_LABELS_DENSE = 10
 DENSE_LABEL_COUNT = 14
 LABEL_CANDIDATE_RINGS = 4
@@ -109,7 +107,7 @@ def render_overlay(
         _draw_label(
             output,
             method_label,
-            (16, 124 if projection_label is not None else 88),
+            (16, 124 if alignment_message is not None else 88),
             COLOR_EXTRA,
         )
 
@@ -604,7 +602,6 @@ def _label_candidate_rects(
                 (0, -step_y * (ring + 1)),
             ]
         )
-    # Additional left/right lanes help camera-wide industrial frames.
     offsets.extend(
         [
             (-step_x * 2, step_y),

@@ -68,7 +68,7 @@ def build_pose_pipeline_summary(
 
     mode = "feature_alignment"
     raw_counts = raw_class_counts or {}
-    yolo_detection_count = int(sum(_int_value(value) for value in raw_counts.values()))
+    yolo_detection_count = _yolo_detection_count(details, raw_counts)
     method = _string_value(alignment_debug.get("method"))
     status = _string_value(alignment_debug.get("status"))
     reason = _string_value(alignment_debug.get("reason"))
@@ -106,6 +106,8 @@ def build_pose_pipeline_summary(
             method=method,
         ),
     }
+
+
 def _final_pose_source(
     *,
     verification_mode: str | None,
@@ -119,7 +121,7 @@ def _final_pose_source(
     if has_scene_unconfirmed:
         return "scene_unconfirmed"
     if status == "success":
-        return "feature_slot_fallback"
+        return "feature_alignment"
     if yolo_detection_count <= 0:
         return "none_yolo_empty_feature_unconfirmed"
     if method:
@@ -136,8 +138,8 @@ def _final_pose_reason(
     reason: str,
     yolo_detection_count: int,
 ) -> str:
-    if final_source == "feature_slot_fallback":
-        return "feature/slot fallback produced a pose"
+    if final_source == "feature_alignment":
+        return "feature alignment produced a confirmed pose"
     if final_source == "yolo_count":
         return "alignment is disabled by verification mode"
     if final_source == "scene_unconfirmed":
@@ -175,10 +177,10 @@ def _next_step_hint(
     status: str,
     method: str,
 ) -> str:
-    if final_source == "feature_slot_fallback" and yolo_detection_count <= 0:
-        return "YOLO is empty; this result is using the slot/feature fallback as intended"
-    if final_source == "feature_slot_fallback":
-        return "YOLO detections exist; inspect projected slots and fallback alignment"
+    if final_source == "feature_alignment" and yolo_detection_count <= 0:
+        return "YOLO is empty; inspect alignment quality and scene content"
+    if final_source == "feature_alignment":
+        return "YOLO detections exist; inspect projected slots and alignment geometry"
     if final_source in {"none_yolo_empty_feature_unconfirmed", "scene_unconfirmed"}:
         return "No confirmed pose; do not draw confident missing polygons, ask for recapture or inspect fallback thresholds"
     if status and status != "success":
@@ -203,6 +205,28 @@ def _detail_status_counts(details: list[dict[str, Any]]) -> Counter[str]:
         if status:
             counts[status] += 1
     return counts
+
+
+def _yolo_detection_count(
+    details: list[dict[str, Any]],
+    raw_counts: dict[str, int],
+) -> int:
+    counted = int(sum(_int_value(value) for value in raw_counts.values()))
+    if counted > 0:
+        return counted
+
+    inferred = 0
+    for detail in details:
+        status = _string_value(detail.get("status"))
+        if status in {"ok", "extra", "unmatched"}:
+            inferred += 1
+            continue
+        if detail.get("detected_bbox") or detail.get("detected_polygon"):
+            inferred += 1
+            continue
+        if detail.get("detected_class_in_zone"):
+            inferred += 1
+    return inferred
 
 
 def _string_value(value: Any) -> str:

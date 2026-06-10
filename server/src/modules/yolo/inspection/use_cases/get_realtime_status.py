@@ -114,7 +114,7 @@ def _status_from_realtime_result(
     expected_details = [
         detail
         for detail in details
-        if str(detail.get("status") or "") in {"ok", "missing"}
+        if detail.get("annotation_id") is not None
     ]
 
     total = max(
@@ -129,7 +129,7 @@ def _status_from_realtime_result(
     missing = [
         str(detail.get("name") or "Объект")
         for detail in expected_details
-        if str(detail.get("status") or "") == "missing"
+        if str(detail.get("status") or "") in {"missing", "unmatched"}
     ]
 
     has_extra = any(str(detail.get("status") or "") == "extra" for detail in details)

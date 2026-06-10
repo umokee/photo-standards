@@ -13,7 +13,7 @@ type EditableStandard = Pick<GroupStandard, "id" | "group_id" | "name" | "angle"
 export const UpdateStandard = ({ standard }: { standard: EditableStandard }) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="ghost" size="sm">Изм.</Button>
+      <Button variant="ghost" size="sm">Изменить</Button>
     </Modal.Trigger>
     <Modal.Content>
       <UpdateStandardModal standard={standard} />

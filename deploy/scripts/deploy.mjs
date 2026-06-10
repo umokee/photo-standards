@@ -180,34 +180,13 @@ function generateNginxConfig() {
   return outputPath;
 }
 
-async function initDb(mode = "migrate") {
-  ensureProjectRoot();
-  ensurePython();
-
-  if (mode === "migrate") {
-    run(npmBin, ["run", "db:migrate"]);
-    return;
-  }
-  if (mode === "bootstrap") {
-    run(npmBin, ["run", "db:bootstrap"]);
-    return;
-  }
-  fail(`Unknown database mode: ${mode}. Use migrate or bootstrap.`);
-}
-
-function runDev() {
-  ensureProjectRoot();
-  ensurePython();
-  run(process.execPath, [path.join(deployDir, "scripts", "run-local.js")]);
-}
-
 async function runLocalProd() {
   ensureProjectRoot();
   ensurePython();
   ensureRuntimeDir();
 
   if (process.env.RUN_MIGRATIONS !== "0") {
-    await initDb("migrate");
+    run(npmBin, ["run", "db:migrate"]);
   }
 
   if (process.env.SKIP_BUILD !== "1") {
@@ -307,13 +286,8 @@ async function stopLocalProd(code = 0) {
 
 async function main() {
   const command = process.argv[2] || "help";
-  const arg = process.argv[3];
 
-  if (command === "init-db") {
-    await initDb(arg || "migrate");
-  } else if (command === "dev") {
-    runDev();
-  } else if (command === "prod-local") {
+  if (command === "prod-local") {
     await runLocalProd();
   } else if (command === "prod-check") {
     await checkLocalProd();
@@ -321,8 +295,6 @@ async function main() {
     await stopLocalProd(0);
   } else {
     process.stdout.write(`Usage:
-  node deploy/scripts/deploy.mjs init-db [migrate|bootstrap]
-  node deploy/scripts/deploy.mjs dev
   node deploy/scripts/deploy.mjs prod-local
   node deploy/scripts/deploy.mjs prod-check
   node deploy/scripts/deploy.mjs prod-stop

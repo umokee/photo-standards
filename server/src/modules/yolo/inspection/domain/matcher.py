@@ -113,16 +113,6 @@ def match_segments(
     frame_size: tuple[int, int] | None = None,
     projection_data: LocalProjectionData | None = None,
 ) -> list[SegmentMatch]:
-    """Assign detections to expected slots with one row per expected object.
-
-    v17_status_conflict_fix:
-    - expected-slot rows own the final status: ok / unmatched / missing;
-    - a same-class YOLO detection is first consumed by an unresolved expected slot
-      before it can become an extra row;
-    - missing polygons are kept when the homography produced a finite polygon even
-      if the polygon is partly outside the frame, so overlay can clip and draw it;
-    - extra rows are only remaining detections after expected slots are satisfied.
-    """
     transform = _resolve_homography(homography, projection_data)
     resolved_frame_size = _resolve_frame_size(frame_size, projection_data)
 
@@ -182,7 +172,6 @@ def match_segments(
                 iou=iou,
                 center_factor=center_factor,
                 center_inside=center_inside,
-                class_matches=True,
                 confidence=det.detection.confidence,
             )
             if acceptable:
@@ -244,13 +233,13 @@ def match_segments(
                 "expected_class_key": slot.item.class_key,
                 "same_class_detection_count": len(existing_indices),
                 "detection_indices": existing_indices,
-                "assignment_policy": "slot_marked_ambiguous_no_silent_ok",
+                "assignment_policy": "best_same_class_candidate_selected",
             },
             projection_debug=slot.debug,
         )
         match = _expected_match(
             slot.item,
-            status="unmatched",
+            status="ok",
             confidence=best_det.detection.confidence,
             expected_polygon=slot.polygon,
             detected_polygon=best_det.polygon,
@@ -330,11 +319,6 @@ def match_segments(
             det = detection_by_index[detection_index]
             reason_code = str(debug.get("reason_code") or "")
 
-            # v24_1_wrong_class_inside_slot_missing:
-            # If YOLO detects a different class inside the expected slot, the
-            # expected object is still missing. Do not attach the wrong YOLO
-            # mask/polygon/bbox to the expected row; consume the detection so it
-            # also does not become a duplicate extra for the same physical zone.
             if reason_code == "different_class_detection_inside_projected_slot":
                 wrong_debug = _with_projection_debug(dict(debug), projection_debug=projection_debug)
                 wrong_debug["detected_mask_ignored"] = True
@@ -446,9 +430,8 @@ def _same_class_detection_in_slot_zone(slot: _ProjectedSlot, det: _DetectionSlot
     iou = _bbox_iou(slot.bbox, det.bbox)
     center_factor = _center_distance_factor(slot.bbox, det.bbox)
     center_inside = _point_in_bbox(_bbox_center(det.bbox), slot.bbox)
-    return (
-        center_inside
-        or iou >= _RELAXED_SAME_CLASS_MIN_IOU
+    return center_inside and (
+        iou >= _RELAXED_SAME_CLASS_MIN_IOU
         or center_factor <= _RELAXED_SAME_CLASS_CENTER_FACTOR
     )
 
@@ -540,18 +523,19 @@ def _choose_same_class_unresolved_assignments(
 ) -> dict[int, tuple[int, dict[str, Any]]]:
     candidates: list[tuple[float, int, int, dict[str, Any]]] = []
     for expected_index, item, _polygon, bbox, reason, _projection_debug in unresolved:
+        if bbox is None:
+            continue
         for det in detection_items:
             if det.index in occupied_detection_indices:
+                continue
+            if det.bbox is None:
                 continue
             if det.detection.class_key != item.class_key:
                 continue
             score = float(det.detection.confidence or 0.0)
-            center_factor: float | None = None
-            iou: float | None = None
-            if bbox is not None and det.bbox is not None:
-                center_factor = _center_distance_factor(bbox, det.bbox)
-                iou = _bbox_iou(bbox, det.bbox)
-                score += (iou * 1.5) - (0.05 * min(center_factor, 20.0))
+            center_factor = _center_distance_factor(bbox, det.bbox)
+            iou = _bbox_iou(bbox, det.bbox)
+            score += (iou * 1.5) - (0.05 * min(center_factor, 20.0))
             reason_code = "same_class_detection_exists_but_expected_slot_not_confirmed"
             debug = {
                 "reason": _reason_message(reason_code),
@@ -561,10 +545,8 @@ def _choose_same_class_unresolved_assignments(
                 "detected_class_key": det.detection.class_key,
                 "assignment_scope": "expected_slot_before_extra",
             }
-            if center_factor is not None:
-                debug["center_distance_factor"] = _round(center_factor)
-            if iou is not None:
-                debug["iou"] = _round(iou)
+            debug["center_distance_factor"] = _round(center_factor)
+            debug["iou"] = _round(iou)
             candidates.append((score, expected_index, det.index, debug))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
@@ -918,6 +900,8 @@ def _missing_debug(
         "reason_code": reason_code,
         "raw_reason": reason,
     }
+
+
 def _with_projection_debug(
     debug: dict[str, Any],
     *,
@@ -1021,7 +1005,6 @@ def _candidate_is_acceptable(
     iou: float,
     center_factor: float,
     center_inside: bool,
-    class_matches: bool,
     confidence: float | None,
 ) -> tuple[bool, str]:
     if iou >= _MIN_MATCH_IOU:
@@ -1031,8 +1014,7 @@ def _candidate_is_acceptable(
         return True, "projected_slot_center_inside"
 
     if (
-        class_matches
-        and center_inside
+        center_inside
         and float(confidence or 0.0) >= _MIN_EXPECTED_SLOT_CONFIDENCE
         and (
             iou >= _RELAXED_SAME_CLASS_MIN_IOU
@@ -1147,7 +1129,7 @@ def _point_in_bbox(point: tuple[float, float], bbox: BBox) -> bool:
 
 
 def _bbox_visible(bbox: BBox, frame_size: tuple[int, int]) -> bool:
-    height, width = frame_size
+    width, height = frame_size
     frame = (0.0, 0.0, float(width), float(height))
     visible_area = _intersection_area(bbox, frame)
     bbox_area = max(1.0, (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]))

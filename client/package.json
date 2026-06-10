@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "project": "node ../deploy/scripts/run-local.js",
     "docker:dev": "cd .. && docker compose -f docker-compose.dev.yml up",
     "docker:dev:build": "cd .. && docker compose -f docker-compose.dev.yml build",
     "docker:dev:recreate": "cd .. && COMPOSE_PROGRESS=plain BUILDKIT_PROGRESS=plain docker compose -f docker-compose.dev.yml up -d --force-recreate",

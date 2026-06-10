@@ -12,13 +12,6 @@ def mask_reference_polygons(
     *,
     padding_px: int = 3,
 ) -> np.ndarray:
-    """Return a copy of reference image with expected object interiors erased.
-
-    Global LightGlue alignment should rely on stable scene/context features, not on
-    product interiors that may be absent on the checked photo.  The fill color is
-    estimated from pixels outside all expected polygons to avoid introducing hard
-    black/white artificial corners.
-    """
     valid = [_polygon_to_int_array(polygon) for polygon in polygons]
     valid = [polygon for polygon in valid if polygon is not None and len(polygon) >= 3]
     if not valid:

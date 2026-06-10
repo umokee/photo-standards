@@ -30,11 +30,7 @@ async def execute_inspection(*, task_id: str) -> None:
         task_id=task_id,
         queue=tasks_constants.queues.gpu,
     )
-
-    try:
-        await process_inspection_task(task_id)
-    except Exception:
-        raise
+    await process_inspection_task(task_id)
 
 
 async def process_inspection_task(task_id: str) -> None:

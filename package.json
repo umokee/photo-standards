@@ -7,9 +7,6 @@
     "dev:client": "npm --prefix ./client run dev -- --host 0.0.0.0 --port 5173",
     "db:bootstrap": "cd server && DEBUG=true .venv/bin/python src/init_db.py",
     "db:migrate": "cd server && .venv/bin/python -m alembic upgrade head",
-    "deploy:dev": "node ./deploy/scripts/deploy.mjs dev",
-    "deploy:init-db": "node ./deploy/scripts/deploy.mjs init-db migrate",
-    "deploy:bootstrap-db": "node ./deploy/scripts/deploy.mjs init-db bootstrap",
     "deploy:prod:local": "node ./deploy/scripts/deploy.mjs prod-local",
     "deploy:prod:check": "node ./deploy/scripts/deploy.mjs prod-check",
     "deploy:prod:stop": "node ./deploy/scripts/deploy.mjs prod-stop"
