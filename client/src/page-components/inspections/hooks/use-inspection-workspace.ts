@@ -493,7 +493,7 @@ function getWorkspaceSubtitle({
   deviceCameraError: string | null;
 }) {
   if (result) {
-    return `Результат: ${result.matched} / ${result.total}`;
+    return "Проверка завершена";
   }
 
   if (taskStage) {
@@ -548,7 +548,7 @@ function getWorkspaceSubtitle({
     }
 
     if (selectedClassIds.length === 0) {
-      return "Выберите классы справа.";
+      return "Выберите элементы контроля справа.";
     }
 
     return "Запустите проверку — кадры будут обрабатываться в реальном времени.";

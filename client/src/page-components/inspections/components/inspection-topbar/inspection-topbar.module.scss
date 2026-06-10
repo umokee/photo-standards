@@ -1,14 +1,15 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v20: plain topbar grid; selects keep the shared Select style. */
 .root {
   display: grid;
   grid-template-columns:
-    minmax(170px, 220px)
+    minmax(150px, 190px)
     minmax(180px, 1fr)
     minmax(180px, 1fr)
-    minmax(220px, 1fr);
-  align-items: end;
-  gap: $space-3;
+    minmax(190px, 0.9fr);
+  align-items: center;
+  gap: $space-2;
   width: 100%;
   min-width: 0;
 
@@ -32,6 +33,6 @@
 
 @media (max-width: 520px) {
   .root {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }

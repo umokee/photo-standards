@@ -54,8 +54,9 @@ const getResultMeta = (result: PanelResult) => {
     return {
       badgeType: "warning" as const,
       badgeLabel: "Подготовка",
-      title: "Проверка запускается",
-      text: "Как только придёт первый обработанный кадр, список классов начнёт обновляться в реальном времени.",
+      title: "Ожидаем первый кадр",
+      description: "Проверка начнётся автоматически после подготовки модели и видеопотока.",
+      scoreLabel: "Подготовка",
     };
   }
 
@@ -63,8 +64,9 @@ const getResultMeta = (result: PanelResult) => {
     return {
       badgeType: "danger" as const,
       badgeLabel: "Не пройдено",
-      title: "Не удалось сопоставить кадр",
-      text: "Кадр слишком отличается по геометрии от эталона. Переснимите ближе к ракурсу эталонного снимка.",
+      title: "Фото не сопоставилось с эталоном",
+      description: "Ракурс или геометрия слишком отличаются. Переснимите ближе к эталонному виду.",
+      scoreLabel: "Требуется новый кадр",
     };
   }
 
@@ -74,17 +76,36 @@ const getResultMeta = (result: PanelResult) => {
     return {
       badgeType: "success" as const,
       badgeLabel: "Пройдено",
-      title: "Проверка пройдена",
-      text: `На месте все ожидаемые сегменты: ${result.total} из ${result.total}.`,
+      title: "Все элементы на месте",
+      description: "Замечаний по выбранным элементам контроля нет.",
+      scoreLabel: `${formatElementCount(result.total)} проверено`,
     };
   }
 
   return {
     badgeType: "danger" as const,
     badgeLabel: "Не пройдено",
-    title: "Есть расхождения",
-    text: `На месте ${result.matched} из ${result.total}. Требуют внимания: ${issueCount}.`,
+    title: `${formatElementCount(issueCount)} ${issueCount === 1 ? "требует" : "требуют"} внимания`,
+    description: "Проверьте отмеченные элементы и соответствующие зоны на фото.",
+    scoreLabel: `${formatElementCount(result.matched)} на месте`,
   };
+};
+
+const formatElementCount = (count: number) => `${count} ${getElementWord(count)}`;
+
+const getElementWord = (count: number) => {
+  const mod10 = Math.abs(count) % 10;
+  const mod100 = Math.abs(count) % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return "элемент";
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return "элемента";
+  }
+
+  return "элементов";
 };
 
 export const InspectionResultPanel = ({ ...props }: Props) => {
@@ -111,6 +132,10 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
     ? props.result?.state === "online" && !isSavePending
     : !effectiveInspectionId && !isSavePending;
   const meta = getResultMeta(normalizedResult);
+  const shouldShowSummaryCopy =
+    normalizedResult.isWarmingUp ||
+    isAlignmentFailed(normalizedResult) ||
+    normalizedResult.status === "passed";
 
   const handleSave = () => {
     if (!canSave) {
@@ -166,27 +191,29 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
 
   return (
     <div className={s.root}>
-      <div className={s.summary}>
-        <div className={s.summaryHead}>
-          <span className={s.eyebrow}>Результат проверки</span>
-          <Badge type={meta.badgeType}>{meta.badgeLabel}</Badge>
-        </div>
-
-        <div className={s.summaryBody}>
-          <div className={s.summaryValue}>
-            {normalizedResult.matched}
-            <span className={s.summaryValueMuted}> / {normalizedResult.total}</span>
+      <section className={s.summary} aria-label="Итог проверки">
+        <div className={s.summaryTop}>
+          <div className={s.summaryStatus}>
+            <span className={s.eyebrow}>Результат</span>
+            <Badge type={meta.badgeType}>{meta.badgeLabel}</Badge>
           </div>
 
+          <div
+            className={s.summaryRatio}
+            aria-label={`${normalizedResult.matched} из ${normalizedResult.total}`}
+          >
+            {normalizedResult.matched}
+            <span className={s.summaryRatioMuted}>/{normalizedResult.total}</span>
+          </div>
+        </div>
+
+        {shouldShowSummaryCopy ? (
           <div className={s.summaryContent}>
             <div className={s.summaryTitle}>{meta.title}</div>
-            <div className={s.summaryText}>{meta.text}</div>
-            {!!normalizedResult.modelName && (
-              <div className={s.summaryHint}>Модель: {normalizedResult.modelName}</div>
-            )}
+            <div className={s.summaryText}>{meta.description}</div>
           </div>
-        </div>
-      </div>
+        ) : null}
+      </section>
 
       <InspectionResultDetails
         details={normalizedResult.details}
@@ -196,44 +223,47 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
 
       <div className={s.saveDock}>
         <div className={s.saveHead}>
-          <span className={s.eyebrow}>
-            {isRealtime ? "Сохранение текущего кадра" : "Сохранение результата"}
-          </span>
+          <span className={s.eyebrow}>{isRealtime ? "Кадр отчёта" : "Отчёт"}</span>
+          <span className={s.saveMeta}>{effectiveInspectionId ? "Сохранён" : "Не сохранён"}</span>
         </div>
 
-        <div className={s.saveBody}>
-          {effectiveInspectionId ? (
-            <div className={s.saveState}>
-              <div className={s.saveStateTitle}>Результат уже сохранён</div>
-              <div className={s.saveStateText}>ID проверки: {effectiveInspectionId}</div>
-            </div>
-          ) : (
-            <>
-              <Input
-                label="Комментарий"
-                placeholder="Дополнительные заметки"
-                value={notes}
-                onChange={setNotes}
-              />
-              {isRealtime ? (
-                <div className={s.saveActionsSingle}>
-                  <Button full disabled={!canSave} onClick={handleSave}>
-                    {saveRealtimeMutation.isPending ? "Сохранение..." : "Сохранить"}
-                  </Button>
-                </div>
-              ) : (
-                <div className={s.saveActions}>
-                  <Button variant="ghost" disabled={!canDiscard} onClick={handleDiscard}>
-                    {discardMutation.isPending ? "Сброс..." : "Сбросить"}
-                  </Button>
-                  <Button disabled={!canSave} onClick={handleSave}>
-                    {saveMutation.isPending ? "Сохранение..." : "Сохранить"}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        {effectiveInspectionId ? (
+          <div className={s.saveState}>
+            <div className={s.saveStateTitle}>Результат сохранён</div>
+            <div className={s.saveStateText}>ID проверки: {effectiveInspectionId}</div>
+          </div>
+        ) : (
+          <>
+            <details className={s.noteDetails}>
+              <summary className={s.noteSummary}>Комментарий к отчёту</summary>
+              <div className={s.noteBody}>
+                <Input
+                  label="Комментарий к отчёту"
+                  placeholder="Причина отклонения или решение оператора"
+                  value={notes}
+                  onChange={setNotes}
+                />
+              </div>
+            </details>
+
+            {isRealtime ? (
+              <div className={s.saveActionsSingle}>
+                <Button full disabled={!canSave} onClick={handleSave}>
+                  {saveRealtimeMutation.isPending ? "Сохранение..." : "Сохранить кадр"}
+                </Button>
+              </div>
+            ) : (
+              <div className={s.saveActions}>
+                <Button variant="ghost" disabled={!canDiscard} onClick={handleDiscard}>
+                  {discardMutation.isPending ? "Сброс..." : "Сбросить"}
+                </Button>
+                <Button disabled={!canSave} onClick={handleSave}>
+                  {saveMutation.isPending ? "Сохранение..." : "Сохранить"}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -264,3 +294,5 @@ function normalizePanelResult(props: Props): PanelResult {
     isWarmingUp: false,
   };
 }
+
+// UI clean v16: keep repeated failed-result copy out of the main summary.

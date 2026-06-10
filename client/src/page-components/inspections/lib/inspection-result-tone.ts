@@ -5,36 +5,36 @@ export const getInspectionResultTone = (status: InspectionSegmentStatus) => {
     case "ok":
       return {
         badge: "success" as const,
-        stroke: "#3a9b5d",
-        fill: "rgba(58, 155, 93, 0.12)",
+        stroke: "#2f7d4f",
+        fill: "rgba(47, 125, 79, 0.10)",
         label: "На месте",
       };
     case "missing":
       return {
         badge: "danger" as const,
-        stroke: "#b84646",
-        fill: "rgba(184, 70, 70, 0.12)",
+        stroke: "#a23a3a",
+        fill: "rgba(162, 58, 58, 0.10)",
         label: "Отсутствует",
       };
     case "extra":
       return {
         badge: "warning" as const,
-        stroke: "#c87a00",
-        fill: "rgba(200, 122, 0, 0.12)",
+        stroke: "#9a6700",
+        fill: "rgba(154, 103, 0, 0.10)",
         label: "Лишнее",
       };
     case "unmatched":
       return {
         badge: "warning" as const,
-        stroke: "#d19a30",
-        fill: "rgba(209, 154, 48, 0.12)",
+        stroke: "#9a6700",
+        fill: "rgba(154, 103, 0, 0.10)",
         label: "Не сопоставлено",
       };
     default:
       return {
         badge: "info" as const,
-        stroke: "#5b7fff",
-        fill: "rgba(91, 127, 255, 0.12)",
+        stroke: "#57606a",
+        fill: "rgba(87, 96, 106, 0.10)",
         label: status,
       };
   }

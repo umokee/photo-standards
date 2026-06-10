@@ -63,7 +63,9 @@ export const InspectionWorkspace = ({
       <div className={s.header}>
         <div className={s.info}>
           <span className={s.title}>{workspace.headerTitle}</span>
-          <span className={s.subtitle}>{workspace.headerSubtitle}</span>
+          {workspace.headerSubtitle ? (
+            <span className={s.subtitle}>{workspace.headerSubtitle}</span>
+          ) : null}
         </div>
 
         <div className={s.actions}>
@@ -80,7 +82,6 @@ export const InspectionWorkspace = ({
 
               <Button
                 variant="ghost"
-                icon={Upload}
                 disabled={isLocked}
                 onClick={() => workspace.replaceInputRef.current?.click()}
               >

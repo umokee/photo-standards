@@ -18,6 +18,11 @@ type Props = {
   variant?: "panel" | "history";
 };
 
+type IndexedDetail = {
+  detail: InspectionResultDetailItem;
+  originalIndex: number;
+};
+
 export const InspectionResultDetails = ({
   details,
   activeMatchKey = null,
@@ -28,61 +33,103 @@ export const InspectionResultDetails = ({
     return null;
   }
 
+  const indexedDetails = details.map((detail, originalIndex) => ({
+    detail,
+    originalIndex,
+  }));
+
+  const renderDetailRow = ({ detail, originalIndex }: IndexedDetail) => {
+    const matchKey = String(originalIndex);
+    const tone = getInspectionResultTone(detail.status);
+    const isActive = activeMatchKey === matchKey;
+    const rowStyle = {
+      "--detail-stroke": tone.stroke,
+    } as CSSProperties;
+
+    const content = (
+      <DetailRowContent
+        detail={detail}
+        badgeType={tone.badge}
+        badgeLabel={tone.label}
+        toneColor={tone.stroke}
+        variant={variant}
+      />
+    );
+
+    if (onActiveMatchChange) {
+      return (
+        <button
+          key={matchKey}
+          type="button"
+          className={clsx(
+            s.row,
+            variant === "history" && s.rowHistory,
+            s.rowInteractive,
+            isActive && s.rowActive
+          )}
+          style={rowStyle}
+          aria-pressed={isActive}
+          onClick={() => onActiveMatchChange(isActive ? null : matchKey)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            onActiveMatchChange(null);
+          }}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    return (
+      <div
+        key={matchKey}
+        className={clsx(s.row, variant === "history" && s.rowHistory)}
+        style={rowStyle}
+      >
+        {content}
+      </div>
+    );
+  };
+
+  if (variant === "history") {
+    return (
+      <div className={clsx(s.root, s.rootHistory)}>
+        <div className={s.list}>{indexedDetails.map(renderDetailRow)}</div>
+      </div>
+    );
+  }
+
+  const issueItems = indexedDetails.filter(({ detail }) => detail.status !== "ok");
+  const checkedItems = indexedDetails.filter(({ detail }) => detail.status === "ok");
+
   return (
-    <div className={clsx(s.root, variant === "history" && s.rootHistory)}>
+    <div className={s.root}>
       <div className={s.list}>
-        {details.map((detail, index) => {
-          const matchKey = String(index);
-          const tone = getInspectionResultTone(detail.status);
-          const isActive = activeMatchKey === matchKey;
-          const rowStyle = {
-            "--detail-stroke": tone.stroke,
-          } as CSSProperties;
+        <section className={s.reportSection}>
+          <div className={s.reportHead}>
+            <span className={s.reportTitle}>Требуют внимания</span>
+            <span className={s.reportCount}>{issueItems.length}</span>
+          </div>
 
-          const content = (
-            <DetailRowContent
-              detail={detail}
-              badgeType={tone.badge}
-              badgeLabel={tone.label}
-              toneColor={tone.stroke}
-              variant={variant}
-            />
-          );
+          <div className={s.reportList}>
+            {issueItems.length > 0 ? (
+              issueItems.map(renderDetailRow)
+            ) : (
+              <div className={s.empty}>Замечаний по выбранным элементам нет.</div>
+            )}
+          </div>
+        </section>
 
-          if (onActiveMatchChange) {
-            return (
-              <button
-                key={matchKey}
-                type="button"
-                className={clsx(
-                  s.row,
-                  variant === "history" && s.rowHistory,
-                  s.rowInteractive,
-                  isActive && s.rowActive
-                )}
-                style={rowStyle}
-                aria-pressed={isActive}
-                onClick={() => onActiveMatchChange(isActive ? null : matchKey)}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  onActiveMatchChange(null);
-                }}
-              >
-                {content}
-              </button>
-            );
-          }
+        {checkedItems.length > 0 ? (
+          <details className={s.reportDisclosure}>
+            <summary className={s.reportHead}>
+              <span className={s.reportTitle}>Проверенные элементы</span>
+              <span className={s.reportCount}>{checkedItems.length}</span>
+            </summary>
 
-          return (
-            <div
-              key={matchKey}
-              className={clsx(s.row, variant === "history" && s.rowHistory)}
-              style={rowStyle}
-            >
-              {content}
-            </div>
-          );
-        })}
+            <div className={s.reportList}>{checkedItems.map(renderDetailRow)}</div>
+          </details>
+        ) : null}
       </div>
     </div>
   );
@@ -103,8 +150,7 @@ const DetailRowContent = ({
 }) => {
   const showConfidence = detail.confidence !== null;
   const showIou = detail.iou !== null;
-  const showHistoryMeta = variant === "history" && (showConfidence || showIou);
-  const debugItems = getDebugItems(detail.debug);
+  const showMeta = showConfidence || showIou;
 
   return (
     <>
@@ -121,90 +167,48 @@ const DetailRowContent = ({
 
         {variant === "panel" ? (
           <div className={s.rowSide}>
-            {showConfidence && (
-              <span className={s.confidence}>{Math.round(detail.confidence! * 100)}%</span>
-            )}
             <Badge type={badgeType}>{badgeLabel}</Badge>
           </div>
         ) : null}
       </div>
 
-      {variant === "panel" && showIou ? (
-        <div className={s.rowMeta}>
-          <span>Совпадение по площади: {Math.round(detail.iou! * 100)}%</span>
-        </div>
+      {variant === "panel" && detail.status !== "ok" ? (
+        <div className={s.rowText}>{getDetailMessage(detail)}</div>
       ) : null}
 
-      {variant === "panel" && debugItems.length > 0 ? (
+      {showMeta ? (
         <div className={s.rowMeta}>
-          {debugItems.map((item) => (
-            <span key={item.label}>
-              {item.label}: {item.value}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      {showHistoryMeta ? (
-        <div className={s.rowMeta}>
-          {showConfidence ? <span>Точность {Math.round(detail.confidence! * 100)}%</span> : null}
-          {showIou ? <span>Совпадение {Math.round(detail.iou! * 100)}%</span> : null}
+          {showConfidence ? <span>уверенность {formatMetricPercent(detail.confidence)}</span> : null}
+          {showIou ? <span>зона {formatMetricPercent(detail.iou)}</span> : null}
         </div>
       ) : null}
     </>
   );
 };
 
+const formatMetricPercent = (value: number | null | undefined) =>
+  `${Math.round((value ?? 0) * 100)}%`;
 
-const DEBUG_LABELS: Record<string, string> = {
-  reason: "Причина",
-  reject_reason: "Отказ",
-  score: "score",
-  threshold: "порог",
-  bbox_iou: "bbox IoU",
-  polygon_iou: "polygon IoU",
-  iou: "IoU",
-  center_distance: "центр",
-  center_limit: "лимит центра",
-  area_ratio: "размер",
-  expected_name: "ожидалось",
+const getDetailMessage = (detail: InspectionResultDetailItem) => {
+  const expectedName = getDebugString(detail.debug, "expected_name");
+
+  switch (detail.status) {
+    case "ok":
+      return "Элемент найден в ожидаемой зоне.";
+    case "missing":
+      return "Элемент не найден в ожидаемой зоне.";
+    case "extra":
+      return expectedName
+        ? `На фото найден другой элемент. Ожидалось: ${expectedName}.`
+        : "На фото есть лишний элемент для выбранного эталона.";
+    case "unmatched":
+      return "Не удалось уверенно сопоставить элемент с эталоном.";
+    default:
+      return "Требуется ручная проверка.";
+  }
 };
 
-const DEBUG_ORDER = [
-  "reason",
-  "reject_reason",
-  "score",
-  "threshold",
-  "bbox_iou",
-  "polygon_iou",
-  "iou",
-  "center_distance",
-  "center_limit",
-  "area_ratio",
-  "expected_name",
-];
-
-const getDebugItems = (debug: Record<string, unknown> | null | undefined) => {
-  if (!debug) {
-    return [];
-  }
-
-  return DEBUG_ORDER.filter((key) => debug[key] !== undefined && debug[key] !== null).map(
-    (key) => ({
-      label: DEBUG_LABELS[key] ?? key,
-      value: formatDebugValue(debug[key]),
-    })
-  );
-};
-
-const formatDebugValue = (value: unknown) => {
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : value.toFixed(3);
-  }
-
-  if (typeof value === "boolean") {
-    return value ? "да" : "нет";
-  }
-
-  return String(value);
+const getDebugString = (debug: Record<string, unknown> | null | undefined, key: string) => {
+  const value = debug?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 };

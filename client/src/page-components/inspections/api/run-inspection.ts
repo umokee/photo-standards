@@ -29,7 +29,7 @@ const runInspectionSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["selected_segment_class_ids"],
-        message: "Выберите хотя бы один класс",
+        message: "Выберите хотя бы один элемент контроля",
       });
     }
 

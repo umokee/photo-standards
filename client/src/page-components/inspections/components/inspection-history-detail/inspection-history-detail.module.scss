@@ -118,7 +118,7 @@
   justify-content: center;
   min-height: 220px;
   flex: 1;
-  background: #111;
+  background: $surface2;
 }
 
 .imageCardLarge .imageLink {
@@ -196,3 +196,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* UI clean v21: neutral image background in history detail. */

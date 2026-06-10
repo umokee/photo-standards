@@ -230,3 +230,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* UI clean v21: expanded card uses neutral border; active state stays in badge. */
+.root.expanded {
+  border-color: $line-strong;
+}

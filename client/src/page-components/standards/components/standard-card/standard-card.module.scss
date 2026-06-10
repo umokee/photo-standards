@@ -382,3 +382,9 @@
     opacity: 1;
   }
 }
+
+
+/* UI clean v21: expanded card uses neutral border; status stays in content. */
+.root.expanded {
+  border-color: $line-strong;
+}

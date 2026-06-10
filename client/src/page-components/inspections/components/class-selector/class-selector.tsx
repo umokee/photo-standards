@@ -109,12 +109,12 @@ export const ClassSelector = ({
     <div className={s.root}>
       <div className={s.header}>
         <div className={s.headerText}>
-          <div className={s.eyebrow}>Проверка</div>
-          <div className={s.title}>Классы для проверки</div>
+          <div className={s.eyebrow}>Настройка проверки</div>
+          <div className={s.title}>Элементы контроля</div>
         </div>
 
         <div className={s.headerSide}>
-          <Badge>{value.length}</Badge>
+          <Badge>{value.length}/{allIds.length}</Badge>
           <Button
             variant="ghost"
             size="sm"
@@ -129,8 +129,8 @@ export const ClassSelector = ({
       <div className={s.body}>
         <QueryState
           isEmpty={!allIds.length}
-          emptyTitle="Нет классов"
-          emptyDescription="Для выбранной группы не настроены классы сегментации"
+          emptyTitle="Нет элементов"
+          emptyDescription="Для выбранной группы не настроены элементы контроля"
         >
           <div className={s.groups}>
             {groups.map((groupItem) => {
@@ -171,7 +171,7 @@ export const ClassSelector = ({
                         aria-expanded={isOpen}
                         onClick={() => handleToggleOpen(groupItem.id)}
                       >
-                        {isOpen ? "Скрыть" : "Показать"}
+                        {isOpen ? "Свернуть" : "Раскрыть"}
                       </button>
 
                       <Badge>

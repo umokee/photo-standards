@@ -36,7 +36,7 @@ export function Component() {
           isEmpty
           size="block"
           emptyTitle="Выберите группу"
-          emptyDescription="После выбора группы здесь появятся классы проверки"
+          emptyDescription="После выбора группы здесь появятся элементы контроля"
         />
       );
     }
@@ -61,7 +61,7 @@ export function Component() {
         <QueryState
           isLoading
           size="block"
-          loadingText="Подготавливаем классы для проверки"
+          loadingText="Подготавливаем элементы контроля"
         />
       );
     }

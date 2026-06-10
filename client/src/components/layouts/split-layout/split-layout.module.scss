@@ -1,11 +1,13 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v19: keep the inspection workspace flush and clipped without decorative padding. */
 .root {
   display: flex;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .backdrop {
@@ -199,3 +201,19 @@
     padding: 0;
   }
 }
+
+/* UI clean v11: layout proportions */
+@media (min-width: 768px) and (max-width: 1360px) {
+  .sidebar {
+    width: 224px;
+  }
+
+  .panel {
+    width: 328px;
+  }
+
+  .topbar {
+    padding-inline: $space-3;
+  }
+}
+/* /UI clean v11 */

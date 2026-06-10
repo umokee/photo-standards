@@ -1,13 +1,19 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v12: compact, GitHub-like status labels without heavy fills. */
 .root {
   display: inline-flex;
   align-items: center;
   gap: $space-1;
-  padding: $space-1 $space-2;
-  border-radius: $radius;
-  font-size: $text-small;
+  min-height: 20px;
+  padding: 1px 7px;
+  border: 1px solid $line-soft;
+  border-radius: 999px;
+  background: $surface;
+  color: $text-sub;
+  font-size: $text-micro;
   font-weight: $fw-semibold;
+  line-height: 18px;
   flex: 0 0 auto;
   width: fit-content;
   max-width: 100%;
@@ -16,31 +22,31 @@
   &.info {
     background: $surface;
     color: $text-sub;
-    border: 1px solid $line-soft;
+    border-color: $line-soft;
   }
 
   &.success {
-    background: $primary-bg;
+    background: $surface;
     color: $primary-text;
     border-color: $primary-bd;
   }
 
   &.warning {
-    background: $warning-bg;
+    background: $surface;
     color: $warning-text;
     border-color: $warning-bd;
   }
 
   &.danger {
-    background: $danger-bg;
+    background: $surface;
     color: $danger-text;
     border-color: $danger-bd;
   }
 }
 
 .colorDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 25%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
