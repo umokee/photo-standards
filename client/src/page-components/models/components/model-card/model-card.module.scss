@@ -236,3 +236,72 @@
 .root.expanded {
   border-color: $line-strong;
 }
+
+/* UI clean v26: models page density, without changing management buttons. */
+.root.expanded {
+  border-color: $line-strong;
+}
+
+.header {
+  gap: $space-2;
+  padding: 12px 14px;
+}
+
+.body {
+  padding: $space-3;
+  background: $surface2;
+  border-top: 1px solid $line;
+}
+
+.detail {
+  gap: $space-2;
+}
+
+.detailGrid {
+  gap: $space-2;
+}
+
+.detailSection {
+  gap: $space-2;
+  padding: $space-3;
+  border-color: $line-soft;
+  background: $surface;
+}
+
+.detailSection > div:first-child {
+  gap: 0;
+}
+
+.detailSection > div:first-child span {
+  font-size: $text-small;
+}
+
+.detailSection > div:last-child {
+  gap: 0;
+}
+
+.naValue {
+  color: $text-hint;
+  font-family: $font-mono;
+  font-weight: $fw-medium;
+}
+
+.classesPanel {
+  padding: $space-2 $space-3;
+  border-color: $line-soft;
+  background: transparent;
+}
+
+.classesPanel > div:first-child span {
+  font-size: $text-small;
+}
+
+.classesPanel > div:last-child {
+  gap: $space-1;
+}
+
+.errorPanel {
+  border-color: $danger-bd;
+  background: $danger-bg;
+}
+/* End UI clean v26. */

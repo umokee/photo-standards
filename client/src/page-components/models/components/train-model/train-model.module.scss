@@ -47,3 +47,20 @@
     color: $warning-text;
   }
 }
+
+/* UI clean v26: calmer train modal split summary. */
+.splitSummary {
+  gap: $space-1;
+  padding: $space-2 $space-3;
+  border-color: $line-soft;
+}
+
+.splitStats {
+  gap: $space-2;
+}
+
+.splitSummaryWarning {
+  background: transparent;
+  border-color: $warning-bd;
+}
+/* End UI clean v26. */

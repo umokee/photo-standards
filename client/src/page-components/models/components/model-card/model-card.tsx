@@ -249,37 +249,37 @@ const ModelCardDetail = ({
   return (
     <div className={s.detail}>
       <div className={s.detailGrid}>
-        <SurfaceSection title="Датасет">
+        <SurfaceSection title="Датасет" className={s.detailSection}>
           {datasetRows.map((item) => (
-            <InfoRow key={item.label} label={item.label} value={item.value} />
+            <InfoRow key={item.label} label={item.label} value={formatInfoValue(item.value)} />
           ))}
         </SurfaceSection>
 
-        <SurfaceSection title="Параметры">
+        <SurfaceSection title="Параметры" className={s.detailSection}>
           {parameterRows.map((item) => (
-            <InfoRow key={item.label} label={item.label} value={item.value} />
+            <InfoRow key={item.label} label={item.label} value={formatInfoValue(item.value)} />
           ))}
         </SurfaceSection>
 
-        <SurfaceSection title="Метрики">
+        <SurfaceSection title="Метрики" className={s.detailSection}>
           {MODEL_METRIC_KEYS.map((key) => (
             <InfoRow
               key={key}
               label={metricLabel(key)}
-              value={formatModelMetric(displayMetrics?.[key])}
+              value={formatInfoValue(formatModelMetric(displayMetrics?.[key]))}
             />
           ))}
         </SurfaceSection>
       </div>
 
       {taskStatus === "failed" && task?.error && (
-        <SurfaceSection title="Ошибка обучения">
+        <SurfaceSection title="Ошибка обучения" className={s.errorPanel}>
           <span className={s.emptyText}>{task.error}</span>
         </SurfaceSection>
       )}
 
       {!!modelClassLabels.length && (
-        <SurfaceSection title="Классы модели" direction="row" transparent>
+        <SurfaceSection title="Классы модели" direction="row" transparent className={s.classesPanel}>
           {modelClassLabels.map((className) => (
             <Badge key={className}>{className}</Badge>
           ))}
@@ -352,6 +352,15 @@ const ModelCardDetail = ({
       )}
     </div>
   );
+};
+
+
+const formatInfoValue = (value: string | number | null | undefined) => {
+  if (value === "n/a") {
+    return <span className={s.naValue}>n/a</span>;
+  }
+
+  return value;
 };
 
 const formatDatasetSplit = (ratio: number | null, count: number | null) => {

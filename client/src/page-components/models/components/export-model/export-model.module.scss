@@ -23,3 +23,17 @@
   flex-wrap: wrap;
   gap: $space-1;
 }
+
+/* UI clean v26: calmer export summary density. */
+.summaryCard {
+  gap: $space-2;
+}
+
+.sectionBlock {
+  gap: $space-1;
+}
+
+.sectionTitle {
+  color: $text-sub;
+}
+/* End UI clean v26. */
