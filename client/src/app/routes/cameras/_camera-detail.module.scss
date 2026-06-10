@@ -1,5 +1,6 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v27: denser camera detail sections. */
 .page {
   display: flex;
   flex-direction: column;
@@ -10,7 +11,7 @@
 .detailsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-4;
+  gap: $space-3;
   min-width: 0;
 }
 
@@ -18,12 +19,26 @@
   grid-column: 1 / -1;
 }
 
+.connectionRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  column-gap: $space-5;
+  min-width: 0;
+}
+
+.connectionWideRow {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
-  .detailsGrid {
+  .detailsGrid,
+  .connectionRows {
     grid-template-columns: 1fr;
   }
 
-  .detailsWide {
+  .detailsWide,
+  .connectionWideRow {
     grid-column: auto;
   }
 }

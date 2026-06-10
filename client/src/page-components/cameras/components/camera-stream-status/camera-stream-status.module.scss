@@ -1,5 +1,6 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v27: smaller camera stream status overlay. */
 .root {
   position: absolute;
   inset: 0;
@@ -7,15 +8,15 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.42);
 }
 
 .card {
   display: flex;
   align-items: center;
   gap: $space-3;
-  max-width: 360px;
-  padding: $space-4 $space-5;
+  max-width: 340px;
+  padding: $space-3 $space-4;
   background: $surface;
   border: 1px solid $line;
   border-radius: $radius;
@@ -36,7 +37,7 @@
 
 .message {
   color: $text-sub;
-  font-size: 0.5em;
+  font-size: $text-small;
   line-height: 1.4;
   word-break: break-word;
 }

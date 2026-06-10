@@ -1,9 +1,15 @@
 @use "@/styles/variables" as *;
 
+/* UI clean v27: compact camera form without changing its logic. */
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space-4;
+  gap: $space-3;
+}
+
+.formSection {
+  padding: 12px 14px;
+  gap: 10px;
 }
 
 .gridTwo {
@@ -14,16 +20,19 @@
 
 .hostPortRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 112px;
+  grid-template-columns: minmax(0, 1fr) 18px 132px;
   gap: $space-2;
   align-items: end;
 }
 
 .separator {
   align-self: end;
-  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
   color: $text-hint;
-  font-size: $text-title;
+  font-size: $text-body;
   line-height: 1;
 }
 

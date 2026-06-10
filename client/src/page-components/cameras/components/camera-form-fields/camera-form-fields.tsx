@@ -48,7 +48,11 @@ export const CameraFormFields = ({ values, errors, onChange, isEditing = false }
 
   return (
     <div className={s.root}>
-      <SurfaceSection title="Основное" hint="Базовые данные камеры и режим подключения.">
+      <SurfaceSection
+        className={s.formSection}
+        title="Основное"
+        hint="Базовые данные камеры и режим подключения."
+      >
         <Input
           label="Название"
           placeholder="Например, Линия 1"
@@ -85,6 +89,7 @@ export const CameraFormFields = ({ values, errors, onChange, isEditing = false }
       </SurfaceSection>
 
       <SurfaceSection
+        className={s.formSection}
         title="Подключение"
         hint={
           isUsb
@@ -180,6 +185,7 @@ export const CameraFormFields = ({ values, errors, onChange, isEditing = false }
 
       {!isUsb ? (
         <SurfaceSection
+          className={s.formSection}
           title="Авторизация"
           hint="Если у камеры нет логина и пароля, поля останутся пустыми и в API уйдут null."
         >
@@ -221,7 +227,11 @@ export const CameraFormFields = ({ values, errors, onChange, isEditing = false }
         </SurfaceSection>
       ) : null}
 
-      <SurfaceSection title="Дополнительно" hint="Параметры работы камеры в системе.">
+      <SurfaceSection
+        className={s.formSection}
+        title="Дополнительно"
+        hint="Параметры работы камеры в системе."
+      >
         <div className={s.gridTwo}>
           <Input
             label="Timeout (сек)"
