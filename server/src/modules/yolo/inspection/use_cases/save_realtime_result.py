@@ -62,21 +62,21 @@ async def _save_realtime_snapshot_inspection(
 ) -> InspectionResult:
     relative_path: str | None = None
     result_image_path: str | None = None
+    inspection_id = uuid4()
 
     try:
-        image_id = uuid4()
         relative_path = storage.persist_frame_as_inspection_image(
-            frame, image_id=image_id
+            frame,
+            image_id=inspection_id,
         )
 
-        result_image_id = uuid4()
         rendered_frame = render_overlay(
             frame,
             build_matches_from_details(result.details),
         )
         result_image_path = storage.persist_frame_as_inspection_result(
             rendered_frame,
-            image_id=result_image_id,
+            image_id=inspection_id,
         )
 
         data = build_realtime_save_payload(
@@ -90,6 +90,7 @@ async def _save_realtime_snapshot_inspection(
         inspection, segment_results = build_inspection_entities(
             data=data,
             notes=notes,
+            inspection_id=inspection_id,
         )
 
         return await repository.create_inspection(

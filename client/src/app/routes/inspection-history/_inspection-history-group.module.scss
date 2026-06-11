@@ -1,6 +1,5 @@
 @use "@/styles/variables" as *;
 
-/* UI clean v30: inspection history controls align with compact cards. */
 .controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

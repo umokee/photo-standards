@@ -1,4 +1,5 @@
 import mimetypes
+import shutil
 from pathlib import Path
 
 from app.config import settings
@@ -20,6 +21,62 @@ def ensure_parent_dir(
     path: Path,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def prune_empty_dirs(
+    path: str | Path,
+    *,
+    stop_at: str | Path | None = None,
+) -> None:
+    current = resolve_storage_path(path)
+    if current.is_file():
+        current = current.parent
+
+    boundary = resolve_storage_path(stop_at) if stop_at is not None else settings.STORAGE_ROOT
+
+    try:
+        current.relative_to(boundary)
+    except ValueError:
+        return
+
+    while current != boundary and current != current.parent:
+        try:
+            current.rmdir()
+        except OSError:
+            break
+        current = current.parent
+
+
+def delete_storage_file(
+    relative_path: str | Path | None,
+    *,
+    prune: bool = True,
+    stop_at: str | Path | None = None,
+) -> None:
+    if not relative_path:
+        return
+
+    absolute_path = resolve_storage_path(relative_path)
+    absolute_path.unlink(missing_ok=True)
+
+    if prune:
+        prune_empty_dirs(absolute_path.parent, stop_at=stop_at)
+
+
+def delete_storage_tree(
+    relative_path: str | Path | None,
+    *,
+    prune: bool = True,
+    stop_at: str | Path | None = None,
+) -> None:
+    if not relative_path:
+        return
+
+    absolute_path = resolve_storage_path(relative_path)
+    shutil.rmtree(absolute_path, ignore_errors=True)
+
+    if prune:
+        prune_empty_dirs(absolute_path.parent, stop_at=stop_at)
 
 
 def _guess_suffix(
@@ -80,8 +137,4 @@ async def save_upload(
 async def delete_file(
     relative_path: str | None,
 ) -> None:
-    if not relative_path:
-        return
-
-    absolute_path = resolve_storage_path(relative_path)
-    absolute_path.unlink(missing_ok=True)
+    delete_storage_file(relative_path)

@@ -11,18 +11,18 @@
 }
 
 .state--inline {
-  min-height: 120px;
-  padding: $space-5 $space-4;
+  min-height: 96px;
+  padding: $space-4 $space-4;
 }
 
 .state--block {
-  min-height: 220px;
-  padding: $space-7 $space-6;
+  min-height: 180px;
+  padding: $space-6 $space-5;
 }
 
 .state--page {
   min-height: 100%;
-  padding: $space-8 $space-7;
+  padding: $space-7 $space-6;
 }
 
 .icon {
@@ -44,10 +44,6 @@
 
 .iconLoading {
   color: $primary;
-}
-
-.iconError {
-  color: $danger-text;
 }
 
 .title {

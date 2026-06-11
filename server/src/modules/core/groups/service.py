@@ -4,7 +4,7 @@ import shutil
 from contextlib import suppress
 from uuid import UUID
 
-from infra.storage.file_storage import resolve_storage_path
+from infra.storage.file_storage import delete_storage_file, resolve_storage_path
 from modules.core.segments import crud as segment_crud
 from modules.core.segments.models import SegmentClass, SegmentClassGroup
 from modules.core.standards.crud import list_standard_image_paths
@@ -145,7 +145,7 @@ async def delete_group(
 
     for image_path in image_paths:
         with suppress(Exception):
-            resolve_storage_path(image_path).unlink(missing_ok=True)
+            delete_storage_file(image_path)
 
     for features_path in features_paths:
         with suppress(Exception):

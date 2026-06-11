@@ -231,7 +231,7 @@ async def take_snapshot(
     captured_at = _now()
     height, width = frame.shape[:2]
 
-    relative_path = f"inspections/source/{task_id}.jpg"
+    relative_path = f"inspections/{task_id}/source.jpg"
     absolute_path = resolve_storage_path(relative_path)
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
 

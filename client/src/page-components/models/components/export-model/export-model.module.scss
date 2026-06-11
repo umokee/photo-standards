@@ -3,17 +3,17 @@
 .summaryCard {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: $space-2;
 }
 
 .sectionBlock {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
+  gap: $space-1;
 }
 
 .sectionTitle {
-  color: $text;
+  color: $text-sub;
   font-size: $text-small;
   font-weight: $fw-semibold;
 }
@@ -23,17 +23,3 @@
   flex-wrap: wrap;
   gap: $space-1;
 }
-
-/* UI clean v26: calmer export summary density. */
-.summaryCard {
-  gap: $space-2;
-}
-
-.sectionBlock {
-  gap: $space-1;
-}
-
-.sectionTitle {
-  color: $text-sub;
-}
-/* End UI clean v26. */

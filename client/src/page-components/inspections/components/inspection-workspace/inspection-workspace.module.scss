@@ -1,9 +1,6 @@
 @use "@/styles/variables" as *;
 
-/* UI clean v20: consistency batch, no decorative chrome. */
 
-/* UI clean v19: neutral image edges, no black debug-like letterbox. */
-/* UI clean v9: compact workspace header, no duplicate result text */
 
 .root {
   display: grid;
@@ -262,7 +259,6 @@
   }
 }
 
-/* UI clean v11: layout proportions */
 @media (min-width: 768px) {
   .header {
     min-height: 48px;
@@ -284,6 +280,3 @@
     width: 96px;
   }
 }
-/* /UI clean v11 */
-
-/* UI clean v21: no black debug-like image edge in inspection workspace. */

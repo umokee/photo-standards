@@ -9,7 +9,11 @@ from pathlib import Path
 from uuid import UUID
 
 from app.exception import ValidationError
-from infra.storage.file_storage import resolve_storage_path
+from infra.storage.file_storage import (
+    delete_storage_file,
+    prune_empty_dirs,
+    resolve_storage_path,
+)
 from modules.yolo.training.domain.dataset_split import polygons_to_yolo_lines
 from modules.yolo.training.domain.types import TrainingData, TrainingSplitPlan
 
@@ -261,6 +265,10 @@ def cleanup_task_artifacts(
 
     shutil.rmtree(paths.dataset_root, ignore_errors=True)
     shutil.rmtree(paths.run_dir, ignore_errors=True)
+    prune_empty_dirs(
+        paths.dataset_root.parent,
+        stop_at=paths.dataset_root.parent.parent,
+    )
 
 
 def resolve_model_weights_path(weights_path: str | None) -> Path | None:
@@ -295,7 +303,7 @@ def delete_model_artifacts(
             continue
 
         try:
-            path.unlink(missing_ok=True)
+            delete_storage_file(path)
         except Exception:
             logger.warning(
                 "Failed to delete model file",

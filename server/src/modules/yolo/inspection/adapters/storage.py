@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import shutil
 from typing import Any
 from uuid import UUID
 
@@ -9,7 +10,11 @@ import structlog
 from app.exception import ValidationError
 from app.observability import log_event
 from fastapi import UploadFile
-from infra.storage.file_storage import resolve_storage_path
+from infra.storage.file_storage import (
+    delete_storage_file,
+    ensure_parent_dir,
+    resolve_storage_path,
+)
 from modules.cameras.service import take_snapshot
 from modules.cameras.streaming.manager import CameraStreamManager
 from modules.yolo.inspection.constants import inspections as inspections_constants
@@ -96,7 +101,7 @@ async def persist_uploaded_inspection_image(
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
         suffix = ".jpg"
 
-    relative_path = f"inspections/source/{task_id}{suffix}"
+    relative_path = _inspection_source_rel_path(task_id, suffix=suffix)
     absolute_path = resolve_storage_path(relative_path)
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_path.write_bytes(await image.read())
@@ -110,7 +115,7 @@ def persist_frame_as_inspection_image(
 ) -> str:
     import cv2
 
-    relative_path = f"inspections/source/{image_id}.jpg"
+    relative_path = _inspection_source_rel_path(image_id, suffix=".jpg")
     absolute_path = resolve_storage_path(relative_path)
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -128,7 +133,7 @@ def persist_frame_as_inspection_result(
 ) -> str:
     import cv2
 
-    relative_path = f"inspections/results/{image_id}.jpg"
+    relative_path = _inspection_result_rel_path(image_id, suffix=".jpg")
     absolute_path = resolve_storage_path(relative_path)
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -182,7 +187,7 @@ def unlink_storage_file(
         return
 
     try:
-        resolve_storage_path(relative_path).unlink(missing_ok=True)
+        delete_storage_file(relative_path)
     except Exception as exc:
         log_event(
             logger,
@@ -204,3 +209,46 @@ def _get_dict_value(data: Any, key: str) -> str | None:
         return None
 
     return value
+
+
+def materialize_saved_inspection_files(
+    *,
+    inspection_id: UUID,
+    image_path: str,
+    result_image_path: str | None,
+) -> tuple[str, str | None]:
+    image_suffix = Path(image_path).suffix.lower() or ".jpg"
+    target_image_path = _inspection_source_rel_path(inspection_id, suffix=image_suffix)
+    _copy_storage_file(image_path, target_image_path)
+
+    target_result_path: str | None = None
+    if result_image_path:
+        result_suffix = Path(result_image_path).suffix.lower() or ".jpg"
+        target_result_path = _inspection_result_rel_path(
+            inspection_id,
+            suffix=result_suffix,
+        )
+        _copy_storage_file(result_image_path, target_result_path)
+
+    return target_image_path, target_result_path
+
+
+def _copy_storage_file(source_relative_path: str, target_relative_path: str) -> None:
+    source = resolve_storage_path(source_relative_path)
+    target = resolve_storage_path(target_relative_path)
+
+    if source == target:
+        return
+
+    ensure_parent_dir(target)
+    shutil.copy2(source, target)
+
+
+def _inspection_source_rel_path(artifact_id: UUID, *, suffix: str) -> str:
+    normalized_suffix = suffix if suffix.startswith(".") else f".{suffix}"
+    return (Path("inspections") / str(artifact_id) / f"source{normalized_suffix}").as_posix()
+
+
+def _inspection_result_rel_path(artifact_id: UUID, *, suffix: str) -> str:
+    normalized_suffix = suffix if suffix.startswith(".") else f".{suffix}"
+    return (Path("inspections") / str(artifact_id) / f"result{normalized_suffix}").as_posix()

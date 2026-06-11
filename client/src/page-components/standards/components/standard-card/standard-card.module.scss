@@ -1,6 +1,5 @@
 @use "@/styles/variables" as *;
 
-/* UI clean v23: group page cleanup without changing the "+N Открыть" tile behavior. */
 .root {
   display: flex;
   flex-direction: column;
@@ -304,19 +303,6 @@
 }
 
 
-.imageCardMoreCount {
-  font-size: $text-title;
-  font-weight: $fw-semibold;
-  color: $text;
-}
-
-.imageCardMoreLabel {
-  font-size: $text-small;
-  color: inherit;
-}
-
-
-/* UI clean v25: active/reference photo state. */
 .imageCardReference,
 .imageCardArmed {
   border-color: $primary;
@@ -332,11 +318,6 @@
 .imageCardAnnotated:not(.imageCardReference):not(.imageCardArmed) {
   border-color: $line;
   outline: 0;
-}
-
-/* Keep hover after annotated reset: it must win. */
-.imageCard:hover {
-  border-color: $primary;
 }
 
 .imageCardAnnotated:not(.imageCardReference):not(.imageCardArmed):hover {
@@ -412,10 +393,4 @@
   .imageCardArmed .imageCardOverlay {
     opacity: 1;
   }
-}
-
-
-/* UI clean v21: expanded card uses neutral border; status stays in content. */
-.root.expanded {
-  border-color: $line-strong;
 }

@@ -142,8 +142,41 @@
 
 .newGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1fr);
   gap: $space-2;
+  align-items: center;
+}
+
+.colorField {
+  flex-shrink: 0;
+}
+
+.colorTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.colorOpen {
+  background: transparent;
+}
+
+.colorSwatch {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.colorPanel {
+  padding: 8px 10px 10px 0;
 }
 
 .inlineMeta {

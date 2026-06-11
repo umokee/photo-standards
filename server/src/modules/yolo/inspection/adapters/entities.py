@@ -13,29 +13,34 @@ def build_inspection_entities(
     *,
     data: dict[str, Any],
     notes: str | None,
+    inspection_id: UUID | None = None,
 ) -> tuple[InspectionResult, list[InspectionSegmentResult]]:
     inspection_status = data.get("inspection_status") or data.get("status")
 
     if not inspection_status:
         raise ValidationError("В результате задачи отсутствует статус проверки")
 
-    inspection = InspectionResult(
-        standard_id=UUID(data["standard_id"]),
-        model_id=UUID(data["model_id"]),
-        camera_id=UUID(data["camera_id"]) if data.get("camera_id") else None,
-        image_path=data["image_path"],
-        result_image_path=data.get("result_image_path"),
-        status=inspection_status,
-        mode=data["mode"],
-        total_segments=data["total"],
-        matched_segments=data["matched"],
-        alignment_status=data.get("alignment_status"),
-        alignment_inlier_count=data.get("alignment_inlier_count"),
-        alignment_raw_match_count=data.get("alignment_raw_match_count"),
-        homography=data.get("homography"),
-        notes=notes,
-        debug_payload=data.get("debug_payload"),
-    )
+    inspection_data: dict[str, Any] = {
+        "standard_id": UUID(data["standard_id"]),
+        "model_id": UUID(data["model_id"]),
+        "camera_id": UUID(data["camera_id"]) if data.get("camera_id") else None,
+        "image_path": data["image_path"],
+        "result_image_path": data.get("result_image_path"),
+        "status": inspection_status,
+        "mode": data["mode"],
+        "total_segments": data["total"],
+        "matched_segments": data["matched"],
+        "alignment_status": data.get("alignment_status"),
+        "alignment_inlier_count": data.get("alignment_inlier_count"),
+        "alignment_raw_match_count": data.get("alignment_raw_match_count"),
+        "homography": data.get("homography"),
+        "notes": notes,
+        "debug_payload": data.get("debug_payload"),
+    }
+    if inspection_id is not None:
+        inspection_data["id"] = inspection_id
+
+    inspection = InspectionResult(**inspection_data)
 
     segment_results = build_segment_results(data.get("details", []))
 

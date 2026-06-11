@@ -11,7 +11,12 @@ from typing import Any
 from uuid import UUID
 
 from app.exception import ValidationError
-from infra.storage.file_storage import ensure_parent_dir, resolve_storage_path
+from infra.storage.file_storage import (
+    delete_storage_tree,
+    ensure_parent_dir,
+    prune_empty_dirs,
+    resolve_storage_path,
+)
 from modules.yolo.interop.api import schemas as interop_schemas
 from modules.yolo.interop.constants import (
     ALLOWED_IMPORT_SUFFIXES,
@@ -121,10 +126,12 @@ def move_file(*, source: Path, target: Path) -> None:
 
 def unlink_path(path: Path) -> None:
     path.unlink(missing_ok=True)
+    prune_empty_dirs(path.parent)
 
 
 def remove_tree(path: Path) -> None:
-    shutil.rmtree(path, ignore_errors=True)
+    stop_at = path.parent.parent if path.parent != path.parent.parent else None
+    delete_storage_tree(path, stop_at=stop_at)
 
 
 def serialize_import_task_payload(payload: ImportTaskPayloadData) -> dict:

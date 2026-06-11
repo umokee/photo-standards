@@ -11,15 +11,15 @@
   transition: border-color 120ms ease, background 120ms ease;
 
   &.expanded {
-    border-color: $primary;
+    border-color: $line-strong;
   }
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
-  padding: 14px 16px;
+  gap: $space-2;
+  padding: 12px 14px;
   cursor: pointer;
 
   &:hover {
@@ -143,7 +143,7 @@
 }
 
 .body {
-  padding: $space-4;
+  padding: $space-3;
   background: $surface2;
   border-top: 1px solid $line;
 }
@@ -151,19 +151,19 @@
 .detail {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: $space-2;
 }
 
 .detailGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $space-3;
+  gap: $space-2;
 }
 
 .detailSection {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: $space-2;
   padding: $space-3;
   background: $surface;
   border: 1px solid $line-soft;
@@ -231,43 +231,6 @@
   }
 }
 
-
-/* UI clean v21: expanded card uses neutral border; active state stays in badge. */
-.root.expanded {
-  border-color: $line-strong;
-}
-
-/* UI clean v26: models page density, without changing management buttons. */
-.root.expanded {
-  border-color: $line-strong;
-}
-
-.header {
-  gap: $space-2;
-  padding: 12px 14px;
-}
-
-.body {
-  padding: $space-3;
-  background: $surface2;
-  border-top: 1px solid $line;
-}
-
-.detail {
-  gap: $space-2;
-}
-
-.detailGrid {
-  gap: $space-2;
-}
-
-.detailSection {
-  gap: $space-2;
-  padding: $space-3;
-  border-color: $line-soft;
-  background: $surface;
-}
-
 .detailSection > div:first-child {
   gap: 0;
 }
@@ -304,4 +267,3 @@
   border-color: $danger-bd;
   background: $danger-bg;
 }
-/* End UI clean v26. */

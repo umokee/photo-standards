@@ -1,6 +1,6 @@
 import Button from "@/components/ui/button/button";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
-import { Star, Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import type { ReactElement } from "react";
 import { useEffect } from "react";
 import { useDeleteImage } from "../api/delete-image";
@@ -20,7 +20,7 @@ export const SetReferenceImage = ({ groupId, standardId, imageId }: SetReference
   <ActionTrigger
     trigger={
       <button type="button" aria-label="Сделать фото эталонным">
-        <Star size={12} />
+        <Check size={12} />
       </button>
     }
   >

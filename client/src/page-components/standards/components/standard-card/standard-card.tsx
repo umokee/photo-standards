@@ -5,6 +5,7 @@ import QueryState from "@/components/ui/query-state/query-state";
 import SurfaceSection from "@/components/ui/surface-section/surface-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GroupStandard } from "@/types/contracts";
+import { angleLabel } from "@/utils/labels";
 import clsx from "clsx";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +25,7 @@ type Props = {
 
 export const StandardCard = ({ standard, expanded, onToggle, onToImageEditor }: Props) => {
   const src = standard.reference_path ? `/storage/${standard.reference_path}` : undefined;
+  const angleText = standard.angle ? ` (${angleLabel(standard.angle)})` : "";
 
   const rootRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -45,7 +47,8 @@ export const StandardCard = ({ standard, expanded, onToggle, onToImageEditor }: 
         </div>
         <div className={s.info}>
           <div className={s.name}>
-            {standard.name} {standard.angle}
+            {standard.name}
+            {angleText}
           </div>
           <div className={s.meta}>
             {standard.images_count} изображений &middot; {standard.annotated_images_count} размечено

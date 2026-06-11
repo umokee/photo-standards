@@ -3,31 +3,34 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space-4;
+  gap: $space-3;
   min-height: 0;
 }
 
 .compactGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-3;
+  gap: $space-2;
 }
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-3;
+  gap: $space-2;
 }
 
 .summaryItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .summaryLabel {
   color: $text-hint;
-  font-size: $text-small;
+  font-size: $text-micro;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .summaryValue {
@@ -37,17 +40,17 @@
 }
 
 .messageBox {
-  padding: $space-3;
+  padding: $space-2 $space-3;
   border: 1px solid $line-soft;
   border-radius: calc($radius + 2px);
   color: $text-sub;
-  background: $surface2;
+  background: transparent;
   font-size: $text-small;
   line-height: 1.5;
 }
 
 .errorBox {
-  padding: $space-3;
+  padding: $space-2 $space-3;
   border: 1px solid rgba(184, 70, 70, 0.28);
   border-radius: calc($radius + 2px);
   color: $danger-text;
@@ -62,35 +65,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-/* UI clean v26: compact model transfer modals. */
-.root {
-  gap: $space-3;
-}
-
-.compactGrid,
-.summaryGrid {
-  gap: $space-2;
-}
-
-.summaryItem {
-  gap: 2px;
-}
-
-.summaryLabel {
-  color: $text-hint;
-  font-size: $text-micro;
-  font-weight: $fw-semibold;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.messageBox,
-.errorBox {
-  padding: $space-2 $space-3;
-}
-
-.messageBox {
-  background: transparent;
-}
-/* End UI clean v26. */

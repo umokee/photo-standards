@@ -293,5 +293,3 @@ function normalizePanelResult(props: Props): PanelResult {
     isWarmingUp: false,
   };
 }
-
-// UI clean v16: keep repeated failed-result copy out of the main summary.

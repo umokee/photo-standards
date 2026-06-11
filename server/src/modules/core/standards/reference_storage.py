@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import UUID
 
 import numpy as np
-from infra.storage.file_storage import resolve_storage_path
+from infra.storage.file_storage import delete_storage_file, resolve_storage_path
 from modules.core.standards.reference_constants import (
     SUPERPOINT_REFERENCE_GRID_COLS,
     SUPERPOINT_REFERENCE_GRID_ROWS,
@@ -62,8 +62,7 @@ def features_file_is_compatible(rel_path: str) -> bool:
 
 
 def delete_features(rel_path: str) -> None:
-    absolute = resolve_storage_path(rel_path)
-    absolute.unlink(missing_ok=True)
+    delete_storage_file(rel_path)
 
 
 def _build_image_features(data: np.lib.npyio.NpzFile, rel_path: str) -> ImageFeatures:

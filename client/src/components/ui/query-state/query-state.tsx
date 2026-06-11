@@ -1,5 +1,4 @@
 import clsx from "clsx";
-import { AlertCircle, Inbox } from "lucide-react";
 import s from "./query-state.module.scss";
 
 type Size = "inline" | "block" | "page";
@@ -46,9 +45,6 @@ const ErrorState = ({
 }) => {
   return (
     <StateContainer size={size}>
-      <div className={clsx(s.icon, s.iconError)}>
-        <AlertCircle />
-      </div>
       <span className={clsx(s.title, s.titleError)}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}
@@ -69,9 +65,6 @@ const EmptyState = ({
 }) => {
   return (
     <StateContainer size={size}>
-      <div className={s.icon}>
-        <Inbox />
-      </div>
       <span className={s.title}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}

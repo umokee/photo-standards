@@ -1,6 +1,7 @@
 import { paths } from "@/app/paths";
 import { Badge } from "@/components/ui/badge/badge";
 import Button from "@/components/ui/button/button";
+import { ColorPicker } from "@/components/ui/color-picker/color-picker";
 import Input from "@/components/ui/input/input";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import Select from "@/components/ui/select/select";
@@ -185,7 +186,12 @@ const ImportModelModal = ({ groupId }: Props) => {
           mode: "new",
           native_key: row.nativeKey,
           new_class_name: row.newClassName.trim(),
-          new_class_hue: Number(row.newClassHue || constants.segments.hue.default),
+          new_class_hue: clampHue(
+            row.newClassHue,
+            constants.segments.hue.min,
+            constants.segments.hue.max,
+            constants.segments.hue.default
+          ),
           new_class_group_id: row.newClassGroupId || null,
         };
       });
@@ -323,6 +329,9 @@ const ImportMappingRow = ({
   onModeChange,
   onChange,
 }: ImportMappingRowProps) => {
+  const currentHue = clampHue(row.newClassHue, minHue, maxHue, minHue);
+  const [isColorOpen, setIsColorOpen] = useState(false);
+
   return (
     <div className={s.mappingRow}>
       <div className={s.mappingTop}>
@@ -391,45 +400,69 @@ const ImportMappingRow = ({
         ) : null}
 
         {row.mode === "new" ? (
-          <div className={s.newGrid}>
-            <Input
-              noMargin
-              value={row.newClassName}
-              placeholder="Название нового класса"
-              onChange={(value) =>
-                onChange(row.nativeKey, {
-                  newClassName: value,
-                })
-              }
-            />
+          <>
+            <div className={s.newGrid}>
+              <div className={s.colorField}>
+                <button
+                  type="button"
+                  className={clsx(s.colorTrigger, isColorOpen && s.colorOpen)}
+                  aria-label="Изменить цвет нового класса"
+                  onClick={() => setIsColorOpen((prev) => !prev)}
+                >
+                  <span
+                    className={s.colorSwatch}
+                    style={{ background: `hsl(${currentHue}, 65%, 55%)` }}
+                  />
+                </button>
+              </div>
 
-            <Input
-              noMargin
-              type="number"
-              min={minHue}
-              max={maxHue}
-              value={row.newClassHue}
-              placeholder="Hue"
-              onChange={(value) =>
-                onChange(row.nativeKey, {
-                  newClassHue: value,
-                })
-              }
-            />
+              <Input
+                noMargin
+                value={row.newClassName}
+                placeholder="Название нового класса"
+                onChange={(value) =>
+                  onChange(row.nativeKey, {
+                    newClassName: value,
+                  })
+                }
+              />
 
-            <Select
-              noMargin
-              options={categoryOptions}
-              value={row.newClassGroupId || null}
-              onChange={(value) =>
-                onChange(row.nativeKey, {
-                  newClassGroupId: value,
-                })
-              }
-            />
-          </div>
+              <Select
+                noMargin
+                options={categoryOptions}
+                value={row.newClassGroupId || null}
+                onChange={(value) =>
+                  onChange(row.nativeKey, {
+                    newClassGroupId: value,
+                  })
+                }
+              />
+            </div>
+
+            {isColorOpen ? (
+              <div className={s.colorPanel}>
+                <ColorPicker
+                  hue={currentHue}
+                  onChange={(value) =>
+                    onChange(row.nativeKey, {
+                      newClassHue: String(value),
+                    })
+                  }
+                />
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
     </div>
   );
 };
+
+function clampHue(value: string | number, min: number, max: number, fallback: number): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
