@@ -12,7 +12,7 @@ export const getInspectionHistoryStatusBadgeType = (status: InspectionStatus) =>
 export const getInspectionHistoryAlignmentLabel = (
   status: InspectionAlignmentStatus | null
 ) => {
-  if (!status) return "—";
+  if (!status) return "-";
   if (status === "success") return "Успешно";
   if (status === "insufficient_matches") return "Недостаточно совпадений";
   if (status === "insufficient_inliers") return "Недостаточно инлаеров";

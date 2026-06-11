@@ -50,8 +50,8 @@ export function Component() {
             <SurfaceSection title="Основное" transparent>
               <InfoRow label="Протокол" value={protocolLabel} />
               <InfoRow label="Активна в системе" value={camera.is_active ? "Да" : "Нет"} />
-              <InfoRow label="Расположение" value={camera.location || "—"} />
-              <InfoRow label="Описание" value={camera.description || "—"} />
+              <InfoRow label="Расположение" value={camera.location || "-"} />
+              <InfoRow label="Описание" value={camera.description || "-"} />
             </SurfaceSection>
 
             <SurfaceSection title="Диагностика" transparent>
@@ -74,17 +74,17 @@ export function Component() {
             >
               {camera.protocol === "usb" ? (
                 <div className={s.connectionRows}>
-                  <InfoRow label="Устройство" value={camera.device_path || "—"} />
+                  <InfoRow label="Устройство" value={camera.device_path || "-"} />
                   <InfoRow label="Режим" value="Локальная USB-камера" />
                   <InfoRow label="Авторизация" value="Не используется" />
                 </div>
               ) : (
                 <div className={s.connectionRows}>
-                  <InfoRow label="Хост" value={camera.host || "—"} />
-                  <InfoRow label="Порт" value={camera.port != null ? String(camera.port) : "—"} />
-                  <InfoRow label="Путь потока" value={camera.stream_path || camera.path || "—"} />
-                  <InfoRow label="Username" value={camera.username || "—"} />
-                  <InfoRow label="Password" value={camera.username ? "••••••••" : "—"} />
+                  <InfoRow label="Хост" value={camera.host || "-"} />
+                  <InfoRow label="Порт" value={camera.port != null ? String(camera.port) : "-"} />
+                  <InfoRow label="Путь потока" value={camera.stream_path || camera.path || "-"} />
+                  <InfoRow label="Username" value={camera.username || "-"} />
+                  <InfoRow label="Password" value={camera.username ? "••••••••" : "-"} />
                   <div className={s.connectionWideRow}>
                     <InfoRow label="URL" value={cameraUrl} valueWrap="wrap" />
                   </div>

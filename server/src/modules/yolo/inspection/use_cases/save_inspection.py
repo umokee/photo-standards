@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 
 from app.exception import ValidationError
 from modules.tasks.constants import tasks as tasks_constants
-from modules.tasks.service import get_task
+from modules.tasks.service import get_task_for_update
 from modules.yolo.inspection.adapters import repository, storage
 from modules.yolo.inspection.adapters.entities import build_inspection_entities
 from modules.yolo.inspection.models import InspectionResult
@@ -15,22 +15,26 @@ async def save_inspection(
     task_id: UUID,
     notes: str | None,
 ) -> InspectionResult:
-    task = await get_task(db, task_id)
+    task = await get_task_for_update(db, task_id)
     if task.type != tasks_constants.types.inspection:
+        await db.rollback()
         raise ValidationError("Переданная задача не является задачей проверки")
     if task.status != tasks_constants.statuses.succeeded or not isinstance(
         task.result, dict
     ):
+        await db.rollback()
         raise ValidationError("Задача ещё не завершена или не содержит результата")
 
     data = task.result
     inspection_status = data.get("inspection_status") or data.get("status")
     if not inspection_status:
+        await db.rollback()
         raise ValidationError("В результате задачи отсутствует статус проверки")
 
     existing_inspection_id = data.get("inspection_id")
     if existing_inspection_id:
         try:
+            await db.rollback()
             return await repository.get_inspection(
                 db,
                 inspection_id=UUID(str(existing_inspection_id)),
@@ -75,7 +79,6 @@ async def save_inspection(
             "inspection_id": str(inspection.id),
         }
         await db.commit()
-        await db.refresh(inspection)
     except Exception:
         await db.rollback()
         storage.unlink_storage_file(

@@ -423,7 +423,7 @@ async def _cleanup_task_artifacts(
             "info",
             "training.artifacts.kept",
             task_id=task_id,
-            reason="paused — checkpoint and dataset preserved for resume",
+            reason="paused - checkpoint and dataset preserved for resume",
         )
         return
 

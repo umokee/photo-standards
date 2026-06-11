@@ -24,6 +24,17 @@ async def get_task(
     return task
 
 
+async def get_task_for_update(
+    db: AsyncSession,
+    task_id: UUID,
+) -> Task:
+    result = await db.execute(select(Task).where(Task.id == task_id).with_for_update())
+    task = result.scalar_one_or_none()
+    if task is None:
+        raise NotFoundError("Задача", task_id)
+    return task
+
+
 async def list_tasks(
     db: AsyncSession,
     *,

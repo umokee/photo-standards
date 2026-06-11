@@ -29,7 +29,7 @@ export const parseServerDate = (value: string | null | undefined): Date | null =
 export const formatCameraDateTime = (value: string | null) => {
   const date = parseServerDate(value);
 
-  if (!date) return "—";
+  if (!date) return "-";
 
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
@@ -113,7 +113,7 @@ export const getCameraStatusMeta = (camera: Camera): CameraStatusMeta => {
 
 export const buildCameraDisplayUrl = (camera: Camera) => {
   if (camera.protocol === "usb") {
-    return camera.device_path || "—";
+    return camera.device_path || "-";
   }
 
   const auth = camera.username ? `${camera.username}@` : "";

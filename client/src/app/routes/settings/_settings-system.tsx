@@ -28,7 +28,7 @@ function formatBytes(bytes: number) {
 }
 
 function formatMegabytes(value: number | null) {
-  if (value == null) return "—";
+  if (value == null) return "-";
   return `${formatCount(value)} MB`;
 }
 
