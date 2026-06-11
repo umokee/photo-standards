@@ -219,16 +219,22 @@ def materialize_saved_inspection_files(
 ) -> tuple[str, str | None]:
     image_suffix = Path(image_path).suffix.lower() or ".jpg"
     target_image_path = _inspection_source_rel_path(inspection_id, suffix=image_suffix)
-    _copy_storage_file(image_path, target_image_path)
-
     target_result_path: str | None = None
-    if result_image_path:
-        result_suffix = Path(result_image_path).suffix.lower() or ".jpg"
-        target_result_path = _inspection_result_rel_path(
-            inspection_id,
-            suffix=result_suffix,
-        )
-        _copy_storage_file(result_image_path, target_result_path)
+
+    try:
+        _copy_storage_file(image_path, target_image_path)
+
+        if result_image_path:
+            result_suffix = Path(result_image_path).suffix.lower() or ".jpg"
+            target_result_path = _inspection_result_rel_path(
+                inspection_id,
+                suffix=result_suffix,
+            )
+            _copy_storage_file(result_image_path, target_result_path)
+    except Exception:
+        delete_storage_file(target_image_path)
+        delete_storage_file(target_result_path)
+        raise
 
     return target_image_path, target_result_path
 

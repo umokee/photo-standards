@@ -113,6 +113,7 @@ async def create_inspection(
     *,
     inspection: InspectionResult,
     segment_results: list[InspectionSegmentResult],
+    commit: bool = True,
 ) -> InspectionResult:
     db.add(inspection)
     await db.flush()
@@ -121,6 +122,8 @@ async def create_inspection(
         segment_result.inspection_id = inspection.id
         db.add(segment_result)
 
-    await db.commit()
-    await db.refresh(inspection)
+    if commit:
+        await db.commit()
+        await db.refresh(inspection)
+
     return inspection

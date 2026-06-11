@@ -28,23 +28,35 @@ async def save_inspection(
     if not inspection_status:
         raise ValidationError("В результате задачи отсутствует статус проверки")
 
+    existing_inspection_id = data.get("inspection_id")
+    if existing_inspection_id:
+        try:
+            return await repository.get_inspection(
+                db,
+                inspection_id=UUID(str(existing_inspection_id)),
+            )
+        except Exception as exc:
+            raise ValidationError(
+                "Задача уже содержит ссылку на сохранённую проверку, но запись истории недоступна"
+            ) from exc
+
     inspection_id = uuid4()
     original_image_path = data.get("image_path")
     original_result_image_path = data.get("result_image_path")
 
-    saved_image_path, saved_result_image_path = storage.materialize_saved_inspection_files(
-        inspection_id=inspection_id,
-        image_path=data["image_path"],
-        result_image_path=data.get("result_image_path"),
-    )
-
-    persisted_data = {
-        **data,
-        "image_path": saved_image_path,
-        "result_image_path": saved_result_image_path,
-    }
-
     try:
+        saved_image_path, saved_result_image_path = storage.materialize_saved_inspection_files(
+            inspection_id=inspection_id,
+            image_path=data["image_path"],
+            result_image_path=data.get("result_image_path"),
+        )
+
+        persisted_data = {
+            **data,
+            "image_path": saved_image_path,
+            "result_image_path": saved_result_image_path,
+        }
+
         inspection, segment_results = build_inspection_entities(
             data=persisted_data,
             notes=notes,
@@ -55,23 +67,26 @@ async def save_inspection(
             db,
             inspection=inspection,
             segment_results=segment_results,
+            commit=False,
         )
+
+        task.result = {
+            **persisted_data,
+            "inspection_id": str(inspection.id),
+        }
+        await db.commit()
+        await db.refresh(inspection)
     except Exception:
+        await db.rollback()
         storage.unlink_storage_file(
-            saved_image_path,
+            locals().get("saved_image_path"),
             log_message="Failed to cleanup copied inspection image %s",
         )
         storage.unlink_storage_file(
-            saved_result_image_path,
+            locals().get("saved_result_image_path"),
             log_message="Failed to cleanup copied inspection result image %s",
         )
         raise
-
-    task.result = {
-        **persisted_data,
-        "inspection_id": str(inspection.id),
-    }
-    await db.commit()
 
     if original_image_path != saved_image_path:
         storage.unlink_storage_file(
