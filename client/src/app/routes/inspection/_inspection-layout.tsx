@@ -88,9 +88,32 @@ export function Component() {
       );
     }
 
+    if (standardId && inspection.standardQuery.isPending) {
+      return (
+        <QueryState
+          isLoading
+          size="block"
+          loadingText="Подготавливаем элементы контроля"
+        />
+      );
+    }
+
+    if (standardId && inspection.standardQuery.isError) {
+      return (
+        <QueryState
+          isError
+          size="block"
+          errorTitle="Не удалось загрузить эталон"
+          errorDescription="Проверьте выбранный эталон и попробуйте снова"
+        />
+      );
+    }
+
+    const classSelectorSource = inspection.standard ?? inspection.group;
+
     return (
       <ClassSelector
-        group={inspection.group}
+        source={classSelectorSource}
         value={inspection.selectedClassIds}
         onChange={inspection.setSelectedClassIds}
         disabled={inspection.isLocked}

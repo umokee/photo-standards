@@ -167,15 +167,9 @@ async def set_standard_reference(
     *,
     image: StandardImage,
 ) -> StandardImage:
-    await db.execute(
-        sa_update(StandardImage)
-        .where(
-            StandardImage.standard_id == image.standard_id,
-            StandardImage.id != image.id,
-        )
-        .values(is_reference=False)
-    )
-    image.is_reference = True
+    # is_reference теперь означает "фото участвует в пуле проверки".
+    # Повторное нажатие снимает метку. Остальные фото этого стандарта не трогаем.
+    image.is_reference = not bool(image.is_reference)
     await db.commit()
     await db.refresh(image)
     return image

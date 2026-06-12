@@ -15,7 +15,7 @@ from modules.core.standards.reference_constants import (
     SUPERPOINT_PHOTO_MAX_KEYPOINTS,
     SUPERPOINT_PHOTO_MAX_SIDE,
 )
-from modules.yolo.inspection.adapters.context import InspectionContext
+from modules.yolo.inspection.adapters.context import InspectionContext, ReferenceView
 from modules.yolo.inspection.adapters.features import align_frame, load_image
 from modules.yolo.inspection.adapters.yolo import run_inference
 from modules.yolo.inspection.constants import inspections as inspections_constants
@@ -24,6 +24,7 @@ from modules.yolo.inspection.domain.alignment import (
     LocalProjectionData,
     alignment_message,
     failed_alignment,
+    project_polygon,
 )
 from modules.yolo.inspection.domain.matcher import (
     all_ok,
@@ -70,6 +71,13 @@ class InspectionFrameResult:
     verification_mode: str = "alignment"
 
 
+@dataclass(slots=True)
+class ReferenceSelectionResult:
+    context: InspectionContext
+    alignment: FrameAlignment
+    scores: list[dict[str, object]]
+
+
 def inspect_image_path(
     *,
     context: InspectionContext,
@@ -112,35 +120,35 @@ def inspect_frame(
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
     verification_mode = _verification_mode()
-
-    expected = _resolve_expected_segments(
-        context=context,
-        expected_segments=expected_segments,
-        profile=profile,
-        profile_enabled=profile_enabled,
-    )
+    active_context = context
 
     if verification_mode == VERIFICATION_MODE_YOLO_COUNT:
+        expected = _resolve_expected_segments(
+            context=active_context,
+            expected_segments=expected_segments,
+            profile=profile,
+            profile_enabled=profile_enabled,
+        )
         alignment = _skipped_alignment()
         message = alignment_display_message or "Совмещение отключено: YOLO count"
         if profile_enabled:
             profile["inspect_alignment_ms"] = 0.0
             started_at = time.perf_counter()
             detection_result = _detect_segments(
-                context=context,
+                context=active_context,
                 image=frame,
                 conf=yolo_conf,
             )
             profile["inspect_detection_ms"] = _elapsed_ms(started_at)
         else:
             detection_result = _detect_segments(
-                context=context,
+                context=active_context,
                 image=frame,
                 conf=yolo_conf,
             )
 
         return _compose_frame_result(
-            context=context,
+            context=active_context,
             frame=frame,
             image_path=image_path,
             expected=expected,
@@ -157,7 +165,7 @@ def inspect_frame(
     if alignment is None:
         if profile_enabled:
             started_at = time.perf_counter()
-            alignment = align_frame(
+            selection = _select_reference_context_and_align(
                 context=context,
                 frame=frame,
                 max_side=alignment_max_side,
@@ -165,14 +173,27 @@ def inspect_frame(
                 selection_grid=alignment_selection_grid,
             )
             profile["inspect_alignment_ms"] = _elapsed_ms(started_at)
+            if len(context.reference_views) > 1:
+                profile["inspect_reference_candidates"] = float(len(selection.scores))
         else:
-            alignment = align_frame(
+            selection = _select_reference_context_and_align(
                 context=context,
                 frame=frame,
                 max_side=alignment_max_side,
                 max_keypoints=alignment_max_keypoints,
                 selection_grid=alignment_selection_grid,
             )
+        active_context = selection.context
+        alignment = selection.alignment
+    else:
+        active_context = context
+
+    expected = _resolve_expected_segments(
+        context=active_context,
+        expected_segments=expected_segments,
+        profile=profile,
+        profile_enabled=profile_enabled,
+    )
 
     message = alignment_display_message or alignment_message(alignment)
 
@@ -183,20 +204,20 @@ def inspect_frame(
     elif profile_enabled:
         started_at = time.perf_counter()
         detection_result = _detect_segments(
-            context=context,
+            context=active_context,
             image=frame,
             conf=yolo_conf,
         )
         profile["inspect_detection_ms"] = _elapsed_ms(started_at)
     else:
         detection_result = _detect_segments(
-            context=context,
+            context=active_context,
             image=frame,
             conf=yolo_conf,
         )
 
     return _compose_frame_result(
-        context=context,
+        context=active_context,
         frame=frame,
         image_path=image_path,
         expected=expected,
@@ -209,7 +230,6 @@ def inspect_frame(
         profile_enabled=profile_enabled,
         verification_mode=verification_mode,
     )
-
 
 def inspect_frame_parallel(
     *,
@@ -234,22 +254,22 @@ def inspect_frame_parallel(
 ) -> InspectionFrameResult:
     profile: dict[str, float] = {}
     verification_mode = _verification_mode()
-
-    expected = _resolve_expected_segments(
-        context=context,
-        expected_segments=expected_segments,
-        profile=profile,
-        profile_enabled=profile_enabled,
-    )
+    active_context = context
 
     if verification_mode == VERIFICATION_MODE_YOLO_COUNT:
+        expected = _resolve_expected_segments(
+            context=active_context,
+            expected_segments=expected_segments,
+            profile=profile,
+            profile_enabled=profile_enabled,
+        )
         alignment = _skipped_alignment()
         message = alignment_display_message or "Совмещение отключено: YOLO count"
         if profile_enabled:
             profile["inspect_alignment_ms"] = 0.0
             started_at = time.perf_counter()
             detection_result = _detect_segments(
-                context=context,
+                context=active_context,
                 image=frame,
                 conf=yolo_conf,
             )
@@ -257,13 +277,13 @@ def inspect_frame_parallel(
             profile["inspect_parallel_wait_ms"] = profile["inspect_detection_ms"]
         else:
             detection_result = _detect_segments(
-                context=context,
+                context=active_context,
                 image=frame,
                 conf=yolo_conf,
             )
 
         return _compose_frame_result(
-            context=context,
+            context=active_context,
             frame=frame,
             image_path=image_path,
             expected=expected,
@@ -294,7 +314,7 @@ def inspect_frame_parallel(
             started_at = time.perf_counter()
 
             alignment_future = active_executor.submit(
-                _timed_align_frame,
+                _timed_select_reference_context_and_align,
                 context,
                 frame,
                 alignment_max_side,
@@ -308,15 +328,20 @@ def inspect_frame_parallel(
                 yolo_conf,
             )
 
-            alignment, alignment_ms = alignment_future.result()
+            selection, alignment_ms = alignment_future.result()
+            active_context = selection.context
+            alignment = selection.alignment
             detection_result, detection_ms = detection_future.result()
 
             if profile_enabled:
                 profile["inspect_alignment_ms"] = alignment_ms
                 profile["inspect_detection_ms"] = detection_ms
                 profile["inspect_parallel_wait_ms"] = _elapsed_ms(started_at)
+                if len(context.reference_views) > 1:
+                    profile["inspect_reference_candidates"] = float(len(selection.scores))
 
         else:
+            active_context = context
             message = alignment_display_message or alignment_message(alignment)
 
             if skip_detection_when_alignment_failed and not alignment.is_success:
@@ -326,20 +351,27 @@ def inspect_frame_parallel(
             elif profile_enabled:
                 started_at = time.perf_counter()
                 detection_result = _detect_segments(
-                    context=context,
+                    context=active_context,
                     image=frame,
                     conf=yolo_conf,
                 )
                 profile["inspect_detection_ms"] = _elapsed_ms(started_at)
             else:
                 detection_result = _detect_segments(
-                    context=context,
+                    context=active_context,
                     image=frame,
                     conf=yolo_conf,
                 )
 
+            expected = _resolve_expected_segments(
+                context=active_context,
+                expected_segments=expected_segments,
+                profile=profile,
+                profile_enabled=profile_enabled,
+            )
+
             return _compose_frame_result(
-                context=context,
+                context=active_context,
                 frame=frame,
                 image_path=image_path,
                 expected=expected,
@@ -356,10 +388,16 @@ def inspect_frame_parallel(
         if owned_executor is not None:
             owned_executor.shutdown(wait=False, cancel_futures=True)
 
+    expected = _resolve_expected_segments(
+        context=active_context,
+        expected_segments=expected_segments,
+        profile=profile,
+        profile_enabled=profile_enabled,
+    )
     message = alignment_display_message or alignment_message(alignment)
 
     return _compose_frame_result(
-        context=context,
+        context=active_context,
         frame=frame,
         image_path=image_path,
         expected=expected,
@@ -372,7 +410,6 @@ def inspect_frame_parallel(
         profile_enabled=profile_enabled,
         verification_mode=verification_mode,
     )
-
 
 def _compose_frame_result(
     *,
@@ -454,6 +491,8 @@ def _compose_frame_result(
                 projection_data=projection_data,
             )
 
+        
+
         _, matched, missing = summarize(matches)
         inspection_status = (
             inspections_constants.statuses.passed
@@ -482,6 +521,7 @@ def _compose_frame_result(
             missing = [item.name for item in expected]
         matched = 0
         inspection_status = inspections_constants.statuses.failed
+
 
     rendered_frame = None
 
@@ -585,8 +625,71 @@ def _merge_alignment_extra_debug(
     for key, value in extra.items():
         if key not in merged:
             merged[key] = value
-    alignment.extra_debug = merged
+    alignment.extra_debug = _compact_alignment_extra_debug(merged)
 
+
+def _compact_alignment_extra_debug(extra: dict[str, object]) -> dict[str, object]:
+    compacted = dict(extra)
+
+    reference_scores = compacted.get("reference_scores")
+    if isinstance(reference_scores, list):
+        limit = _debug_int_setting("INSPECTION_DEBUG_MAX_REFERENCE_SCORES", 8)
+        total = len(reference_scores)
+        compacted["reference_scores_total_count"] = total
+        compacted["reference_scores"] = [
+            _compact_reference_score(item)
+            for item in reference_scores[:limit]
+            if isinstance(item, dict)
+        ]
+        if total > limit:
+            compacted["reference_scores_truncated_count"] = total - limit
+
+    return compacted
+
+
+def _compact_reference_score(item: dict[object, object]) -> dict[str, object]:
+    result = _copy_debug_keys(
+        item,
+        {
+            "rank",
+            "reference_image_id",
+            "is_primary",
+            "status",
+            "method",
+            "stage",
+            "reason",
+            "raw_match_count",
+            "inlier_count",
+            "inlier_ratio",
+            "median_error",
+            "score",
+            "confidence",
+            "low_confidence",
+            "guard_reasons",
+            "slot_coverage",
+        },
+    )
+    image_path = item.get("image_path")
+    if isinstance(image_path, str):
+        result["image_path_tail"] = image_path.rstrip("/").split("/")[-1]
+    return result
+
+
+def _copy_debug_keys(item: dict[object, object], keys: set[str]) -> dict[str, object]:
+    copied: dict[str, object] = {}
+    for key in keys:
+        if key in item:
+            copied[key] = item[key]
+    return copied
+
+
+def _debug_int_setting(name: str, default: int) -> int:
+    raw = getattr(settings, name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(1, value)
 
 def _resolve_expected_segments(
     *,
@@ -613,22 +716,436 @@ def _resolve_expected_segments(
     )
 
 
-def _timed_align_frame(
+def _timed_select_reference_context_and_align(
     context: InspectionContext,
     frame: np.ndarray,
     max_side: int | None,
     max_keypoints: int,
     selection_grid: tuple[int, int] | None,
-) -> tuple[FrameAlignment, float]:
+) -> tuple[ReferenceSelectionResult, float]:
     started_at = time.perf_counter()
-    alignment = align_frame(
+    selection = _select_reference_context_and_align(
         context=context,
         frame=frame,
         max_side=max_side,
         max_keypoints=max_keypoints,
         selection_grid=selection_grid,
     )
-    return alignment, _elapsed_ms(started_at)
+    return selection, _elapsed_ms(started_at)
+
+
+def _select_reference_context_and_align(
+    *,
+    context: InspectionContext,
+    frame: np.ndarray,
+    max_side: int | None,
+    max_keypoints: int,
+    selection_grid: tuple[int, int] | None,
+) -> ReferenceSelectionResult:
+    views = context.reference_views or [
+        ReferenceView(
+            image=context.reference_image,
+            features=context.reference_features,
+            is_primary=True,
+        )
+    ]
+
+    if len(views) <= 1 or not settings.INSPECTION_MULTI_REFERENCE_ENABLED:
+        active_context = context.with_reference_view(views[0])
+        alignment = align_frame(
+            context=active_context,
+            frame=frame,
+            max_side=max_side,
+            max_keypoints=max_keypoints,
+            selection_grid=selection_grid,
+        )
+        slot_coverage = _reference_slot_coverage_payload(
+            context=active_context,
+            alignment=alignment,
+            frame=frame,
+        )
+        _merge_alignment_extra_debug(
+            alignment,
+            {
+                "multi_reference_enabled": bool(
+                    settings.INSPECTION_MULTI_REFERENCE_ENABLED
+                ),
+                "selected_reference_id": str(active_context.reference_image.id),
+                "selected_reference_rank": 1,
+                "reference_candidate_count": len(views),
+                "selected_reference_confidence": _reference_quality_guard_payload(
+                    alignment=alignment,
+                    slot_coverage=slot_coverage,
+                )["confidence"],
+                "low_confidence_reference_selection": _reference_quality_guard_payload(
+                    alignment=alignment,
+                    slot_coverage=slot_coverage,
+                )["low_confidence"],
+                "reference_selection_guard_reasons": _reference_quality_guard_payload(
+                    alignment=alignment,
+                    slot_coverage=slot_coverage,
+                )["reasons"],
+                "reference_scores": [
+                    _reference_score_payload(
+                        views[0],
+                        alignment,
+                        1,
+                        slot_coverage=slot_coverage,
+                    )
+                ],
+            },
+        )
+        return ReferenceSelectionResult(
+            context=active_context,
+            alignment=alignment,
+            scores=alignment.extra_debug.get("reference_scores", [])
+            if isinstance(alignment.extra_debug, dict)
+            else [],
+        )
+
+    scored: list[
+        tuple[
+            float,
+            ReferenceView,
+            InspectionContext,
+            FrameAlignment,
+            dict[str, object],
+        ]
+    ] = []
+    score_payloads: list[dict[str, object]] = []
+
+    for view in views:
+        candidate_context = context.with_reference_view(view)
+        alignment = align_frame(
+            context=candidate_context,
+            frame=frame,
+            max_side=max_side,
+            max_keypoints=max_keypoints,
+            selection_grid=selection_grid,
+        )
+        slot_coverage = _reference_slot_coverage_payload(
+            context=candidate_context,
+            alignment=alignment,
+            frame=frame,
+        )
+        score = _reference_alignment_score(view, alignment, slot_coverage)
+        scored.append((score, view, candidate_context, alignment, slot_coverage))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    for rank, (
+        score,
+        view,
+        _candidate_context,
+        alignment,
+        slot_coverage,
+    ) in enumerate(scored, start=1):
+        score_payload = _reference_score_payload(
+            view,
+            alignment,
+            rank,
+            slot_coverage=slot_coverage,
+        )
+        score_payload["score"] = round(score, 3)
+        score_payloads.append(score_payload)
+
+    _score, best_view, best_context, best_alignment, _best_slot_coverage = scored[0]
+    best_guard = _reference_quality_guard_payload(
+        alignment=best_alignment,
+        slot_coverage=_best_slot_coverage,
+    )
+    _merge_alignment_extra_debug(
+        best_alignment,
+        {
+            "multi_reference_enabled": True,
+            "selected_reference_id": str(best_view.image.id),
+            "selected_reference_rank": 1,
+            "selected_reference_is_primary": best_view.is_primary,
+            "reference_candidate_count": len(views),
+            "selected_reference_confidence": best_guard["confidence"],
+            "low_confidence_reference_selection": best_guard["low_confidence"],
+            "reference_selection_guard_reasons": best_guard["reasons"],
+            "reference_selection_guard_thresholds": best_guard["thresholds"],
+            "reference_scores": score_payloads,
+        },
+    )
+    return ReferenceSelectionResult(
+        context=best_context,
+        alignment=best_alignment,
+        scores=score_payloads,
+    )
+
+
+def _reference_alignment_score(
+    view: ReferenceView,
+    alignment: FrameAlignment,
+    slot_coverage: dict[str, object] | None = None,
+) -> float:
+    median_error = alignment.median_error
+    error_penalty = min(float(median_error), 50.0) if median_error is not None else 25.0
+    primary_bonus = 0.01 if view.is_primary else 0.0
+    coverage_score = _coverage_score(slot_coverage)
+
+    if alignment.is_success:
+        inlier_ratio = alignment.inlier_count / max(alignment.raw_match_count, 1)
+        return (
+            alignment.inlier_count * 3.0
+            + alignment.raw_match_count * 0.15
+            + inlier_ratio * 25.0
+            + coverage_score * 1.25
+            - error_penalty * 2.0
+            + primary_bonus
+        )
+
+    # Failed alignments are still ranked, so debug shows why every candidate lost.
+    return (
+        alignment.inlier_count * 1.0
+        + alignment.raw_match_count * 0.05
+        + coverage_score * 0.25
+        - error_penalty * 2.0
+        + primary_bonus
+    )
+
+
+def _reference_score_payload(
+    view: ReferenceView,
+    alignment: FrameAlignment,
+    rank: int,
+    *,
+    slot_coverage: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "rank": rank,
+        "reference_image_id": str(view.image.id),
+        "is_primary": view.is_primary,
+        "image_path": view.image.image_path,
+        "status": alignment.status.value,
+        "method": alignment.method,
+        "stage": alignment.stage,
+        "reason": alignment.reason,
+        "raw_match_count": alignment.raw_match_count,
+        "inlier_count": alignment.inlier_count,
+        "inlier_ratio": round(
+            alignment.inlier_count / max(alignment.raw_match_count, 1),
+            4,
+        ),
+        "median_error": alignment.median_error,
+        "reference_feature_count": alignment.reference_feature_count,
+        "frame_feature_count": alignment.frame_feature_count,
+    }
+    if slot_coverage is not None:
+        payload["slot_coverage"] = slot_coverage
+
+    guard = _reference_quality_guard_payload(
+        alignment=alignment,
+        slot_coverage=slot_coverage,
+    )
+    payload["confidence"] = guard["confidence"]
+    payload["low_confidence"] = guard["low_confidence"]
+    payload["guard_reasons"] = guard["reasons"]
+    payload["guard_thresholds"] = guard["thresholds"]
+    return payload
+
+
+def _reference_quality_guard_payload(
+    *,
+    alignment: FrameAlignment,
+    slot_coverage: dict[str, object] | None,
+) -> dict[str, object]:
+    thresholds = {
+        "min_inliers": int(
+            getattr(settings, "INSPECTION_MULTI_REFERENCE_WARN_MIN_INLIERS", 8)
+        ),
+        "min_inlier_ratio": float(
+            getattr(settings, "INSPECTION_MULTI_REFERENCE_WARN_MIN_INLIER_RATIO", 0.08)
+        ),
+        "max_median_error": float(
+            getattr(settings, "INSPECTION_MULTI_REFERENCE_WARN_MAX_MEDIAN_ERROR", 25.0)
+        ),
+        "min_visible_ratio": float(
+            getattr(settings, "INSPECTION_MULTI_REFERENCE_WARN_MIN_VISIBLE_RATIO", 0.35)
+        ),
+    }
+
+    reasons: list[str] = []
+    raw_matches = max(int(alignment.raw_match_count or 0), 0)
+    inliers = max(int(alignment.inlier_count or 0), 0)
+    inlier_ratio = inliers / max(raw_matches, 1)
+
+    if not alignment.is_success:
+        reasons.append(f"alignment_status:{alignment.status.value}")
+
+    if inliers < thresholds["min_inliers"]:
+        reasons.append(
+            f"too_few_inliers:{inliers}<"
+            f"{thresholds['min_inliers']}"
+        )
+
+    if inlier_ratio < thresholds["min_inlier_ratio"]:
+        reasons.append(
+            f"low_inlier_ratio:{inlier_ratio:.3f}<"
+            f"{thresholds['min_inlier_ratio']:.3f}"
+        )
+
+    if alignment.median_error is None:
+        reasons.append("missing_median_error")
+    elif float(alignment.median_error) > thresholds["max_median_error"]:
+        reasons.append(
+            f"high_median_error:{float(alignment.median_error):.2f}>"
+            f"{thresholds['max_median_error']:.2f}"
+        )
+
+    visible_ratio = _slot_visible_ratio(slot_coverage)
+    if visible_ratio is not None and visible_ratio < thresholds["min_visible_ratio"]:
+        reasons.append(
+            f"low_slot_visible_ratio:{visible_ratio:.3f}<"
+            f"{thresholds['min_visible_ratio']:.3f}"
+        )
+
+    low_confidence = bool(reasons)
+    return {
+        "confidence": "low" if low_confidence else "high",
+        "low_confidence": low_confidence,
+        "reasons": reasons,
+        "thresholds": thresholds,
+    }
+
+
+def _slot_visible_ratio(slot_coverage: dict[str, object] | None) -> float | None:
+    if not slot_coverage:
+        return None
+
+    raw_total = slot_coverage.get("total")
+    try:
+        total = int(raw_total)
+    except (TypeError, ValueError):
+        total = 0
+
+    if total <= 0:
+        return None
+
+    raw_ratio = slot_coverage.get("visible_ratio")
+    if isinstance(raw_ratio, (int, float)):
+        return float(raw_ratio)
+
+    raw_visible = slot_coverage.get("visible")
+    try:
+        visible = int(raw_visible)
+    except (TypeError, ValueError):
+        return None
+
+    return visible / max(total, 1)
+
+def _coverage_score(slot_coverage: dict[str, object] | None) -> float:
+    if not slot_coverage:
+        return 0.0
+    raw_score = slot_coverage.get("score")
+    if isinstance(raw_score, (int, float)):
+        return float(raw_score)
+    return 0.0
+
+
+def _reference_slot_coverage_payload(
+    *,
+    context: InspectionContext,
+    alignment: FrameAlignment,
+    frame: np.ndarray,
+) -> dict[str, object]:
+    expected = build_expected_segments(
+        context.reference_image,
+        {sc.id for sc in context.selected_classes},
+    )
+    total = len(expected)
+    if total == 0:
+        return {
+            "total": 0,
+            "projected": 0,
+            "visible": 0,
+            "avg_containment": None,
+            "score": 0.0,
+            "reason": "no_expected_segments",
+        }
+
+    if alignment.homography is None:
+        return {
+            "total": total,
+            "projected": 0,
+            "visible": 0,
+            "avg_containment": 0.0,
+            "score": 0.0,
+            "reason": "no_homography",
+        }
+
+    frame_height, frame_width = frame.shape[:2]
+    projected = 0
+    visible = 0
+    containments: list[float] = []
+
+    for item in expected:
+        containment = _projected_polygon_containment(
+            item.reference_polygon,
+            alignment.homography,
+            frame_width=frame_width,
+            frame_height=frame_height,
+        )
+        if containment is None:
+            continue
+        projected += 1
+        containments.append(containment)
+        if containment >= 0.35:
+            visible += 1
+
+    avg_containment = (sum(containments) / len(containments)) if containments else 0.0
+    visible_ratio = visible / max(total, 1)
+    projected_ratio = projected / max(total, 1)
+    score = (visible_ratio * 70.0) + (projected_ratio * 15.0) + (avg_containment * 15.0)
+
+    return {
+        "total": total,
+        "projected": projected,
+        "visible": visible,
+        "visible_ratio": round(visible_ratio, 4),
+        "projected_ratio": round(projected_ratio, 4),
+        "avg_containment": round(avg_containment, 4),
+        "score": round(score, 3),
+        "reason": "ok" if projected else "no_projected_polygons",
+    }
+
+
+def _projected_polygon_containment(
+    polygon: list[list[float]],
+    homography: np.ndarray,
+    *,
+    frame_width: int,
+    frame_height: int,
+) -> float | None:
+    if not polygon:
+        return None
+
+    try:
+        projected = np.asarray(project_polygon(polygon, homography), dtype=np.float32)
+    except Exception:
+        return None
+
+    if projected.ndim != 2 or projected.shape[1] != 2 or not np.isfinite(projected).all():
+        return None
+
+    min_x = float(np.min(projected[:, 0]))
+    max_x = float(np.max(projected[:, 0]))
+    min_y = float(np.min(projected[:, 1]))
+    max_y = float(np.max(projected[:, 1]))
+    width = max_x - min_x
+    height = max_y - min_y
+    if width <= 1.0 or height <= 1.0:
+        return None
+
+    polygon_area = width * height
+    clipped_min_x = max(0.0, min_x)
+    clipped_max_x = min(float(frame_width - 1), max_x)
+    clipped_min_y = max(0.0, min_y)
+    clipped_max_y = min(float(frame_height - 1), max_y)
+    clipped_width = max(0.0, clipped_max_x - clipped_min_x)
+    clipped_height = max(0.0, clipped_max_y - clipped_min_y)
+    return float((clipped_width * clipped_height) / max(polygon_area, 1.0))
 
 
 def _timed_detect_segments(
@@ -685,6 +1202,8 @@ def _load_projection_reference_frame(context: InspectionContext) -> np.ndarray |
         return load_image(resolve_storage_path(context.reference_image.image_path))
     except Exception:
         return None
+
+
 def _verification_mode() -> str:
     if settings.INSPECTION_VERIFICATION_MODE == VERIFICATION_MODE_YOLO_COUNT:
         return VERIFICATION_MODE_YOLO_COUNT

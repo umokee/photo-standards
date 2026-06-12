@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from app.config import settings
 from app.exception import ValidationError
 from modules.core.segments.models import SegmentClass
 from modules.core.standards.models import Standard, StandardImage
@@ -22,12 +23,20 @@ from .repository import get_standard_for_inspection
 
 
 @dataclass(slots=True)
+class ReferenceView:
+    image: StandardImage
+    features: ImageFeatures
+    is_primary: bool = False
+
+
+@dataclass(slots=True)
 class InspectionContext:
     standard: Standard
     model: MlModel
     reference_image: StandardImage
     reference_features: ImageFeatures
     selected_classes: list[SegmentClass]
+    reference_views: list[ReferenceView] = field(default_factory=list)
     _native_to_internal_cache: dict[str, str] | None = field(default=None, repr=False)
 
     @property
@@ -38,6 +47,17 @@ class InspectionContext:
             )
         return self._native_to_internal_cache
 
+    def with_reference_view(self, view: ReferenceView) -> InspectionContext:
+        return InspectionContext(
+            standard=self.standard,
+            model=self.model,
+            reference_image=view.image,
+            reference_features=view.features,
+            selected_classes=self.selected_classes,
+            reference_views=self.reference_views,
+            _native_to_internal_cache=self._native_to_internal_cache,
+        )
+
 
 async def load_inspection_context(
     db: AsyncSession,
@@ -46,16 +66,6 @@ async def load_inspection_context(
     selected_segment_class_ids: list[UUID],
 ) -> InspectionContext:
     standard = await get_standard_for_inspection(db, standard_id=standard_id)
-
-    reference_image = next((img for img in standard.images if img.is_reference), None)
-    if reference_image is None:
-        raise ValidationError("У эталона нет reference-фото")
-    if not reference_image.annotations:
-        raise ValidationError("Reference-фото не содержит аннотаций")
-    if not features_are_ready(reference_image):
-        await compute_and_save_features(db, image_id=reference_image.id)
-
-    reference_features = load_features(reference_image.features_path)
 
     selected_set = set(selected_segment_class_ids)
     if not selected_set:
@@ -71,6 +81,31 @@ async def load_inspection_context(
     if len({item.id for item in selected_classes}) != len(selected_set):
         raise ValidationError("Часть выбранных классов не принадлежит группе эталона")
 
+    candidate_images = _reference_candidate_images(
+        standard,
+        selected_segment_class_ids=selected_set,
+    )
+    if not candidate_images:
+        raise ValidationError("В эталоне нет размеченных фото, включённых в проверку")
+
+    reference_views: list[ReferenceView] = []
+    for image in candidate_images:
+        if not features_are_ready(image):
+            await compute_and_save_features(db, image_id=image.id)
+            # compute_and_save_features commits and updates DB. Reload the already
+            # attached object fields for the feature path/count used below.
+            await db.refresh(image)
+
+        reference_views.append(
+            ReferenceView(
+                image=image,
+                features=load_features(image.features_path),
+                is_primary=image.is_reference,
+            )
+        )
+
+    reference_view = reference_views[0]
+
     model = await training_repository.get_active_model(
         db,
         group_id=standard.group_id,
@@ -80,7 +115,36 @@ async def load_inspection_context(
     return InspectionContext(
         standard=standard,
         model=model,
-        reference_image=reference_image,
-        reference_features=reference_features,
+        reference_image=reference_view.image,
+        reference_features=reference_view.features,
         selected_classes=selected_classes,
+        reference_views=reference_views,
     )
+
+
+def _reference_candidate_images(
+    standard: Standard,
+    *,
+    selected_segment_class_ids: set[UUID],
+) -> list[StandardImage]:
+    candidates: list[StandardImage] = []
+
+    for image in standard.images:
+        if not image.is_reference:
+            continue
+
+        annotated_class_ids = {
+            annotation.segment_class_id
+            for annotation in image.annotations
+            if annotation.points and annotation.segment_class_id in selected_segment_class_ids
+        }
+        if selected_segment_class_ids.issubset(annotated_class_ids):
+            candidates.append(image)
+
+    candidates.sort(key=lambda image: (image.created_at, str(image.id)))
+
+    if not settings.INSPECTION_MULTI_REFERENCE_ENABLED:
+        return candidates[:1]
+
+    max_candidates = max(1, int(settings.INSPECTION_MULTI_REFERENCE_MAX_CANDIDATES))
+    return candidates[:max_candidates]

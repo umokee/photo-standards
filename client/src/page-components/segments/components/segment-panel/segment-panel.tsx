@@ -16,6 +16,8 @@ interface Props {
   group?: GroupDetail;
   categories: SegmentClassCategory[];
   ungroupedClasses: SegmentClass[];
+  standardId?: string;
+  imageId?: string;
   imageSegmentClasses: SegmentClassWithPoints[];
   selectedSegmentClassId: string | null;
   selectedContourIndex: number | null;
@@ -29,6 +31,8 @@ export const SegmentPanel = ({
   group,
   categories,
   ungroupedClasses,
+  standardId,
+  imageId,
   imageSegmentClasses,
   selectedSegmentClassId,
   selectedContourIndex,
@@ -54,7 +58,14 @@ export const SegmentPanel = ({
       <div className={clsx(s.section, s.classes)}>
         <div className={s.sectionHeader}>
           <span className={s.sectionTitle}>Классы</span>
-          {group && <ManageSegmentGroups group={group} compact />}
+          {group && (
+            <ManageSegmentGroups
+              group={group}
+              compact
+              standardId={standardId}
+              imageId={imageId}
+            />
+          )}
         </div>
 
         <div className={s.classes}>

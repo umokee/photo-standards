@@ -268,7 +268,10 @@ const reducer = (state: EditorState, action: Action): EditorState => {
   }
 };
 
-export const useManageSegmentGroups = (group: GroupDetail) => {
+export const useManageSegmentGroups = (
+  group: GroupDetail,
+  options?: { standardId?: string; imageId?: string }
+) => {
   const [state, dispatch] = useReducer(reducer, group, createInitialState);
   const [activeColorKey, setActiveColorKey] = useState<string | null>(null);
 
@@ -279,6 +282,8 @@ export const useManageSegmentGroups = (group: GroupDetail) => {
 
   const mutation = useSaveSegmentClasses({
     groupId: group.id,
+    standardId: options?.standardId,
+    imageId: options?.imageId,
   });
 
   const save = async () => {

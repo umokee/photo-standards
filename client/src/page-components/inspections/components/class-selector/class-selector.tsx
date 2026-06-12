@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge/badge";
 import Button from "@/components/ui/button/button";
 import QueryState from "@/components/ui/query-state/query-state";
-import type { GroupDetail } from "@/types/contracts";
+import type { GroupDetail, StandardDetail } from "@/types/contracts";
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,25 +12,24 @@ import {
 import s from "./class-selector.module.scss";
 
 type Props = {
-  group: GroupDetail;
+  source: GroupDetail | StandardDetail;
   value: string[];
   onChange: (next: string[]) => void;
-  onAllIdsChange?: (ids: string[]) => void;
   initializeWithAll?: boolean;
   disabled?: boolean;
 };
 
 export const ClassSelector = ({
-  group,
+  source,
   value,
   onChange,
-  onAllIdsChange,
   initializeWithAll = true,
   disabled = false,
 }: Props) => {
-  const groups = useMemo(() => (group ? buildClassSelectorGroups(group) : []), [group]);
-  const allIds = useMemo(() => (group ? getClassSelectorAllIds(group) : []), [group]);
+  const groups = useMemo(() => (source ? buildClassSelectorGroups(source) : []), [source]);
+  const allIds = useMemo(() => (source ? getClassSelectorAllIds(source) : []), [source]);
   const allIdsSet = useMemo(() => new Set(allIds), [allIds]);
+  const allIdsKey = useMemo(() => allIds.join("|"), [allIds]);
   const selectedSet = useMemo(() => new Set(value), [value]);
 
   const groupIds = useMemo(() => groups.map((groupItem) => groupItem.id), [groups]);
@@ -38,26 +37,51 @@ export const ClassSelector = ({
 
   const [openGroupIds, setOpenGroupIds] = useState<string[]>(groupIds);
   const initializedGroupIdRef = useRef<string | null>(null);
+  const initializedAllIdsKeyRef = useRef<string>("");
+  const previousAllIdsKeyRef = useRef<string>("");
 
   useEffect(() => {
     setOpenGroupIds(groupIds);
   }, [groupIdsKey, groupIds]);
 
   useEffect(() => {
-    onAllIdsChange?.(allIds);
-  }, [allIds, onAllIdsChange]);
-
-  useEffect(() => {
     if (!initializeWithAll) return;
 
     const hasForeignSelection = value.some((id) => !allIdsSet.has(id));
-    const groupChanged = initializedGroupIdRef.current !== group.id;
+    const sourceChanged = initializedGroupIdRef.current !== source.id;
+    const availableIdsChanged =
+      initializedGroupIdRef.current === source.id && initializedAllIdsKeyRef.current !== allIdsKey;
 
-    if (!groupChanged && !hasForeignSelection) return;
+    if (sourceChanged) {
+      onChange(allIds);
+      initializedGroupIdRef.current = source.id;
+      initializedAllIdsKeyRef.current = allIdsKey;
+      previousAllIdsKeyRef.current = allIdsKey;
+      return;
+    }
 
-    onChange(allIds);
-    initializedGroupIdRef.current = group.id;
-  }, [allIds, allIdsSet, group.id, initializeWithAll, onChange, value]);
+    if (hasForeignSelection) {
+      onChange(value.filter((id) => allIdsSet.has(id)));
+      initializedAllIdsKeyRef.current = allIdsKey;
+      previousAllIdsKeyRef.current = allIdsKey;
+      return;
+    }
+
+    if (availableIdsChanged) {
+      const previousIds = new Set(previousAllIdsKeyRef.current.split("|").filter(Boolean));
+      const addedIds = allIds.filter((id) => !previousIds.has(id));
+
+      if (addedIds.length > 0) {
+        onChange([...value, ...addedIds.filter((id) => !selectedSet.has(id))]);
+      }
+
+      initializedAllIdsKeyRef.current = allIdsKey;
+      previousAllIdsKeyRef.current = allIdsKey;
+      return;
+    }
+
+    previousAllIdsKeyRef.current = allIdsKey;
+  }, [allIds, allIdsKey, allIdsSet, source.id, initializeWithAll, onChange, value]);
 
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedSet.has(id));
 

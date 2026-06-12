@@ -11,6 +11,8 @@ import s from "./manage-segment-groups.module.scss";
 interface Props {
   group: GroupDetail;
   compact?: boolean;
+  standardId?: string;
+  imageId?: string;
 }
 
 interface ClassState {
@@ -238,7 +240,7 @@ const UngroupedBlock = ({
   );
 };
 
-export const ManageSegmentGroups = ({ group, compact }: Props) => (
+export const ManageSegmentGroups = ({ group, compact, standardId, imageId }: Props) => (
   <Modal>
     <Modal.Trigger>
       <>
@@ -255,12 +257,12 @@ export const ManageSegmentGroups = ({ group, compact }: Props) => (
     </Modal.Trigger>
 
     <Modal.Content>
-      <ManageSegmentGroupsModal group={group} />
+      <ManageSegmentGroupsModal group={group} standardId={standardId} imageId={imageId} />
     </Modal.Content>
   </Modal>
 );
 
-const ManageSegmentGroupsModal = ({ group }: Props) => {
+const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
   const close = useModalClose();
 
   const {
@@ -273,7 +275,7 @@ const ManageSegmentGroupsModal = ({ group }: Props) => {
     categoryActions,
     classActions,
     save,
-  } = useManageSegmentGroups(group);
+  } = useManageSegmentGroups(group, { standardId, imageId });
 
   const handleSave = async () => {
     const ok = await save();

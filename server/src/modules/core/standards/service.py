@@ -138,19 +138,21 @@ async def set_reference(
     image_id: UUID,
 ) -> StandardImageResponse:
     image = await crud.get_image(db, image_id=image_id)
-    image = await crud.set_standard_reference(db, image=image)
 
-    if not features_are_ready(image):
+    if not image.is_reference and not features_are_ready(image):
         await compute_and_save_features(db, image_id=image_id)
+
+    image = await crud.set_standard_reference(db, image=image)
 
     image = await crud.get_image_with_annotations(db, image_id=image_id)
     log_event(
         logger,
         "info",
-        "standard.reference.set",
+        "standard.reference.toggled",
         standard_id=image.standard_id,
         image_id=image.id,
         image_path=image.image_path,
+        is_reference=image.is_reference,
         annotation_count=sum(1 for annotation in image.annotations if annotation.points),
     )
     return _build_standard_image_response(image)

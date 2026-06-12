@@ -682,7 +682,7 @@ def _try_identity_alignment(
         frame_matches=reference_inliers.copy(),
         method="identity",
         stage="identity",
-        reason="reference image and frame are almost identical",
+        reason="reference view and frame are almost identical",
         reference_feature_count=context.reference_features.count,
         frame_feature_count=None,
         reference_size=(width, height),

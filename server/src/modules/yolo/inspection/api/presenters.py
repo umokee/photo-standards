@@ -59,7 +59,7 @@ def build_inspection_history_item_response(
         ),
         standard_id=inspection.standard_id,
         standard_name=standard.name if standard is not None else None,
-        standard_reference_path=_get_standard_reference_path(standard),
+        standard_reference_path=_get_inspection_reference_path(inspection),
         model_id=inspection.model_id,
         model_name=build_model_name(model) if model is not None else None,
         camera_id=inspection.camera_id,
@@ -96,7 +96,7 @@ def build_inspection_result_response(
         ),
         standard_id=inspection.standard_id,
         standard_name=standard.name if standard is not None else None,
-        standard_reference_path=_get_standard_reference_path(standard),
+        standard_reference_path=_get_inspection_reference_path(inspection),
         model_id=inspection.model_id,
         model_name=build_model_name(model) if model is not None else None,
         camera_id=inspection.camera_id,
@@ -122,6 +122,38 @@ def build_inspection_result_response(
             for item in inspection.segment_results
         ],
     )
+
+
+def _get_inspection_reference_path(inspection: InspectionResult) -> str | None:
+    standard = inspection.standard
+    selected_reference_id = _find_debug_value(
+        inspection.debug_payload,
+        "selected_reference_id",
+    )
+
+    if selected_reference_id and standard is not None:
+        selected_reference_id_text = str(selected_reference_id)
+        for image in getattr(standard, "images", []):
+            if str(getattr(image, "id", "")) == selected_reference_id_text:
+                return getattr(image, "image_path", None)
+
+    return _get_standard_reference_path(standard)
+
+
+def _find_debug_value(payload: object, key: str) -> object | None:
+    if isinstance(payload, dict):
+        if key in payload:
+            return payload[key]
+        for value in payload.values():
+            found = _find_debug_value(value, key)
+            if found is not None:
+                return found
+    if isinstance(payload, list):
+        for value in payload:
+            found = _find_debug_value(value, key)
+            if found is not None:
+                return found
+    return None
 
 
 def _get_standard_reference_path(standard: object | None) -> str | None:

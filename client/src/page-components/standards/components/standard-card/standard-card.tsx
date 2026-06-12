@@ -92,7 +92,12 @@ const StandardCardDetail = ({
 
   useEffect(() => {
     setArmedImageId(null);
-  }, [showAllImages, standardId]);
+    setShowAllImages(false);
+  }, [standardId]);
+
+  useEffect(() => {
+    setArmedImageId(null);
+  }, [showAllImages]);
 
   const displayCategories =
     standard.used_segment_class_categories ?? standard.segment_class_categories;
@@ -103,11 +108,9 @@ const StandardCardDetail = ({
     ...displayCategories.flatMap((category) => category.segment_classes),
     ...displayUngroupedClasses,
   ];
-
   const visibleImages = showAllImages
     ? standard.images
     : standard.images.slice(0, IMAGE_PREVIEW_LIMIT);
-
   const hiddenImagesCount = Math.max(standard.images.length - IMAGE_PREVIEW_LIMIT, 0);
 
   const handleImageCardClick = (imageId: string) => {
@@ -148,13 +151,14 @@ const StandardCardDetail = ({
                   <ImageWithFallback src={`/storage/${image.image_path}`} iconSize={20} />
                 </div>
 
-                {image.is_reference && <span className={s.imageCardRef}>ЭТ</span>}
+                {image.is_reference && <span className={s.imageCardRef}>ПРОВ</span>}
 
                 <div className={s.imageCardOverlay}>
                   <SetReferenceImage
                     groupId={standard.group_id}
                     standardId={standard.id}
                     imageId={image.id}
+                    isReference={image.is_reference}
                   />
                   <DeleteStandardImage
                     groupId={standard.group_id}

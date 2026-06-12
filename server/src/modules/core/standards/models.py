@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import sqlalchemy
 from app.db import Base
 from modules.core.standards.constants import standards
-from sqlalchemy import ForeignKey, Index, Integer, String, func, text
+from sqlalchemy import ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -44,14 +44,6 @@ class Standard(Base):
 
 class StandardImage(Base):
     __tablename__ = "standard_images"
-    __table_args__ = (
-        Index(
-            "uq_standard_reference",
-            "standard_id",
-            unique=True,
-            postgresql_where=text("is_reference = true"),
-        ),
-    )
 
     id: Mapped[UUID] = mapped_column(default=uuid4, primary_key=True, index=True)
     standard_id: Mapped[UUID] = mapped_column(

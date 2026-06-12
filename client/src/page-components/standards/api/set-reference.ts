@@ -25,7 +25,7 @@ export const useSetReference = ({ groupId, standardId, mutationConfig }: Options
         qc.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) }),
         qc.invalidateQueries({ queryKey: queryKeys.standards.detail(standardId) }),
       ]);
-      notifySuccess("Изображение установлено как образец");
+      notifySuccess("Пул фото для проверки обновлён");
       await onSuccess?.(...args);
     },
     ...rest,

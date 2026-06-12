@@ -40,7 +40,7 @@ export const SegmentHeader = ({
           К эталону
         </Button>
         <div className={s.title}>{standardName}</div>
-        {isReference && <Badge>Эталон</Badge>}
+        {isReference && <Badge>Участвует в проверке</Badge>}
         <Badge type={isCurrentAnnotated ? "success" : "warning"}>
           {isCurrentAnnotated ? "Размечено" : "Не размечено"}
         </Badge>

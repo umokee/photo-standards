@@ -78,6 +78,8 @@ export interface InspectionRealtimeStatus {
   alignment_raw_match_count: number | null;
   captured_at: string | null;
   details: InspectionTaskSegmentDetail[];
+  debug_payload: Record<string, unknown> | null;
+  pose_pipeline: Record<string, unknown> | null;
 }
 
 export interface InspectionSaveResponse {

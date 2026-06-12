@@ -16,6 +16,7 @@ import type {
   InspectionRunOverrides,
 } from "@/page-components/inspections/lib/inspection-context";
 import { useGetTask } from "@/page-components/tasks/api/get-task";
+import { getStandardQueryOptions } from "@/page-components/standards/api/get-standard";
 import { useTaskLive } from "@/page-components/tasks/hooks/use-task-live";
 import { isActiveTaskStatus } from "@/page-components/tasks/lib/task-helpers";
 import type { InspectionRealtimeStatus, InspectionTaskResult } from "@/types/contracts";
@@ -49,6 +50,12 @@ export function useInspectionLayout({
     enabled: Boolean(groupId),
   });
   const group = groupQuery.data ?? null;
+
+  const standardQuery = useQuery({
+    ...getStandardQueryOptions(standardId ?? ""),
+    enabled: Boolean(standardId),
+  });
+  const standard = standardQuery.data ?? null;
 
   const runMutation = useRunInspection({
     mutationConfig: {
@@ -249,5 +256,7 @@ export function useInspectionLayout({
     setCameraId,
     setSavedInspectionId,
     setSelectedClassIds,
+    standard,
+    standardQuery,
   };
 }

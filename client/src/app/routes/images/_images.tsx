@@ -19,7 +19,7 @@ import {
 import { useGetImage } from "@/page-components/standards/api/get-image";
 import { useGetStandardDetail } from "@/page-components/standards/api/get-standard";
 import { useMutationState } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
 
 type LoaderData = {
@@ -77,6 +77,14 @@ const ImagesContent = () => {
 
   const categories = standard.segment_class_categories;
   const ungroupedClasses = standard.ungrouped_segment_classes;
+  const availableSegmentClassIds = useMemo(
+    () =>
+      new Set([
+        ...categories.flatMap((category) => category.segment_classes.map((item) => item.id)),
+        ...ungroupedClasses.map((item) => item.id),
+      ]),
+    [categories, ungroupedClasses]
+  );
   const pendingByClassId: Record<string, number[][][]> = Object.fromEntries(
     pendingAnnotations
       .filter((item) => item.variables.imageId === imageId)
@@ -111,6 +119,20 @@ const ImagesContent = () => {
   const imageUrl = `/storage/${image.image_path}`;
   const isCurrentAnnotated = imageSegmentClasses.some((segmentClass) => segmentClass.points.length);
 
+  useEffect(() => {
+    if (!selectedSegmentClassId) {
+      return;
+    }
+
+    if (availableSegmentClassIds.has(selectedSegmentClassId)) {
+      return;
+    }
+
+    setSelectedSegmentClassId(null);
+    setSelectedContourIndex(null);
+    setMode("view");
+  }, [availableSegmentClassIds, selectedSegmentClassId]);
+
   const saveSegmentContours = (segmentClassId: string, nextContours: number[][][]) => {
     annotate.mutate({
       segmentClassId,
@@ -129,7 +151,7 @@ const ImagesContent = () => {
     navigate(paths.standardImage(groupId, standardId, nextUnannotatedImage.id));
 
   const handleFinishDrawing = (draftContour: number[][]) => {
-    if (!selectedSegmentClassId) {
+    if (!selectedSegmentClassId || !availableSegmentClassIds.has(selectedSegmentClassId)) {
       return;
     }
 
@@ -158,6 +180,8 @@ const ImagesContent = () => {
       group={group}
       categories={categories}
       ungroupedClasses={ungroupedClasses}
+      standardId={standardId}
+      imageId={imageId}
       imageSegmentClasses={imageSegmentClasses}
       selectedSegmentClassId={selectedSegmentClassId}
       onSelectSegmentClass={setSelectedSegmentClassId}

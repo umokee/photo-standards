@@ -1,6 +1,6 @@
 import Button from "@/components/ui/button/button";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, X } from "lucide-react";
 import type { ReactElement } from "react";
 import { useEffect } from "react";
 import { useDeleteImage } from "../api/delete-image";
@@ -10,21 +10,42 @@ type SetReferenceImageProps = {
   groupId: string;
   standardId: string;
   imageId: string;
-};
-
-type DeleteStandardImageProps = SetReferenceImageProps & {
   isReference: boolean;
 };
 
-export const SetReferenceImage = ({ groupId, standardId, imageId }: SetReferenceImageProps) => (
+type DeleteStandardImageProps = SetReferenceImageProps;
+
+export const SetReferenceImage = ({
+  groupId,
+  standardId,
+  imageId,
+  isReference,
+}: SetReferenceImageProps) => (
   <ActionTrigger
     trigger={
-      <button type="button" aria-label="Сделать фото эталонным">
-        <Check size={12} />
+      <button
+        type="button"
+        aria-label={
+          isReference
+            ? "Убрать фото из проверки"
+            : "Использовать фото в проверке"
+        }
+        title={
+          isReference
+            ? "Убрать фото из проверки"
+            : "Использовать фото в проверке"
+        }
+      >
+        {isReference ? <X size={12} /> : <Check size={12} />}
       </button>
     }
   >
-    <SetReferenceImageModal groupId={groupId} standardId={standardId} imageId={imageId} />
+    <SetReferenceImageModal
+      groupId={groupId}
+      standardId={standardId}
+      imageId={imageId}
+      isReference={isReference}
+    />
   </ActionTrigger>
 );
 
@@ -50,7 +71,12 @@ export const DeleteStandardImage = ({
   </ActionTrigger>
 );
 
-const SetReferenceImageModal = ({ groupId, standardId, imageId }: SetReferenceImageProps) => {
+const SetReferenceImageModal = ({
+  groupId,
+  standardId,
+  imageId,
+  isReference,
+}: SetReferenceImageProps) => {
   const close = useModalClose();
   const mutation = useSetReference({ groupId, standardId });
 
@@ -62,10 +88,14 @@ const SetReferenceImageModal = ({ groupId, standardId, imageId }: SetReferenceIm
 
   return (
     <StandardImageActionModal
-      title="Назначить эталонное фото"
-      description="Сделать это изображение эталонным для данного изделия?"
-      confirmLabel="Назначить"
-      pendingLabel="Назначаем..."
+      title={isReference ? "Убрать фото из проверки" : "Использовать фото в проверке"}
+      description={
+        isReference
+          ? "Это фото больше не будет участвовать в автоматическом выборе ракурса при проверке."
+          : "Это фото будет добавлено в пул ракурсов, из которых система выбирает лучший при проверке."
+      }
+      confirmLabel={isReference ? "Убрать" : "Использовать"}
+      pendingLabel={isReference ? "Убираем..." : "Добавляем..."}
       isPending={mutation.isPending}
       onConfirm={() => mutation.mutate(imageId)}
     />
@@ -92,7 +122,7 @@ const DeleteStandardImageModal = ({
       title="Удалить фото эталона"
       description={
         isReference
-          ? "Это текущее эталонное фото. Вы уверены, что хотите удалить его?"
+          ? "Это фото участвует в проверке. Вы уверены, что хотите удалить его?"
           : "Вы уверены, что хотите удалить это фото?"
       }
       confirmLabel="Удалить"
