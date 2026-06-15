@@ -41,6 +41,7 @@ const CreateStandardModal = ({ groupId }: { groupId: string }) => {
       return;
     }
 
+    setFormErrors({});
     mutation.mutate(result.data);
   };
 
@@ -52,7 +53,15 @@ const CreateStandardModal = ({ groupId }: { groupId: string }) => {
           label="Название"
           placeholder="Пример"
           value={name}
-          onChange={setName}
+          onChange={(value) => {
+            setName(value);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.name;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.name ?? getFieldError(mutation.error, "name")}
         />
         <Select
@@ -60,7 +69,15 @@ const CreateStandardModal = ({ groupId }: { groupId: string }) => {
           options={angleOptions}
           value={angle ?? ""}
           placeholder="Выберите ракурс"
-          onChange={(val) => setAngle(val ? (val as Angle) : null)}
+          onChange={(val) => {
+            setAngle(val ? (val as Angle) : null);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.angle;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.angle ?? getFieldError(mutation.error, "angle")}
         />
       </Modal.Body>

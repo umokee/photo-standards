@@ -43,6 +43,7 @@ const UploadImagesModal = ({ groupId, standardId }: { groupId: string; standardI
       return;
     }
 
+    setFormErrors({});
     mutation.mutate(result.data);
   };
 

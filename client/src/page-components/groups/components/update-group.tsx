@@ -44,6 +44,7 @@ const UpdateGroupModal = ({ group }: { group: GroupDetail }) => {
 
     if (!result.data) return;
 
+    setFormErrors({});
     mutation.mutate({ id: group.id, data: result.data });
   };
 
@@ -55,7 +56,15 @@ const UpdateGroupModal = ({ group }: { group: GroupDetail }) => {
           label="Название"
           placeholder="Пример"
           value={name}
-          onChange={setName}
+          onChange={(value) => {
+            setName(value);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.name;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.name ?? getFieldError(mutation.error, "name")}
         />
 
@@ -63,7 +72,15 @@ const UpdateGroupModal = ({ group }: { group: GroupDetail }) => {
           label="Описание"
           placeholder="Пример"
           value={description}
-          onChange={setDescription}
+          onChange={(value) => {
+            setDescription(value);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.description;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.description ?? getFieldError(mutation.error, "description")}
         />
       </Modal.Body>

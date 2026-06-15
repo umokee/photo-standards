@@ -40,6 +40,7 @@ const CreateGroupModal = () => {
       return;
     }
 
+    setFormErrors({});
     mutation.mutate(result.data);
   };
 
@@ -50,14 +51,30 @@ const CreateGroupModal = () => {
         <Input
           label="Название"
           value={name}
-          onChange={setName}
+          onChange={(value) => {
+            setName(value);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.name;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.name ?? getFieldError(mutation.error, "name")}
         />
 
         <Input
           label="Описание"
           value={description}
-          onChange={setDescription}
+          onChange={(value) => {
+            setDescription(value);
+            setFormErrors((current) => {
+              const next = { ...current };
+              delete next.description;
+              delete next.form;
+              return next;
+            });
+          }}
           error={formErrors.description ?? getFieldError(mutation.error, "description")}
         />
       </Modal.Body>
