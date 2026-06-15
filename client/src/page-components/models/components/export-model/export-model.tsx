@@ -95,7 +95,7 @@ const ExportModelModal = ({ models }: Props) => {
         <div className={shell.root}>
           {exportableModels.length === 0 ? (
             <div className={shell.messageBox}>
-              Пока нет готовых versioned-моделей для экспорта. Сначала завершите обучение или импорт
+              Пока нет готовых моделей для экспорта. Сначала завершите обучение или импорт
               модели, чтобы появились `.pt` и `.classes.json`.
             </div>
           ) : (

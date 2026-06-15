@@ -342,7 +342,12 @@ const ModelCardDetail = ({
                 size="sm"
                 variant="danger"
                 disabled={isDeleting}
-                onClick={() => onDelete?.(model.id)}
+                onClick={() => {
+                  if (!window.confirm(`Удалить модель "${model.name}"?`)) {
+                    return;
+                  }
+                  onDelete?.(model.id);
+                }}
               >
                 {isDeleting ? "Удаление..." : "Удалить"}
               </Button>

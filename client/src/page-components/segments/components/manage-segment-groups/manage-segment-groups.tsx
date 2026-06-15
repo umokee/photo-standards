@@ -66,6 +66,10 @@ const ClassRow = ({
   const color = `hsl(${item.hue}, 65%, 55%)`;
 
   const handleRemove = () => {
+    if (!window.confirm(`Удалить класс "${item.name || 'без названия'}"?`)) {
+      return;
+    }
+
     if (isColorOpen) {
       closeColorPicker();
     }
@@ -174,7 +178,12 @@ const CategoryItem = ({
         <button
           type="button"
           className={clsx(s.iconButton, s.removeButton)}
-          onClick={() => categoryActions.remove(category.key)}
+          onClick={() => {
+            if (!window.confirm(`Удалить категорию "${category.name || 'без названия'}"?`)) {
+              return;
+            }
+            categoryActions.remove(category.key);
+          }}
         >
           <X size={14} />
         </button>

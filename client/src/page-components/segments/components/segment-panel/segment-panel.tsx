@@ -174,13 +174,16 @@ export const SegmentPanel = ({
                   <div className={s.annPolygon}>
                     {item.segmentClassName} {item.contourIndex + 1}
                   </div>
-                  <div
-                    className={s.annDelete}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteContour(item.segmentClassId, item.contourIndex);
-                    }}
-                  >
+                   <div
+                     className={s.annDelete}
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       if (!window.confirm(`Удалить полигон "${item.segmentClassName} ${item.contourIndex + 1}"?`)) {
+                         return;
+                       }
+                       onDeleteContour(item.segmentClassId, item.contourIndex);
+                     }}
+                   >
                     <Trash2 size={11} />
                   </div>
                 </div>
