@@ -13,12 +13,12 @@ SUPERPOINT_INPUT_STRIDE = 8
 # * reference: computed once and cached for the standard image, so it can be dense;
 # * photo: one-off inspection image, allowed to be heavier than realtime;
 # * video: live frame path, must stay small and predictable.
-SUPERPOINT_REFERENCE_MAX_SIDE: int | None = 4096
-SUPERPOINT_PHOTO_MAX_SIDE: int | None = 4096
+SUPERPOINT_REFERENCE_MAX_SIDE: int | None = 2048
+SUPERPOINT_PHOTO_MAX_SIDE: int | None = 2048
 SUPERPOINT_VIDEO_MAX_SIDE: int = 640
 
-SUPERPOINT_REFERENCE_MAX_KEYPOINTS = 8192
-SUPERPOINT_PHOTO_MAX_KEYPOINTS = 4096
+SUPERPOINT_REFERENCE_MAX_KEYPOINTS = 4096
+SUPERPOINT_PHOTO_MAX_KEYPOINTS = 2048
 SUPERPOINT_VIDEO_MAX_KEYPOINTS = 512
 
 # Grid-balanced keypoint selection keeps high-score features from collapsing
