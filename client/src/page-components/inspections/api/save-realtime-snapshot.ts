@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 const saveRealtimeSnapshotSchema = z.object({
-  session_id: z.string().trim().min(1, "Не удалось определить live-сессию"),
+  session_id: z.string().trim().min(1, "Не удалось определить сессию реального времени"),
   notes: z.string().nullable().optional().transform((value) => value?.trim() || null),
 });
 

@@ -45,7 +45,7 @@ def validate_import_mappings(
     ungrouped_classes: list[SegmentClassRef],
 ) -> None:
     if not mappings:
-        raise ValueError("Нужно передать хотя бы одно сопоставление классов")
+        raise ValueError("Добавьте хотя бы одно сопоставление классов")
 
     native_keys = {item.key for item in native_classes}
     all_classes = _flatten_segment_classes(categories, ungrouped_classes)
@@ -84,7 +84,7 @@ def validate_import_mappings(
             raise ValueError("Выбранная группа классов не принадлежит текущей группе")
 
         if item.new_class_name is None:
-            raise ValueError("Для нового класса нужно указать название")
+            raise ValueError("Укажите название нового класса")
 
         new_name_norm = _norm(item.new_class_name)
         if new_name_norm in existing_names_norm:
@@ -132,7 +132,7 @@ def build_resolved_import_mapping(
         )
 
     if not class_keys:
-        raise ValueError("Нужно сопоставить хотя бы один класс модели")
+        raise ValueError("Сопоставьте хотя бы один класс модели")
 
     return ResolvedImportMapping(
         class_keys=class_keys,

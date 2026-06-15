@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 const updateStandardSchema = z.object({
-  name: z.string(),
+  name: z.string().max(255, "Название слишком длинное"),
   angle: z.string().nullable(),
 });
 
@@ -38,7 +38,7 @@ export const buildUpdateStandardPayload = (
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["name"],
-          message: "Название обязательно",
+          message: "Укажите название",
         });
       }
 
@@ -46,7 +46,7 @@ export const buildUpdateStandardPayload = (
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["angle"],
-          message: "Выберите корректный ракурс",
+          message: "Выберите ракурс из списка",
         });
       }
     })

@@ -6,7 +6,7 @@ import { z } from "zod";
 
 const previewImportModelSchema = z
   .object({
-    group_id: z.string().trim().min(1, "Группа обязательна"),
+    group_id: z.string().trim().min(1, "Выберите группу"),
     weights: z.instanceof(File).nullable(),
   })
   .superRefine((values, ctx) => {
@@ -14,7 +14,7 @@ const previewImportModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["weights"],
-        message: "Выберите .pt файл",
+        message: "Выберите файл .pt",
       });
       return;
     }
@@ -23,7 +23,7 @@ const previewImportModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["weights"],
-        message: "Поддерживается только .pt файл",
+        message: "Выберите файл в формате .pt",
       });
     }
   });

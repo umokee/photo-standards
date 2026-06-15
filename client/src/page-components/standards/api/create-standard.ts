@@ -7,8 +7,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 const createStandardSchema = z.object({
-  groupId: z.string(),
-  name: z.string(),
+  groupId: z.string().uuid(),
+  name: z.string().max(255, "Название слишком длинное"),
   angle: z.string().nullable(),
 });
 
@@ -37,7 +37,7 @@ export const buildCreateStandardPayload = (
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["groupId"],
-          message: "Не удалось определить группу",
+          message: "Выберите группу",
         });
       }
 
@@ -45,7 +45,7 @@ export const buildCreateStandardPayload = (
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["name"],
-          message: "Название обязательно",
+          message: "Укажите название",
         });
       }
 
@@ -53,7 +53,7 @@ export const buildCreateStandardPayload = (
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["angle"],
-          message: "Выберите корректный ракурс",
+          message: "Выберите ракурс из списка",
         });
       }
     })

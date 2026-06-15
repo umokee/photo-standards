@@ -14,15 +14,15 @@ const importModelMappingSchema = z
   .discriminatedUnion("mode", [
     z.object({
       mode: z.literal("existing"),
-      native_key: z.string().trim().min(1, "Ключ класса обязателен"),
+      native_key: z.string().trim().min(1, "Укажите ключ класса"),
       segment_class_id: z.string().trim().min(1, "Выберите существующий класс"),
     }),
     z
       .object({
         mode: z.literal("new"),
-        native_key: z.string().trim().min(1, "Ключ класса обязателен"),
+      native_key: z.string().trim().min(1, "Укажите ключ класса"),
         new_class_name: z.string().trim().min(1, "Укажите название нового класса"),
-        new_class_hue: z.number().int("Hue должен быть целым числом"),
+        new_class_hue: z.number().int("Укажите целое значение оттенка"),
         new_class_group_id: z.string().trim().nullable().optional(),
       })
       .superRefine((value, ctx) => {
@@ -33,7 +33,7 @@ const importModelMappingSchema = z
           ctx.addIssue({
             code: "custom",
             path: ["new_class_hue"],
-            message: `Hue должен быть от ${hue.min} до ${hue.max}`,
+            message: `Укажите оттенок в диапазоне от ${hue.min} до ${hue.max}`,
           });
         }
       }),
@@ -51,7 +51,7 @@ const importModelMappingSchema = z
 
 const importModelSchema = z
   .object({
-    group_id: z.string().trim().min(1, "Группа обязательна"),
+    group_id: z.string().trim().min(1, "Выберите группу"),
     architecture: z
       .string()
       .trim()
@@ -75,7 +75,7 @@ const importModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["architecture"],
-        message: "Выберите корректную архитектуру",
+        message: "Выберите архитектуру из списка",
       });
     }
 
@@ -97,13 +97,13 @@ const importModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["weights"],
-        message: "Выберите .pt файл",
+        message: "Выберите файл .pt",
       });
     } else if (!values.weights.name.toLowerCase().endsWith(".pt")) {
       ctx.addIssue({
         code: "custom",
         path: ["weights"],
-        message: "Поддерживается только .pt файл",
+        message: "Выберите файл в формате .pt",
       });
     }
   });

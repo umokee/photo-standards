@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 const updateGroupSchema = z.object({
-  name: z.string().trim().min(1, "Название обязательно"),
+  name: z.string().trim().min(1, "Укажите название"),
   description: z.string().transform((value) => {
     const next = value.trim();
     return next === "" ? null : next;

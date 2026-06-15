@@ -170,14 +170,14 @@ class InspectionSession:
 
     def push_browser_frame(self, data: bytes) -> None:
         if not isinstance(self._frame_source, BrowserFrameSource):
-            raise ValidationError("Сессия не принимает кадры браузерной камеры")
+            raise ValidationError("Сессия не принимает кадры с камеры устройства")
 
         self._frame_source.push_jpeg(data)
         self.touch_browser_frame()
 
     def push_browser_video_frame(self, frame: np.ndarray) -> None:
         if not isinstance(self._frame_source, BrowserFrameSource):
-            raise ValidationError("Сессия не принимает кадры браузерной камеры")
+            raise ValidationError("Сессия не принимает кадры с камеры устройства")
 
         self._frame_source.push_frame(frame)
         self.touch_browser_frame()

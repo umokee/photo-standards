@@ -149,7 +149,7 @@ export function useInspectionWorkspace({
       })
       .catch((error) => {
         setRealtimeError(
-          error instanceof Error ? error.message : "Не удалось подключить видеопоток"
+          error instanceof Error ? error.message : "Не удалось подключить видеопоток камеры"
         );
       });
 
@@ -262,7 +262,7 @@ export function useInspectionWorkspace({
       const firstKey = Object.keys(payloadResult.errors)[0];
       const firstError = firstKey ? payloadResult.errors[firstKey] : undefined;
 
-      setRealtimeError(firstError ?? "Не удалось подготовить запуск live-проверки");
+      setRealtimeError(firstError ?? "Не удалось подготовить запуск проверки в реальном времени");
       return;
     }
 
@@ -272,12 +272,12 @@ export function useInspectionWorkspace({
       const response = await realtimeStartMutation.mutateAsync(payloadResult.data);
 
       if (response.kind !== "session" || !response.session_id) {
-        throw new Error("Сервер не вернул realtime session_id");
+          throw new Error("Сервер не вернул идентификатор сессии реального времени");
       }
 
       setRealtimeSessionId(response.session_id);
     } catch (err) {
-      setRealtimeError(err instanceof Error ? err.message : "Не удалось запустить live-проверку");
+      setRealtimeError(err instanceof Error ? err.message : "Не удалось запустить проверку в реальном времени");
     }
   };
 

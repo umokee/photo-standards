@@ -172,11 +172,11 @@ def write_class_manifest(
     artifact_paths: ModelArtifactPaths,
 ) -> Path:
     if model.version is None:
-        raise ValidationError("Нельзя сформировать manifest для модели без version")
+        raise ValidationError("Не удалось сформировать манифест: у модели отсутствует версия")
 
     class_meta = list(model.class_meta or [])
     if not class_meta:
-        raise ValidationError("У модели отсутствует class_meta")
+        raise ValidationError("У модели отсутствуют метаданные классов")
 
     payload = {
         "format": "photo-standards-db.yolo-class-manifest",

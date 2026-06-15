@@ -191,7 +191,7 @@ class CameraCapture:
 
         if camera.protocol == "usb":
             if not camera.device_path:
-                raise _CaptureBroken("Для USB-камеры не указан device_path")
+                raise _CaptureBroken("Для USB-камеры не указан путь к устройству")
 
             device = _resolve_usb_device(camera.device_path)
             backend = VideoBackendImpl.open_usb(device)

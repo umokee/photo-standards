@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const exportModelSchema = z.object({
   modelId: z.string().trim().min(1, "Выберите модель"),
-  fileName: z.string().trim().min(1, "Имя файла обязательно"),
+  fileName: z.string().trim().min(1, "Укажите имя файла"),
 });
 
 export type ExportModelFormValues = z.input<typeof exportModelSchema>;

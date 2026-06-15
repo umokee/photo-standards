@@ -3,7 +3,27 @@ from typing import Self
 from uuid import UUID
 
 from modules.core.schemas import Name
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
+
+_DESCRIPTION_MAX_LENGTH = 2000
+
+
+def _normalize_description(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    stripped = value.strip()
+    return stripped or None
+
+
+def _validate_description_length(value: str | None) -> str | None:
+    if value is not None and len(value) > _DESCRIPTION_MAX_LENGTH:
+        raise PydanticCustomError(
+            "group_description_error",
+            f"Укажите описание длиной не более {_DESCRIPTION_MAX_LENGTH} символов"
+        )
+    return value
 
 
 class GroupSegmentClassResponse(BaseModel):
@@ -110,13 +130,25 @@ class GroupCreate(BaseModel):
     name: Name
     description: str | None = None
 
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        return _validate_description_length(_normalize_description(value))
+
 
 class GroupUpdate(BaseModel):
     name: Name | None = None
     description: str | None = None
 
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        return _validate_description_length(_normalize_description(value))
+
     @model_validator(mode="after")
     def validate_not_empty(self) -> Self:
         if not self.model_dump(exclude_unset=True):
-            raise ValueError("Необходимо передать хотя бы одно поле")
+            raise PydanticCustomError(
+                "group_update_error", "Укажите хотя бы одно поле"
+            )
         return self

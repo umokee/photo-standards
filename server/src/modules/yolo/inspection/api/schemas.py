@@ -2,7 +2,27 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
+
+_NOTES_MAX_LENGTH = 2000
+
+
+def _normalize_notes(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    stripped = value.strip()
+    return stripped or None
+
+
+def _validate_notes_length(value: str | None) -> str | None:
+    if value is not None and len(value) > _NOTES_MAX_LENGTH:
+        raise PydanticCustomError(
+            "inspection_notes_error",
+            f"Укажите примечание длиной не более {_NOTES_MAX_LENGTH} символов"
+        )
+    return value
 
 
 class InspectionStartResponse(BaseModel):
@@ -57,6 +77,11 @@ class InspectionTaskResultResponse(BaseModel):
 class InspectionSaveRequest(BaseModel):
     task_id: UUID
     notes: str | None = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def normalize_notes(cls, value: str | None) -> str | None:
+        return _validate_notes_length(_normalize_notes(value))
 
 
 class InspectionSaveResponse(BaseModel):
@@ -165,6 +190,11 @@ class InspectionRealtimeStatusResponse(BaseModel):
 
 class InspectionRealtimeSnapshotSaveRequest(BaseModel):
     notes: str | None = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def normalize_notes(cls, value: str | None) -> str | None:
+        return _validate_notes_length(_normalize_notes(value))
 
 
 class InspectionWebRTCOfferRequest(BaseModel):

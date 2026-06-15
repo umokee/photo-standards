@@ -8,7 +8,7 @@ import { z } from "zod";
 
 const trainModelSchema = z
   .object({
-    group_id: z.string().trim().min(1, "Группа обязательна"),
+    group_id: z.string().trim().min(1, "Выберите группу"),
     architecture: z
       .string()
       .trim()
@@ -16,11 +16,11 @@ const trainModelSchema = z
       .transform((val) => {
         return val as Architecture;
       }),
-    train_ratio: z.string().trim().min(1, "Укажите Train %").transform(Number),
-    val_ratio: z.string().trim().min(1, "Укажите Val %").transform(Number),
+    train_ratio: z.string().trim().min(1, "Укажите долю train, %").transform(Number),
+    val_ratio: z.string().trim().min(1, "Укажите долю val, %").transform(Number),
     epochs: z.string().trim().min(1, "Укажите количество эпох").transform(Number),
     imgsz: z.string().trim().min(1, "Укажите размер изображения").transform(Number),
-    batch_size: z.string().trim().min(1, "Укажите Batch size").transform(Number),
+    batch_size: z.string().trim().min(1, "Укажите размер батча").transform(Number),
   })
   .superRefine((values, ctx) => {
     const constants = getConstantsOrThrow();
@@ -31,7 +31,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["architecture"],
-        message: "Выберите корректную архитектуру",
+        message: "Выберите архитектуру из списка",
       });
     }
 
@@ -53,7 +53,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["batch_size"],
-        message: "Batch size должен быть целым числом",
+        message: "Размер батча должен быть целым числом",
       });
     } else if (
       values.batch_size < training.batch_size.min ||
@@ -62,7 +62,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["batch_size"],
-        message: `Batch size должен быть от ${training.batch_size.min} до ${training.batch_size.max}`,
+        message: `Размер батча должен быть от ${training.batch_size.min} до ${training.batch_size.max}`,
       });
     }
 
@@ -84,7 +84,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["train_ratio"],
-        message: "Train % должен быть целым числом",
+        message: "Доля train должна быть целым числом",
       });
     } else if (
       values.train_ratio < training.train_ratio.min ||
@@ -93,7 +93,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["train_ratio"],
-        message: `Train % должен быть от ${training.train_ratio.min} до ${training.train_ratio.max}`,
+        message: `Доля train должна быть от ${training.train_ratio.min} до ${training.train_ratio.max}`,
       });
     }
 
@@ -101,7 +101,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["val_ratio"],
-        message: "Val % должен быть целым числом",
+        message: "Доля val должна быть целым числом",
       });
     } else if (
       values.val_ratio < training.val_ratio.min ||
@@ -110,7 +110,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["val_ratio"],
-        message: `Val % должен быть от ${training.val_ratio.min} до ${training.val_ratio.max}`,
+        message: `Доля val должна быть от ${training.val_ratio.min} до ${training.val_ratio.max}`,
       });
     }
 
@@ -122,7 +122,7 @@ const trainModelSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["val_ratio"],
-        message: `Сумма Train и Val должна быть не больше ${safeRatioSumMax}%`,
+        message: `Сумма долей train и val должна быть не больше ${safeRatioSumMax}%`,
       });
     }
   });

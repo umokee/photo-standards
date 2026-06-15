@@ -78,7 +78,7 @@ export const initialCameraFormValues: CameraFormValues = {
 
 const cameraFormSchema = z
   .object({
-    name: z.string().trim().min(1, "Название обязательно"),
+    name: z.string().trim().min(1, "Укажите название"),
     description: z.string(),
     protocol: z.enum(["rtsp", "http", "usb"]),
     host: z.string(),
@@ -118,7 +118,13 @@ const cameraFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["host"],
-        message: "Хост обязателен",
+        message: "Укажите IPv4-адрес камеры",
+      });
+    } else if (!isValidCameraHost(values.host)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["host"],
+        message: "Укажите корректный IPv4-адрес",
       });
     }
 
@@ -128,6 +134,12 @@ const cameraFormSchema = z
         path: ["stream_path"],
         message: "Укажите путь потока",
       });
+    } else if (!isValidStreamPath(values.stream_path)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stream_path"],
+        message: "Укажите путь потока без пробелов",
+      });
     }
 
     if (values.port.trim()) {
@@ -136,17 +148,17 @@ const cameraFormSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["port"],
-          message: "Порт должен быть числом от 1 до 65535",
+          message: "Укажите порт числом от 1 до 65535",
         });
       }
     }
 
     if (values.has_auth && !values.username.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["username"],
-        message: "Укажите логин",
-      });
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["username"],
+          message: "Укажите логин",
+        });
     }
   });
 
@@ -329,4 +341,24 @@ const getDefaultPort = (protocol: CameraProtocol): string => {
 const toNullable = (value: string): string | null => {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+};
+
+const isValidCameraHost = (value: string): boolean => {
+  const candidate = value.trim();
+
+  if (!candidate || /\s/.test(candidate) || candidate.includes("://") || /[\\/@?#]/.test(candidate)) {
+    return false;
+  }
+
+  const ipv4Parts = candidate.split(".");
+  if (ipv4Parts.length !== 4) {
+    return false;
+  }
+
+  return ipv4Parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+};
+
+const isValidStreamPath = (value: string): boolean => {
+  const candidate = value.trim();
+  return candidate !== "" && !/\s/.test(candidate) && !candidate.includes("://") && !candidate.includes("@");
 };

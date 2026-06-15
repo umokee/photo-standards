@@ -51,7 +51,7 @@ def _ensure_segmentation_model(model: Any) -> None:
         getattr(model, "model", None), "task", None
     )
     if str(task or "").strip().lower() != "segment":
-        raise ValidationError("Поддерживается только сегментационная YOLO .pt модель")
+        raise ValidationError("Выберите сегментационную YOLO-модель в формате .pt")
 
 
 def _ordered_names(names: Any) -> list[tuple[int, str]]:

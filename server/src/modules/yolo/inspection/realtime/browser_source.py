@@ -22,10 +22,10 @@ class BrowserFrameSource:
 
     def push_frame(self, frame: np.ndarray) -> None:
         if self._closed.is_set():
-            raise ValidationError("Realtime-сессия уже остановлена")
+            raise ValidationError("Сессия реального времени уже остановлена")
 
         if frame is None or frame.size == 0:
-            raise ValidationError("Пустой кадр камеры устройства")
+            raise ValidationError("Камера устройства передала пустой кадр")
 
         with self._lock:
             self._latest_frame = frame.copy()
@@ -34,13 +34,13 @@ class BrowserFrameSource:
 
     def push_jpeg(self, data: bytes) -> None:
         if not data:
-            raise ValidationError("Пустой кадр камеры устройства")
+            raise ValidationError("Камера устройства передала пустой кадр")
 
         raw = np.frombuffer(data, dtype=np.uint8)
         frame = cv2.imdecode(raw, cv2.IMREAD_COLOR)
 
         if frame is None or frame.size == 0:
-            raise ValidationError("Не удалось прочитать кадр камеры устройства")
+            raise ValidationError("Не удалось прочитать кадр с камеры устройства")
 
         self.push_frame(frame)
 

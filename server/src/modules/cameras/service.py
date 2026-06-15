@@ -33,6 +33,7 @@ from .schemas import (
     CameraUpdate,
     CameraWebRTCOfferRequest,
     CameraWebRTCOfferResponse,
+    validate_camera_connection_fields,
 )
 from .urls import build_camera_stream_url, build_camera_stream_url_no_auth
 
@@ -104,14 +105,16 @@ async def update_camera(
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(camera, key, value)
 
-    if camera.protocol == "usb":
-        if not camera.device_path:
-            raise ValidationError("Для USB-камеры обязателен device_path")
-    else:
-        if not camera.host:
-            raise ValidationError(
-                f"Для {camera.protocol.upper()}-камеры обязателен host"
-            )
+    try:
+        validate_camera_connection_fields(
+            protocol=camera.protocol,
+            host=camera.host,
+            path=camera.path,
+            stream_path=camera.stream_path,
+            device_path=camera.device_path,
+        )
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
 
     await db.commit()
     await db.refresh(camera)
@@ -370,7 +373,7 @@ async def create_camera_preview_answer(
         )
 
         if pc.localDescription is None:
-            raise ValidationError("Не удалось создать WebRTC answer")
+            raise ValidationError("Не удалось сформировать WebRTC-ответ")
 
         return CameraWebRTCOfferResponse(
             sdp=pc.localDescription.sdp,
@@ -465,7 +468,7 @@ def _get_preview_error_message(exc: Exception) -> str:
     if message:
         return message
 
-    return "Не удалось подключить WebRTC preview камеры"
+    return "Не удалось подключить WebRTC-предпросмотр камеры"
 
 
 def _now() -> datetime:
@@ -571,7 +574,7 @@ def _capture_background_probe_frame_sync(
 
     if protocol == "usb":
         if not device_path:
-            raise ValidationError("Для USB-камеры не указан device_path")
+            raise ValidationError("Для USB-камеры не указан путь к устройству")
 
         backend = VideoBackendImpl.open_usb(device_path)
         return _read_backend_frame_or_raise(
@@ -580,7 +583,7 @@ def _capture_background_probe_frame_sync(
             failure_message=f"Не удалось открыть USB-устройство: {device_path}",
         )
 
-    raise ValidationError(f"Неподдерживаемый протокол: {protocol}")
+    raise ValidationError(f"Протокол камеры не поддерживается: {protocol}")
 
 
 def _preflight_tcp_endpoint(
@@ -590,7 +593,7 @@ def _preflight_tcp_endpoint(
     timeout_sec: float,
 ) -> str | None:
     if not host:
-        return "Не указан host камеры"
+        return "Не указан IPv4-адрес камеры"
 
     timeout = min(max(timeout_sec, 1.0), 3.0)
 

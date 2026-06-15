@@ -1,42 +1,77 @@
 from datetime import datetime
+import re
 from typing import Annotated, Self
 from uuid import UUID
 
 from modules.users.constants import users
 from pydantic import (
+    BeforeValidator,
     BaseModel,
     ConfigDict,
-    StringConstraints,
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
-Username = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        min_length=3,
-        max_length=100,
-        pattern=r"^[a-zA-Z0-9_.-]+$",
-    ),
-]
+_USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
-Password = Annotated[
-    str,
-    StringConstraints(
-        min_length=6,
-        max_length=255,
-    ),
-]
 
-FullName = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        min_length=3,
-        max_length=255,
-    ),
-]
+def _validate_username(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+
+    normalized = value.strip()
+    if len(normalized) < 3:
+        raise PydanticCustomError(
+            "username_error", "Укажите имя пользователя длиной не менее 3 символов"
+        )
+    if len(normalized) > 100:
+        raise PydanticCustomError(
+            "username_error",
+            "Укажите имя пользователя длиной не более 100 символов",
+        )
+    if not _USERNAME_RE.fullmatch(normalized):
+        raise PydanticCustomError(
+            "username_error",
+            "Укажите имя пользователя латиницей, цифрами или символами ._-",
+        )
+    return normalized
+
+
+def _validate_password(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+
+    if len(value) < 6:
+        raise PydanticCustomError(
+            "password_error", "Укажите пароль длиной не менее 6 символов"
+        )
+    if len(value) > 255:
+        raise PydanticCustomError(
+            "password_error", "Укажите пароль длиной не более 255 символов"
+        )
+    return value
+
+
+def _validate_full_name(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+
+    normalized = value.strip()
+    if len(normalized) < 3:
+        raise PydanticCustomError(
+            "full_name_error", "Укажите имя длиной не менее 3 символов"
+        )
+    if len(normalized) > 255:
+        raise PydanticCustomError(
+            "full_name_error", "Укажите имя длиной не более 255 символов"
+        )
+    return normalized
+
+
+Username = Annotated[str, BeforeValidator(_validate_username)]
+Password = Annotated[str, BeforeValidator(_validate_password)]
+FullName = Annotated[str, BeforeValidator(_validate_full_name)]
 
 
 class UserCreate(BaseModel):
@@ -49,7 +84,10 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_role(cls, val: str) -> str:
         if val not in users.roles:
-            raise ValueError(f"Роль должна быть одна из {', '.join(users.roles)}")
+            raise PydanticCustomError(
+                "user_role_error",
+                f"Выберите роль из списка: {', '.join(users.roles)}",
+            )
         return val
 
 
@@ -64,13 +102,16 @@ class UserUpdate(BaseModel):
     @classmethod
     def validate_role(cls, val: str | None) -> str | None:
         if val is not None and val not in users.roles:
-            raise ValueError(f"Роль должна быть одна из {', '.join(users.roles)}")
+            raise PydanticCustomError(
+                "user_role_error",
+                f"Выберите роль из списка: {', '.join(users.roles)}",
+            )
         return val
 
     @model_validator(mode="after")
     def validate_not_empty(self) -> Self:
         if not self.model_dump(exclude_unset=True):
-            raise ValueError("Необходимо передать хотя бы одно поле")
+            raise PydanticCustomError("user_update_error", "Укажите хотя бы одно поле")
         return self
 
 

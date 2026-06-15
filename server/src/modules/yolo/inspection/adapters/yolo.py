@@ -42,7 +42,7 @@ def run_inference(
     imgsz: int | None = None,
 ) -> list[YoloDetection]:
     if image is None:
-        raise ValueError("Нужно передать image")
+        raise ValueError("Передайте изображение для проверки")
 
     return _run_inference_torch(
         weights_path=weights_path,

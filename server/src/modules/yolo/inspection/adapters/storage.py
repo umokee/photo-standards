@@ -10,6 +10,7 @@ import structlog
 from app.exception import ValidationError
 from app.observability import log_event
 from fastapi import UploadFile
+from infra.storage import file_storage
 from infra.storage.file_storage import (
     delete_storage_file,
     ensure_parent_dir,
@@ -49,7 +50,7 @@ async def acquire_inspection_image_source(
 ) -> InspectionImageSource:
     if mode == inspections_constants.modes.photo:
         if image is None:
-            raise ValidationError("Для режима photo нужно передать изображение")
+            raise ValidationError("Для режима фото добавьте изображение")
 
         image_path = await persist_uploaded_inspection_image(image, task_id=task_id)
         return InspectionImageSource(
@@ -70,7 +71,7 @@ async def acquire_inspection_image_source(
             )
 
         if camera_id is None:
-            raise ValidationError("Для режима snapshot нужно выбрать камеру")
+            raise ValidationError("Для режима снимка выберите камеру")
 
         snapshot = await take_snapshot(
             db,
@@ -87,7 +88,7 @@ async def acquire_inspection_image_source(
         )
 
     if mode == inspections_constants.modes.realtime:
-        raise ValidationError("Режим realtime запускается отдельной realtime-сессией")
+        raise ValidationError("Режим реального времени запускается отдельной сессией")
 
     raise ValidationError("Некорректный режим проверки")
 
@@ -97,14 +98,15 @@ async def persist_uploaded_inspection_image(
     *,
     task_id: UUID,
 ) -> str:
-    suffix = Path(image.filename).suffix.lower() if image.filename else ".jpg"
+    relative_path = await file_storage.save_upload(
+        image,
+        f"inspections/{task_id}",
+        "source",
+    )
+    suffix = Path(relative_path).suffix.lower()
     if suffix not in ALLOWED_IMAGE_SUFFIXES:
-        suffix = ".jpg"
-
-    relative_path = _inspection_source_rel_path(task_id, suffix=suffix)
-    absolute_path = resolve_storage_path(relative_path)
-    absolute_path.parent.mkdir(parents=True, exist_ok=True)
-    absolute_path.write_bytes(await image.read())
+        delete_storage_file(relative_path)
+        raise ValidationError("Неподдерживаемый формат изображения")
     return relative_path
 
 

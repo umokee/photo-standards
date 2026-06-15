@@ -6,6 +6,7 @@ import structlog
 from fastapi import UploadFile
 from app.observability import log_event
 from infra.storage import file_storage
+from modules.core.groups import crud as group_crud
 from modules.core.schemas import AnnotationPoints
 from modules.core.segments import crud as segment_crud
 from modules.core.segments.models import SegmentClass, SegmentClassGroup
@@ -46,6 +47,13 @@ async def create_standard(
     db: AsyncSession,
     data: StandardCreate,
 ) -> StandardMutationResponse:
+    await group_crud.get_group(db, group_id=data.group_id)
+    await crud.ensure_standard_name_unique(
+        db,
+        group_id=data.group_id,
+        name=data.name,
+        angle=data.angle,
+    )
     standard = await crud.create_standard(
         db,
         group_id=data.group_id,
@@ -61,6 +69,18 @@ async def update_standard(
     data: StandardUpdate,
 ) -> StandardMutationResponse:
     standard = await crud.get_standard(db, standard_id=standard_id)
+
+    next_name = data.name if data.name is not None else standard.name
+    next_angle = data.angle if "angle" in data.model_fields_set else standard.angle
+
+    if next_name != standard.name or next_angle != standard.angle:
+        await crud.ensure_standard_name_unique(
+            db,
+            group_id=standard.group_id,
+            name=next_name,
+            angle=next_angle,
+            exclude_id=standard_id,
+        )
 
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(standard, key, value)

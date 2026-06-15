@@ -1,7 +1,8 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class SamPromptPoint(BaseModel):
@@ -12,7 +13,16 @@ class SamPromptPoint(BaseModel):
 
 class SamClickRequest(BaseModel):
     image_id: UUID
-    points: list[SamPromptPoint] = Field(min_length=1)
+    points: list[SamPromptPoint]
+
+    @field_validator("points")
+    @classmethod
+    def validate_points(cls, value: list[SamPromptPoint]) -> list[SamPromptPoint]:
+        if not value:
+            raise PydanticCustomError(
+                "sam_points_error", "Добавьте хотя бы одну точку"
+            )
+        return value
 
 
 class SamClickResponse(BaseModel):

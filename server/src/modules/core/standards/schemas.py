@@ -11,6 +11,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
 
 class StandardSegmentClassResponse(BaseModel):
@@ -119,8 +120,9 @@ class StandardCreate(BaseModel):
     @classmethod
     def validate_angle(cls, val: str | None) -> str | None:
         if val is not None and val not in standards.angles:
-            raise ValueError(
-                f"Ракурс должен быть один из {', '.join(standards.angles)}"
+            raise PydanticCustomError(
+                "standard_angle_error",
+                f"Выберите ракурс из списка: {', '.join(standards.angles)}",
             )
         return val
 
@@ -134,13 +136,16 @@ class StandardUpdate(BaseModel):
     @classmethod
     def validate_angle(cls, val: str | None) -> str | None:
         if val is not None and val not in standards.angles:
-            raise ValueError(
-                f"Ракурс должен быть один из {', '.join(standards.angles)}"
+            raise PydanticCustomError(
+                "standard_angle_error",
+                f"Выберите ракурс из списка: {', '.join(standards.angles)}",
             )
         return val
 
     @model_validator(mode="after")
     def validate_not_empty(self) -> Self:
         if not self.model_dump(exclude_unset=True):
-            raise ValueError("Необходимо передать хотя бы одно поле")
+            raise PydanticCustomError(
+                "standard_update_error", "Укажите хотя бы одно поле"
+            )
         return self

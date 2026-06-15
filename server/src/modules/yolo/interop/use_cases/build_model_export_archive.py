@@ -16,7 +16,7 @@ async def build_model_export_archive(
     model = await repository.get_model(db, model_id=model_id)
 
     if model.version is None:
-        raise ValidationError("Экспорт доступен только для готовой versioned-модели")
+        raise ValidationError("Экспорт доступен только для готовой версии модели")
 
     artifact_paths = storage.build_model_artifact_paths(
         group_id=model.group_id,

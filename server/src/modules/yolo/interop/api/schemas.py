@@ -12,56 +12,101 @@ from modules.yolo.interop.constants import ALLOWED_IMPORT_SUFFIXES
 from modules.yolo.training.constants import training
 from pydantic import (
     AfterValidator,
+    BeforeValidator,
     BaseModel,
     ConfigDict,
     Field,
-    StringConstraints,
     TypeAdapter,
     field_validator,
 )
+from pydantic_core import PydanticCustomError
 from pydantic import (
     ValidationError as PydanticValidationError,
 )
 
-NonEmptyStr = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
-]
+def _validate_non_empty_str(value: str) -> str:
+    if not isinstance(value, str):
+        return value
 
-MappingsJsonStr = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1),
-]
+    normalized = value.strip()
+    if not normalized:
+        raise PydanticCustomError("interop_text_error", "Укажите значение")
+    if len(normalized) > 255:
+        raise PydanticCustomError(
+            "interop_text_error", "Укажите значение длиной не более 255 символов"
+        )
+    return normalized
 
-StoragePathStr = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
-]
 
-HueValue = Annotated[
-    int,
-    Field(ge=segments.hue.min, le=segments.hue.max),
-]
+def _validate_mappings_json_str(value: str) -> str:
+    if not isinstance(value, str):
+        return value
 
-BatchSizeValue = Annotated[
-    int,
-    Field(ge=training.batch_size.min, le=training.batch_size.max),
-]
+    normalized = value.strip()
+    if not normalized:
+        raise PydanticCustomError(
+            "interop_mappings_error", "Укажите mappings_json"
+        )
+    return normalized
+
+
+def _validate_storage_path_str(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+
+    normalized = value.strip()
+    if not normalized:
+        raise PydanticCustomError("interop_path_error", "Укажите путь")
+    if len(normalized) > 500:
+        raise PydanticCustomError(
+            "interop_path_error", "Укажите путь длиной не более 500 символов"
+        )
+    return normalized
+
+
+def _check_hue(value: int) -> int:
+    if value < segments.hue.min or value > segments.hue.max:
+        raise PydanticCustomError(
+            "interop_hue_error",
+            f"Укажите оттенок в диапазоне от {segments.hue.min} до {segments.hue.max}",
+        )
+    return value
+
+
+def _check_batch_size(value: int) -> int:
+    if value < training.batch_size.min or value > training.batch_size.max:
+        raise PydanticCustomError(
+            "interop_batch_error",
+            "Укажите размер батча в диапазоне от "
+            f"{training.batch_size.min} до {training.batch_size.max}",
+        )
+    return value
+
+
+NonEmptyStr = Annotated[str, BeforeValidator(_validate_non_empty_str)]
+MappingsJsonStr = Annotated[str, BeforeValidator(_validate_mappings_json_str)]
+StoragePathStr = Annotated[str, BeforeValidator(_validate_storage_path_str)]
+
+HueValue = Annotated[int, AfterValidator(_check_hue)]
+
+BatchSizeValue = Annotated[int, AfterValidator(_check_batch_size)]
 
 
 def _check_architecture(value: str) -> str:
     if value not in training.architectures:
-        raise ValueError(
-            f"Архитектура должна быть одной из: {', '.join(training.architectures)}"
+        raise PydanticCustomError(
+            "interop_architecture_error",
+            f"Выберите архитектуру из списка: {', '.join(training.architectures)}",
         )
     return value
 
 
 def _check_imgsz(value: int) -> int:
     if value not in training.image_size:
-        raise ValueError(
-            f"Размер изображения должен быть одним из: "
-            f"{', '.join(map(str, training.image_size))}"
+        raise PydanticCustomError(
+            "interop_imgsz_error",
+            "Выберите размер изображения из списка: "
+            f"{', '.join(map(str, training.image_size))}",
         )
     return value
 
@@ -69,7 +114,9 @@ def _check_imgsz(value: int) -> int:
 def _check_import_file(weights: UploadFile) -> UploadFile:
     suffix = Path(weights.filename or "").suffix.lower()
     if suffix not in ALLOWED_IMPORT_SUFFIXES:
-        raise ValueError("Поддерживается импорт только .pt моделей YOLO")
+        raise PydanticCustomError(
+            "interop_file_error", "Выберите файл модели YOLO в формате .pt"
+        )
     return weights
 
 
@@ -174,7 +221,16 @@ class ModelImportTaskPayload(BaseModel):
     activate: bool = False
     task_root: StoragePathStr
     source_pt_path: StoragePathStr
-    mappings: list[ImportedClassMappingDraft] = Field(min_length=1)
+    mappings: list[ImportedClassMappingDraft] = Field(default_factory=list)
+
+    @field_validator("mappings")
+    @classmethod
+    def validate_mappings(cls, value: list[ImportedClassMappingDraft]) -> list[ImportedClassMappingDraft]:
+        if not value:
+            raise PydanticCustomError(
+                "interop_mappings_error", "Добавьте хотя бы одно сопоставление классов"
+            )
+        return value
 
 
 _IMPORT_MAPPINGS_ADAPTER = TypeAdapter(list[ImportedClassMappingDraft])

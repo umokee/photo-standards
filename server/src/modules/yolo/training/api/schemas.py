@@ -6,6 +6,7 @@ from uuid import UUID
 
 from modules.yolo.training.constants import training
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 
 class TrainRequest(BaseModel):
@@ -39,21 +40,31 @@ class TrainRequest(BaseModel):
     @classmethod
     def validate_architecture(cls, value: str) -> str:
         if value not in training.architectures:
-            raise ValueError(f"Неизвестная архитектура: {value}")
+            raise PydanticCustomError(
+                "train_architecture_error",
+                f"Выберите архитектуру из списка: {', '.join(training.architectures)}",
+            )
         return value
 
     @field_validator("imgsz")
     @classmethod
     def validate_imgsz(cls, value: int) -> int:
         if value not in training.image_size:
-            raise ValueError(f"Некорректный размер изображения: {value}")
+            raise PydanticCustomError(
+                "train_imgsz_error",
+                "Выберите размер изображения из списка: "
+                f"{', '.join(map(str, training.image_size))}",
+            )
         return value
 
     @model_validator(mode="after")
     def validate_ratio_sum(self) -> Self:
         safe = min(training.ratio_sum_max, 100)
         if self.train_ratio + self.val_ratio > safe:
-            raise ValueError(f"Сумма train и val должна быть не больше {safe}%")
+            raise PydanticCustomError(
+                "train_ratio_error",
+                f"Сумма долей train и val должна быть не больше {safe}%",
+            )
         return self
 
 

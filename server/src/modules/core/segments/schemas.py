@@ -1,8 +1,10 @@
+import math
 from uuid import UUID
 
 from modules.core.segments.constants import segments
 from modules.core.schemas import AnnotationPoints, Name
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class SegmentClassDraftItem(BaseModel):
@@ -66,3 +68,29 @@ class SegmentClassWithPointsResponse(BaseModel):
 
 class AnnotationSave(BaseModel):
     points: AnnotationPoints
+
+    @field_validator("points")
+    @classmethod
+    def validate_points(cls, value: AnnotationPoints) -> AnnotationPoints:
+        for polygon_index, polygon in enumerate(value):
+            if len(polygon) < 3:
+                raise PydanticCustomError(
+                    "annotation_points_error",
+                    f"Полигон #{polygon_index + 1} должен содержать минимум 3 точки"
+                )
+
+            for point_index, point in enumerate(polygon):
+                if len(point) != 2:
+                    raise PydanticCustomError(
+                        "annotation_points_error",
+                        f"Точка #{point_index + 1} в полигоне #{polygon_index + 1} должна содержать 2 координаты"
+                    )
+
+                x, y = point
+                if not math.isfinite(x) or not math.isfinite(y):
+                    raise PydanticCustomError(
+                        "annotation_points_error",
+                        "Координаты полигона должны быть конечными числами",
+                    )
+
+        return value

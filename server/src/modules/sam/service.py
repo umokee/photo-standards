@@ -141,7 +141,7 @@ def _segment_from_clicks(
     point_labels: list[int],
 ) -> dict[str, object]:
     if not point_coords:
-        raise ValueError("Нужен хотя бы один клик")
+        raise ValueError("Добавьте хотя бы одну точку")
 
     masks, scores = predict_masks_from_clicks(
         image_id=image_id,

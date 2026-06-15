@@ -6,6 +6,7 @@ from app.observability import log_event
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 logger = structlog.get_logger("app.errors")
 
@@ -68,6 +69,15 @@ def register_exception_handlers(app: FastAPI) -> None:
         error = ValidationError(
             message="Проверьте введённые данные",
             details={"errors": _build_validation_errors(exc)},
+        )
+        _log_app_error(request, error)
+        return _json_error_response(error)
+
+    @app.exception_handler(IntegrityError)
+    async def integrity_error_handler(request: Request, exc: IntegrityError):
+        error = ValidationError(
+            message="Данные не прошли проверку целостности",
+            details={"type": "integrity_error"},
         )
         _log_app_error(request, error)
         return _json_error_response(error)

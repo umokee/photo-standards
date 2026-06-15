@@ -18,7 +18,7 @@ const runInspectionSchema = z
       .refine(
         (value): value is InspectionMode =>
           inspectionModePaths.includes(value as (typeof inspectionModePaths)[number]),
-        "Выберите корректный режим проверки"
+        "Выберите режим проверки из списка"
       ),
     image: z.instanceof(File).nullable().optional(),
     camera_id: z.string().trim().nullable().optional(),
@@ -57,7 +57,7 @@ const runInspectionSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["image"],
-          message: "Не удалось получить кадр камеры устройства",
+          message: "Не удалось получить кадр с камеры устройства",
         });
       }
     }

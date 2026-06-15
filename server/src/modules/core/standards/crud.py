@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.exception import NotFoundError
+from app.exception import ConflictError, NotFoundError
 from modules.core.groups.models import Group
 from modules.core.segments.models import (
     SegmentAnnotation,
@@ -65,6 +65,41 @@ async def create_standard(
     await db.commit()
     await db.refresh(standard)
     return standard
+
+
+async def ensure_standard_name_unique(
+    db: AsyncSession,
+    *,
+    group_id: UUID,
+    name: str,
+    angle: str | None,
+    exclude_id: UUID | None = None,
+) -> None:
+    query = select(Standard.id).where(
+        Standard.group_id == group_id,
+        Standard.name == name,
+    )
+
+    if angle is None:
+        query = query.where(Standard.angle.is_(None))
+    else:
+        query = query.where(Standard.angle == angle)
+
+    if exclude_id is not None:
+        query = query.where(Standard.id != exclude_id)
+
+    if await db.scalar(query) is not None:
+        raise ConflictError(
+            "Эталон уже существует",
+            details={
+                "entity": "standard",
+                "entity_label": "Эталон",
+                "field": "name",
+                "value": name,
+                "group_id": str(group_id),
+                "angle": angle,
+            },
+        )
 
 
 async def list_standard_image_paths(
