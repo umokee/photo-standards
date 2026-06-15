@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import shutil
 import threading
 import time
 from contextlib import suppress
@@ -16,8 +17,9 @@ from app.observability import log_event
 from modules.core.standards.reference_constants import (
     LIGHTGLUE_TORCH_WEIGHTS_PATH,
     MAX_LIGHTGLUE_MATCH_PAIRS,
-    SUPERPOINT_VIDEO_MAX_KEYPOINTS,
     SUPERPOINT_TORCH_WEIGHTS_PATH,
+    SUPERPOINT_VIDEO_MAX_KEYPOINTS,
+    TORCH_HUB_DIR,
 )
 
 logger = structlog.get_logger(__name__)
@@ -167,9 +169,7 @@ def warmup_reference_matching() -> None:
     started_at = time.perf_counter()
 
     try:
-        runtime = get_reference_runtime(
-            max_keypoints=SUPERPOINT_VIDEO_MAX_KEYPOINTS
-        )
+        runtime = get_reference_runtime(max_keypoints=SUPERPOINT_VIDEO_MAX_KEYPOINTS)
     except Exception as exc:
         log_event(
             logger,
@@ -195,6 +195,35 @@ def clear_reference_runtime_cache() -> None:
     _release_torch_memory()
 
 
+def _prepare_local_torch_hub_cache() -> None:
+    if not SUPERPOINT_TORCH_WEIGHTS_PATH.is_file():
+        raise FileNotFoundError(
+            f"Файл весов SuperPoint не найден: {SUPERPOINT_TORCH_WEIGHTS_PATH}"
+        )
+
+    if not LIGHTGLUE_TORCH_WEIGHTS_PATH.is_file():
+        raise FileNotFoundError(
+            f"Файл весов LightGlue не найден: {LIGHTGLUE_TORCH_WEIGHTS_PATH}"
+        )
+
+    torch.hub.set_dir(str(TORCH_HUB_DIR))
+
+    checkpoints_dir = TORCH_HUB_DIR / "checkpoints"
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+    target = checkpoints_dir / "superpoint_v1.pth"
+
+    if (
+        target.exists()
+        and target.stat().st_size == SUPERPOINT_TORCH_WEIGHTS_PATH.stat().st_size
+    ):
+        return
+
+    temp_target = target.with_suffix(".pth.tmp")
+    shutil.copy2(SUPERPOINT_TORCH_WEIGHTS_PATH, temp_target)
+    temp_target.replace(target)
+
+
 def _build_runtime(
     *,
     device_kind: AlignmentDeviceKind,
@@ -204,10 +233,8 @@ def _build_runtime(
 
     device = _resolve_torch_device(device_kind)
 
+    _prepare_local_torch_hub_cache()
     extractor = SuperPoint(max_num_keypoints=max_keypoints).eval()
-    extractor.load_state_dict(
-        torch.load(SUPERPOINT_TORCH_WEIGHTS_PATH, map_location="cpu")
-    )
 
     matcher = LightGlue(
         features=None,

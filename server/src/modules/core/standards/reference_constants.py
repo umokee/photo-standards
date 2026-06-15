@@ -4,6 +4,7 @@ from infra.storage.file_storage import resolve_storage_path
 
 SUPERPOINT_TORCH_WEIGHTS_PATH = resolve_storage_path("weights/superpoint_v1.pth")
 LIGHTGLUE_TORCH_WEIGHTS_PATH = resolve_storage_path("weights/superpoint_lightglue.pth")
+TORCH_HUB_DIR = resolve_storage_path("torch-hub")
 
 SUPERPOINT_INPUT_STRIDE = 8
 
