@@ -8,6 +8,7 @@ import Select from "@/components/ui/select/select";
 import SurfaceSection from "@/components/ui/surface-section/surface-section";
 import ToggleCard from "@/components/ui/toggle-card/toggle-card";
 import { useAppConstants, useArchitectureOptions, useImageSizeOptions } from "@/constants";
+import { getFieldError, getFieldErrorMap } from "@/lib/errors";
 import { useGetGroup } from "@/page-components/groups/api/get-group";
 import type { Architecture, ImportedClassMappingDraft } from "@/types/contracts";
 import clsx from "clsx";
@@ -63,6 +64,7 @@ const ImportModelModal = ({ groupId }: Props) => {
   const [imageSize, setImageSize] = useState(() => String(constants.training.image_size.default));
   const [activate, setActivate] = useState(true);
   const [rows, setRows] = useState<ImportModelMappingRow[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const previewMutation = usePreviewImportModel();
   const importMutation = useImportModel({
@@ -82,6 +84,13 @@ const ImportModelModal = ({ groupId }: Props) => {
 
   const existingClassOptions = useMemo(() => buildImportModelExistingClassOptions(group), [group]);
   const categoryOptions = useMemo(() => buildImportModelCategoryOptions(group), [group]);
+  const importFieldErrors = useMemo(() => getFieldErrorMap(importMutation.error), [importMutation.error]);
+  const combinedErrors = useMemo(() => ({ ...importFieldErrors, ...formErrors }), [importFieldErrors, formErrors]);
+  const previewWeightsError =
+    formErrors.weights ?? getFieldError(previewMutation.error, "weights") ?? importFieldErrors.weights;
+  const architectureError = combinedErrors.architecture;
+  const imageSizeError = combinedErrors.imgsz;
+  const mappingsError = combinedErrors.mappings ?? combinedErrors.mappings_json;
 
   const mappedCount = useMemo(
     () => rows.filter((row) => row.mode === "existing" || row.mode === "new").length,
@@ -114,6 +123,7 @@ const ImportModelModal = ({ groupId }: Props) => {
     if (!file) return;
 
     setRows([]);
+    setFormErrors((current) => clearImportFormErrors(current, ["weights", "mappings", "form"]));
     previewMutation.reset();
     importMutation.reset();
     setWeightsFile(file);
@@ -126,6 +136,7 @@ const ImportModelModal = ({ groupId }: Props) => {
       weights: file,
     });
     if (!previewPayload.ok) {
+      setFormErrors(previewPayload.errors);
       return;
     }
 
@@ -146,6 +157,7 @@ const ImportModelModal = ({ groupId }: Props) => {
   };
 
   const handleRowModeChange = (nativeKey: string, mode: ImportModelMappingMode) => {
+    setFormErrors((current) => clearImportMappingErrors(current));
     setRows((current) =>
       current.map((row) =>
         row.nativeKey === nativeKey
@@ -163,6 +175,7 @@ const ImportModelModal = ({ groupId }: Props) => {
     nativeKey: string,
     patch: Partial<Omit<ImportModelMappingRow, "nativeKey" | "nativeIndex">>
   ) => {
+    setFormErrors((current) => clearImportMappingErrors(current));
     setRows((current) =>
       current.map((row) => (row.nativeKey === nativeKey ? { ...row, ...patch } : row))
     );
@@ -205,9 +218,11 @@ const ImportModelModal = ({ groupId }: Props) => {
       weights: weightsFile,
     });
     if (!payload.ok) {
+      setFormErrors(payload.errors);
       return;
     }
 
+    setFormErrors({});
     importMutation.mutate(payload.data);
   };
 
@@ -236,6 +251,8 @@ const ImportModelModal = ({ groupId }: Props) => {
                 {weightsFile ? "Заменить файл" : "Выбрать .pt"}
               </Button>
             </div>
+
+            {previewWeightsError ? <div className={shell.errorBox}>{previewWeightsError}</div> : null}
           </SurfaceSection>
 
           <SurfaceSection
@@ -247,14 +264,22 @@ const ImportModelModal = ({ groupId }: Props) => {
                 label="Архитектура"
                 options={architectureOptions}
                 value={architecture}
-                onChange={(value) => setArchitecture(value as Architecture)}
+                error={architectureError}
+                onChange={(value) => {
+                  setArchitecture(value as Architecture);
+                  setFormErrors((current) => clearImportFormErrors(current, ["architecture", "form"]));
+                }}
               />
 
               <Select
                 label="Размер изображения"
                 options={imageSizeOptions}
                 value={imageSize}
-                onChange={setImageSize}
+                error={imageSizeError}
+                onChange={(value) => {
+                  setImageSize(value);
+                  setFormErrors((current) => clearImportFormErrors(current, ["imgsz", "form"]));
+                }}
               />
             </div>
 
@@ -276,10 +301,12 @@ const ImportModelModal = ({ groupId }: Props) => {
           >
             {previewMutation.data && (
               <div className={s.mappings}>
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <ImportMappingRow
                     key={row.nativeKey}
+                    rowIndex={index}
                     row={row}
+                    errors={combinedErrors}
                     existingClassOptions={existingClassOptions}
                     categoryOptions={categoryOptions}
                     minHue={constants.segments.hue.min}
@@ -290,7 +317,15 @@ const ImportModelModal = ({ groupId }: Props) => {
                 ))}
               </div>
             )}
+
+            {mappingsError ? <div className={shell.errorBox}>{mappingsError}</div> : null}
           </SurfaceSection>
+
+          {importMutation.isError && !mappingsError ? (
+            <div className={shell.errorBox}>
+              {importMutation.error?.message ?? "Не удалось поставить импорт модели в очередь"}
+            </div>
+          ) : null}
         </div>
       </Modal.Body>
 
@@ -308,7 +343,9 @@ const ImportModelModal = ({ groupId }: Props) => {
 };
 
 type ImportMappingRowProps = {
+  rowIndex: number;
   row: ImportModelMappingRow;
+  errors: Record<string, string>;
   existingClassOptions: ImportModelSelectOption[];
   categoryOptions: ImportModelSelectOption[];
   minHue: number;
@@ -321,7 +358,9 @@ type ImportMappingRowProps = {
 };
 
 const ImportMappingRow = ({
+  rowIndex,
   row,
+  errors,
   existingClassOptions,
   categoryOptions,
   minHue,
@@ -331,6 +370,8 @@ const ImportMappingRow = ({
 }: ImportMappingRowProps) => {
   const currentHue = clampHue(row.newClassHue, minHue, maxHue, minHue);
   const [isColorOpen, setIsColorOpen] = useState(false);
+  const existingClassError = errors[`mappings.${rowIndex}.segment_class_id`];
+  const newClassNameError = errors[`mappings.${rowIndex}.new_class_name`];
 
   return (
     <div className={s.mappingRow}>
@@ -390,6 +431,7 @@ const ImportMappingRow = ({
               placeholder="Выберите существующий класс"
               options={existingClassOptions}
               value={row.segmentClassId || null}
+              error={existingClassError}
               onChange={(value) =>
                 onChange(row.nativeKey, {
                   segmentClassId: value,
@@ -420,6 +462,7 @@ const ImportMappingRow = ({
                 noMargin
                 value={row.newClassName}
                 placeholder="Название нового класса"
+                error={newClassNameError}
                 onChange={(value) =>
                   onChange(row.nativeKey, {
                     newClassName: value,
@@ -465,4 +508,29 @@ function clampHue(value: string | number, min: number, max: number, fallback: nu
   }
 
   return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+function clearImportFormErrors(errors: Record<string, string>, keys: string[]): Record<string, string> {
+  const next = { ...errors };
+
+  for (const key of keys) {
+    delete next[key];
+  }
+
+  return next;
+}
+
+function clearImportMappingErrors(errors: Record<string, string>): Record<string, string> {
+  const next = { ...errors };
+
+  for (const key of Object.keys(next)) {
+    if (key.startsWith("mappings.")) {
+      delete next[key];
+    }
+  }
+
+  delete next.mappings;
+  delete next.form;
+
+  return next;
 }

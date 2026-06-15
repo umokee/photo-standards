@@ -21,6 +21,7 @@ interface Props {
   imageSegmentClasses: SegmentClassWithPoints[];
   selectedSegmentClassId: string | null;
   selectedContourIndex: number | null;
+  annotationError?: string | null;
   onSelectSegmentClass: (id: string) => void;
   onStartDraw: (kind: DrawKind) => void;
   onSelectContour: (index: number | null) => void;
@@ -36,6 +37,7 @@ export const SegmentPanel = ({
   imageSegmentClasses,
   selectedSegmentClassId,
   selectedContourIndex,
+  annotationError,
   onSelectSegmentClass,
   onStartDraw,
   onSelectContour,
@@ -131,6 +133,8 @@ export const SegmentPanel = ({
               })}
             </div>
           )}
+
+          {annotationError ? <div className={s.errorText}>{annotationError}</div> : null}
         </div>
       </div>
 

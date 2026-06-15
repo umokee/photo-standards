@@ -67,6 +67,13 @@
   gap: $space-1;
 }
 
+.errorText {
+  padding: $space-2;
+  color: $danger-text;
+  font-size: $text-small;
+  line-height: 1.4;
+}
+
 .groupBlock {
   margin-bottom: $space-1;
 }

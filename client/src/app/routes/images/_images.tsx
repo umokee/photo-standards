@@ -58,6 +58,7 @@ const ImagesContent = () => {
   const [selectedSegmentClassId, setSelectedSegmentClassId] = useState<string | null>(null);
   const [selectedContourIndex, setSelectedContourIndex] = useState<number | null>(null);
   const [mode, setMode] = useState<EditorMode>("view");
+  const [annotationError, setAnnotationError] = useState<string | null>(null);
 
   const { data: group } = useGetGroup(groupId);
   const { data: standard } = useGetStandardDetail(standardId);
@@ -134,10 +135,15 @@ const ImagesContent = () => {
   }, [availableSegmentClassIds, selectedSegmentClassId]);
 
   const saveSegmentContours = (segmentClassId: string, nextContours: number[][][]) => {
+    setAnnotationError(null);
     annotate.mutate({
       segmentClassId,
       imageId,
       points: nextContours,
+    }, {
+      onError: (error) => {
+        setAnnotationError(error instanceof Error ? error.message : "Не удалось сохранить аннотацию");
+      },
     });
   };
 
@@ -172,7 +178,10 @@ const ImagesContent = () => {
     setSelectedContourIndex(null);
   };
 
-  const handleStartDraw = (kind: DrawKind) => setMode(drawKindToMode[kind]);
+  const handleStartDraw = (kind: DrawKind) => {
+    setAnnotationError(null);
+    setMode(drawKindToMode[kind]);
+  };
   const handleCancelDraw = () => setMode("view");
 
   const panel = (
@@ -184,11 +193,15 @@ const ImagesContent = () => {
       imageId={imageId}
       imageSegmentClasses={imageSegmentClasses}
       selectedSegmentClassId={selectedSegmentClassId}
-      onSelectSegmentClass={setSelectedSegmentClassId}
+      onSelectSegmentClass={(id) => {
+        setAnnotationError(null);
+        setSelectedSegmentClassId(id);
+      }}
       onStartDraw={handleStartDraw}
       selectedContourIndex={selectedContourIndex}
       onSelectContour={setSelectedContourIndex}
       onDeleteContour={handleDeleteContour}
+      annotationError={annotationError}
     />
   );
 

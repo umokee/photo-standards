@@ -274,10 +274,12 @@ export const useManageSegmentGroups = (
 ) => {
   const [state, dispatch] = useReducer(reducer, group, createInitialState);
   const [activeColorKey, setActiveColorKey] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     dispatch({ type: "reset", payload: createInitialState(group) });
     setActiveColorKey(null);
+    setFieldErrors({});
   }, [group]);
 
   const mutation = useSaveSegmentClasses({
@@ -287,7 +289,33 @@ export const useManageSegmentGroups = (
   });
 
   const save = async () => {
+    const nextErrors: Record<string, string> = {};
+
+    for (const category of state.categories) {
+      if (!category.name.trim()) {
+        nextErrors[`category:${category.key}`] = "Укажите название категории";
+      }
+
+      for (const segmentClass of category.segmentClasses) {
+        if (!segmentClass.name.trim()) {
+          nextErrors[`class:${segmentClass.key}`] = "Укажите название класса";
+        }
+      }
+    }
+
+    for (const segmentClass of state.ungroupedClasses) {
+      if (!segmentClass.name.trim()) {
+        nextErrors[`class:${segmentClass.key}`] = "Укажите название класса";
+      }
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      return false;
+    }
+
     try {
+      setFieldErrors({});
       await mutation.mutateAsync({
         groupId: group.id,
         categories: serializeCategories(state.categories),
@@ -305,6 +333,7 @@ export const useManageSegmentGroups = (
   return {
     categories: state.categories,
     ungroupedClasses: state.ungroupedClasses,
+    fieldErrors,
     saving: mutation.isPending,
     activeColorKey,
     toggleColorPicker: (key: string) => setActiveColorKey((prev) => (prev === key ? null : key)),
@@ -314,8 +343,14 @@ export const useManageSegmentGroups = (
       add: () => dispatch({ type: "category/add" }),
       remove: (key: string) => dispatch({ type: "category/remove", key }),
       toggle: (key: string) => dispatch({ type: "category/toggle", key }),
-      updateName: (key: string, value: string) =>
-        dispatch({ type: "category/update-name", key, value }),
+      updateName: (key: string, value: string) => {
+        setFieldErrors((current) => {
+          const next = { ...current };
+          delete next[`category:${key}`];
+          return next;
+        });
+        dispatch({ type: "category/update-name", key, value });
+      },
     },
 
     classActions: {
@@ -328,13 +363,19 @@ export const useManageSegmentGroups = (
 
       removeUngrouped: (classKey: string) => dispatch({ type: "class/remove-ungrouped", classKey }),
 
-      updateName: (categoryKey: string | null, classKey: string, value: string) =>
+      updateName: (categoryKey: string | null, classKey: string, value: string) => {
+        setFieldErrors((current) => {
+          const next = { ...current };
+          delete next[`class:${classKey}`];
+          return next;
+        });
         dispatch({
           type: "class/update-name",
           categoryKey,
           classKey,
           value,
-        }),
+        });
+      },
 
       updateHue: (categoryKey: string | null, classKey: string, value: number) =>
         dispatch({

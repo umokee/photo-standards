@@ -126,7 +126,10 @@ export const buildImportModelPayload = (
     const errors: Record<string, string> = {};
 
     for (const issue of parsed.error.issues) {
-      const key = issue.path[0] === "mappings" ? "mappings" : String(issue.path[0] ?? "form");
+      const key =
+        issue.path[0] === "mappings"
+          ? issue.path.map((part) => String(part)).join(".")
+          : String(issue.path[0] ?? "form");
       if (!errors[key]) {
         errors[key] = issue.message;
       }

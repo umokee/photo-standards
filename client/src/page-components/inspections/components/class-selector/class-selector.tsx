@@ -238,6 +238,7 @@ export const ClassSelector = ({
             })}
           </div>
         </QueryState>
+
       </div>
     </div>
   );

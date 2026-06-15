@@ -10,6 +10,7 @@ import {
   useImageSizeOptions,
   useTrainingLimits,
 } from "@/constants";
+import { getFieldError } from "@/lib/errors";
 import type { Architecture } from "@/types/contracts";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -77,6 +78,9 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
   const testPercent = Math.max(0, 100 - trainPercent - valPercent);
 
   const isRatioInvalid = trainPercent + valPercent > safeRatioSumMax;
+  const ratioError = isRatioInvalid
+    ? `Сумма долей train и val должна быть не больше ${safeRatioSumMax}%.`
+    : undefined;
   const isSubmitDisabled = mutation.isPending || isTrainingLocked || !canTrain || isRatioInvalid;
   const availabilityMessage = isTrainingLocked
     ? "Для этой группы уже запущено обучение. Дождитесь завершения текущей задачи или отмените её"
@@ -150,7 +154,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 label="Архитектура"
                 options={architectureOptions}
                 value={architecture}
-                error={formErrors.architecture}
+                error={formErrors.architecture ?? getFieldError(mutation.error, "architecture")}
                 onChange={(value) => {
                   setArchitecture(value as Architecture);
                   setFormErrors((current) => clearFormErrors(current, ["architecture", "form"]));
@@ -161,7 +165,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 label="Размер изображения"
                 options={imageSizeOptions}
                 value={imageSize}
-                error={formErrors.imgsz}
+                error={formErrors.imgsz ?? getFieldError(mutation.error, "imgsz")}
                 onChange={(value) => {
                   setImageSize(value);
                   setFormErrors((current) => clearFormErrors(current, ["imgsz", "form"]));
@@ -182,7 +186,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 max={trainingLimits.epochs.max}
                 step={1}
                 value={epochs}
-                error={formErrors.epochs}
+                error={formErrors.epochs ?? getFieldError(mutation.error, "epochs")}
                 onChange={(value) => {
                   setEpochs(value);
                   setFormErrors((current) => clearFormErrors(current, ["epochs", "form"]));
@@ -196,7 +200,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 max={trainingLimits.batch_size.max}
                 step={1}
                 value={batchSize}
-                error={formErrors.batch_size}
+                error={formErrors.batch_size ?? getFieldError(mutation.error, "batch_size")}
                 onChange={(value) => {
                   setBatchSize(value);
                   setFormErrors((current) => clearFormErrors(current, ["batch_size", "form"]));
@@ -217,7 +221,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 max={trainingLimits.train_ratio.max}
                 step={1}
                 value={trainRatio}
-                error={formErrors.train_ratio}
+                error={formErrors.train_ratio ?? getFieldError(mutation.error, "train_ratio")}
                 onChange={handleTrainRatioChange}
               />
 
@@ -228,7 +232,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
                 max={trainingLimits.val_ratio.max}
                 step={1}
                 value={valRatio}
-                error={formErrors.val_ratio}
+                error={formErrors.val_ratio ?? ratioError ?? getFieldError(mutation.error, "val_ratio")}
                 onChange={handleValRatioChange}
               />
             </div>
@@ -249,7 +253,7 @@ const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
               </div>
 
               <span className={s.splitHint}>
-                {isRatioInvalid && `Сумма Train и Val должна быть не больше ${safeRatioSumMax}%.`}
+                {isRatioInvalid && ratioError}
               </span>
             </div>
           </SurfaceSection>

@@ -82,24 +82,28 @@ export const InspectionTopbar = ({
 
   return (
     <div className={s.root}>
-      <Select
-        noMargin
-        options={modeOptions}
-        value={currentMode}
-        onChange={(value) => {
-          if (isInspectionModePath(value)) {
-            onModeChange(value);
-          }
-        }}
-      />
+      <div className={s.field}>
+        <Select
+          noMargin
+          options={modeOptions}
+          value={currentMode}
+          onChange={(value) => {
+            if (isInspectionModePath(value)) {
+              onModeChange(value);
+            }
+          }}
+        />
+      </div>
 
-      <Select
-        noMargin
-        placeholder="Выберите группу"
-        options={groupOptions}
-        value={groupId ?? ""}
-        onChange={(value) => onGroupChange(value || null)}
-      />
+      <div className={s.field}>
+        <Select
+          noMargin
+          placeholder="Выберите группу"
+          options={groupOptions}
+          value={groupId ?? ""}
+          onChange={(value) => onGroupChange(value || null)}
+        />
+      </div>
 
       {groupId ? (
         <InspectionStandardSelect
@@ -108,34 +112,40 @@ export const InspectionTopbar = ({
           onChange={(value) => onStandardChange(value || null)}
         />
       ) : (
-        <Select
-          noMargin
-          disabled
-          placeholder="Сначала выберите группу"
-          options={[]}
-          value=""
-          onChange={() => {}}
-        />
+        <div className={s.field}>
+          <Select
+            noMargin
+            disabled
+            placeholder="Сначала выберите группу"
+            options={[]}
+            value=""
+            onChange={() => {}}
+          />
+        </div>
       )}
 
       {requiresCamera ? (
-        <Select
-          noMargin
-          placeholder={cameraPlaceholder}
-          options={availableCameraOptions}
-          value={cameraId ?? ""}
-          onChange={(value) => onCameraChange(value || null)}
-          disabled={availableCameraOptions.length === 0}
-        />
+        <div className={s.field}>
+          <Select
+            noMargin
+            placeholder={cameraPlaceholder}
+            options={availableCameraOptions}
+            value={cameraId ?? ""}
+            onChange={(value) => onCameraChange(value || null)}
+            disabled={availableCameraOptions.length === 0}
+          />
+        </div>
       ) : (
-        <Select
-          noMargin
-          disabled
-          placeholder="Камера не нужна"
-          options={[]}
-          value=""
-          onChange={() => {}}
-        />
+        <div className={s.field}>
+          <Select
+            noMargin
+            disabled
+            placeholder="Камера не нужна"
+            options={[]}
+            value=""
+            onChange={() => {}}
+          />
+        </div>
       )}
     </div>
   );
@@ -174,14 +184,16 @@ const InspectionStandardSelect = memo(function InspectionStandardSelect({
         : "В группе нет эталонов";
 
   return (
-    <Select
-      noMargin
-      placeholder={placeholder}
-      options={options}
-      value={value}
-      onChange={onChange}
-      disabled={isPending || isError || options.length === 0}
-    />
+    <div className={s.field}>
+      <Select
+        noMargin
+        placeholder={placeholder}
+        options={options}
+        value={value}
+        onChange={onChange}
+        disabled={isPending || isError || options.length === 0}
+      />
+    </div>
   );
 });
 

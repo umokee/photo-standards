@@ -127,6 +127,18 @@
   }
 }
 
+.nameInputError {
+  color: $danger-text;
+}
+
+.inlineError {
+  padding: 0 32px 8px;
+  color: $danger-text;
+  font-size: $text-small;
+  line-height: 1.4;
+  background: $surface2;
+}
+
 .iconButton {
   display: flex;
   align-items: center;

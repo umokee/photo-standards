@@ -47,6 +47,7 @@ interface ClassActions {
 interface ClassRowProps {
   item: ClassState;
   categoryKey: string | null;
+  error?: string;
   isColorOpen: boolean;
   toggleColorPicker: (key: string) => void;
   closeColorPicker: () => void;
@@ -56,6 +57,7 @@ interface ClassRowProps {
 const ClassRow = ({
   item,
   categoryKey,
+  error,
   isColorOpen,
   toggleColorPicker,
   closeColorPicker,
@@ -94,7 +96,7 @@ const ClassRow = ({
         </div>
 
         <input
-          className={s.nameInput}
+          className={clsx(s.nameInput, error && s.nameInputError)}
           value={item.name}
           placeholder="Название класса"
           onChange={(e) => classActions.updateName(categoryKey, item.key, e.target.value)}
@@ -104,6 +106,8 @@ const ClassRow = ({
           <X size={14} />
         </button>
       </div>
+
+      {error ? <div className={s.inlineError}>{error}</div> : null}
 
       {isColorOpen && (
         <div className={s.colorPanel}>
@@ -119,6 +123,8 @@ const ClassRow = ({
 
 interface CategoryItemProps {
   category: CategoryState;
+  error?: string;
+  fieldErrors: Record<string, string>;
   activeColorKey: string | null;
   toggleColorPicker: (key: string) => void;
   closeColorPicker: () => void;
@@ -128,6 +134,8 @@ interface CategoryItemProps {
 
 const CategoryItem = ({
   category,
+  error,
+  fieldErrors,
   activeColorKey,
   toggleColorPicker,
   closeColorPicker,
@@ -149,7 +157,7 @@ const CategoryItem = ({
         />
 
         <input
-          className={s.nameInput}
+          className={clsx(s.nameInput, error && s.nameInputError)}
           value={category.name}
           placeholder="Название категории"
           onChange={(e) => categoryActions.updateName(category.key, e.target.value)}
@@ -172,12 +180,15 @@ const CategoryItem = ({
         </button>
       </div>
 
+      {error ? <div className={s.inlineError}>{error}</div> : null}
+
       {!category.collapsed &&
         category.segmentClasses.map((item) => (
           <ClassRow
             key={item.key}
             item={item}
             categoryKey={category.key}
+            error={fieldErrors[`class:${item.key}`]}
             isColorOpen={activeColorKey === item.key}
             toggleColorPicker={toggleColorPicker}
             closeColorPicker={closeColorPicker}
@@ -190,6 +201,7 @@ const CategoryItem = ({
 
 interface UngroupedBlockProps {
   items: ClassState[];
+  fieldErrors: Record<string, string>;
   activeColorKey: string | null;
   toggleColorPicker: (key: string) => void;
   closeColorPicker: () => void;
@@ -198,6 +210,7 @@ interface UngroupedBlockProps {
 
 const UngroupedBlock = ({
   items,
+  fieldErrors,
   activeColorKey,
   toggleColorPicker,
   closeColorPicker,
@@ -224,6 +237,7 @@ const UngroupedBlock = ({
           key={item.key}
           item={item}
           categoryKey={null}
+          error={fieldErrors[`class:${item.key}`]}
           isColorOpen={activeColorKey === item.key}
           toggleColorPicker={toggleColorPicker}
           closeColorPicker={closeColorPicker}
@@ -275,6 +289,7 @@ const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
     categoryActions,
     classActions,
     save,
+    fieldErrors,
   } = useManageSegmentGroups(group, { standardId, imageId });
 
   const handleSave = async () => {
@@ -289,10 +304,12 @@ const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
       <Modal.Body>
         <div className={s.content}>
           <div className={s.list}>
-            {categories.map((category) => (
+              {categories.map((category) => (
                 <CategoryItem
                   key={category.key}
                   category={category}
+                  error={fieldErrors[`category:${category.key}`]}
+                  fieldErrors={fieldErrors}
                   activeColorKey={activeColorKey}
                   toggleColorPicker={toggleColorPicker}
                   closeColorPicker={closeColorPicker}
@@ -303,6 +320,7 @@ const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
 
             <UngroupedBlock
                 items={ungroupedClasses}
+                fieldErrors={fieldErrors}
                 activeColorKey={activeColorKey}
                 toggleColorPicker={toggleColorPicker}
                 closeColorPicker={closeColorPicker}

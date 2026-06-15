@@ -1,5 +1,6 @@
 import Button from "@/components/ui/button/button";
 import Input from "@/components/ui/input/input";
+import { getFieldError } from "@/lib/errors";
 import { InspectionResultDetails } from "@/page-components/inspections/components/inspection-result-details/inspection-result-details";
 import type { InspectionRealtimeStatus, InspectionTaskResult } from "@/types/contracts";
 import { useState } from "react";
@@ -109,6 +110,7 @@ const getElementWord = (count: number) => {
 
 export const InspectionResultPanel = ({ ...props }: Props) => {
   const [notes, setNotes] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const isRealtime = props.kind === "realtime";
   const normalizedResult = normalizePanelResult(props);
 
@@ -148,9 +150,11 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
       });
 
       if (!payloadResult.ok) {
+        setFormErrors(payloadResult.errors);
         return;
       }
 
+      setFormErrors({});
       saveRealtimeMutation.mutate(payloadResult.data);
       return;
     }
@@ -161,9 +165,11 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
     });
 
     if (!payloadResult.ok) {
+      setFormErrors(payloadResult.errors);
       return;
     }
 
+    setFormErrors({});
     saveMutation.mutate(payloadResult.data);
   };
 
@@ -240,7 +246,21 @@ export const InspectionResultPanel = ({ ...props }: Props) => {
                   label="Комментарий к отчёту"
                   placeholder="Причина отклонения или решение оператора"
                   value={notes}
-                  onChange={setNotes}
+                  error={
+                    formErrors.notes ??
+                    (isRealtime
+                      ? getFieldError(saveRealtimeMutation.error, "notes")
+                      : getFieldError(saveMutation.error, "notes"))
+                  }
+                  onChange={(value) => {
+                    setNotes(value);
+                    setFormErrors((current) => {
+                      const next = { ...current };
+                      delete next.notes;
+                      delete next.form;
+                      return next;
+                    });
+                  }}
                 />
               </div>
             </details>

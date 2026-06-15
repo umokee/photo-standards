@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/badge/badge";
 import Button from "@/components/ui/button/button";
+import { getFieldError } from "@/lib/errors";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import Select from "@/components/ui/select/select";
 import SurfaceSection from "@/components/ui/surface-section/surface-section";
 import type { MlModel } from "@/types/contracts";
 import { architectureLabel } from "@/utils/labels";
 import { useEffect, useMemo, useState } from "react";
-import { useExportModel } from "../../api/export-model";
+import { buildExportModelPayload, useExportModel } from "../../api/export-model";
 import {
   buildExportModelFileName,
   formatExportModelOptionLabel,
@@ -42,6 +43,7 @@ const ExportModelModal = ({ models }: Props) => {
   );
 
   const [selectedModelId, setSelectedModelId] = useState(exportableModels[0]?.id ?? "");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (exportableModels.length === 0) {
@@ -71,12 +73,18 @@ const ExportModelModal = ({ models }: Props) => {
   const previewClassLabels = classLabels.slice(0, 8);
 
   const handleSubmit = () => {
-    if (!selectedModel) return;
-
-    mutation.mutate({
-      modelId: selectedModel.id,
-      fileName: buildExportModelFileName(selectedModel),
+    const payload = buildExportModelPayload({
+      modelId: selectedModelId,
+      fileName: selectedModel ? buildExportModelFileName(selectedModel) : "",
     });
+
+    if (!payload.ok) {
+      setFormErrors(payload.errors);
+      return;
+    }
+
+    setFormErrors({});
+    mutation.mutate(payload.data);
   };
 
   return (
@@ -97,7 +105,16 @@ const ExportModelModal = ({ models }: Props) => {
                   label="Модель"
                   options={modelOptions}
                   value={selectedModelId}
-                  onChange={setSelectedModelId}
+                  error={formErrors.modelId ?? getFieldError(mutation.error, "modelId")}
+                  onChange={(value) => {
+                    setSelectedModelId(value);
+                    setFormErrors((current) => {
+                      const next = { ...current };
+                      delete next.modelId;
+                      delete next.form;
+                      return next;
+                    });
+                  }}
                 />
               </SurfaceSection>
 

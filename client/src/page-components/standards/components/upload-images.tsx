@@ -1,5 +1,6 @@
 import Button from "@/components/ui/button/button";
 import ImageInput from "@/components/ui/image-input/image-input";
+import { getFieldError } from "@/lib/errors";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import { useEffect, useState } from "react";
 import { buildUploadImagesPayload, useUploadImages } from "../api/upload-images";
@@ -56,7 +57,7 @@ const UploadImagesModal = ({ groupId, standardId }: { groupId: string; standardI
       <Modal.Body>
         <ImageInput
           multiple
-          error={formErrors.images}
+          error={formErrors.images ?? getFieldError(mutation.error, "images")}
           value={images}
           onChange={(value) => handleChange(value ? (value as File[]) : null)}
         />
