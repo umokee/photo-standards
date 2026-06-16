@@ -382,3 +382,65 @@
   backdrop-filter: blur(18px);
 }
 
+
+/* v7 shell polish */
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 253, 246, 0.92)),
+    #fffdf6;
+}
+
+.navLink,
+.navSectionButton,
+.footerLink {
+  transition: background 0.14s ease, color 0.14s ease, transform 0.14s ease;
+}
+
+.navLink:hover,
+.navSectionButton:hover,
+.footerLink:hover {
+  transform: translateX(1px);
+}
+
+.editorMode .sidebar {
+  background:
+    radial-gradient(circle at 30% 0%, rgba(225, 255, 37, 0.045), transparent 28%),
+    #151717;
+}
+
+.editorMode .main {
+  background: #080a0b;
+}
+
+
+/* v8 shell polish */
+.shell {
+  background:
+    radial-gradient(circle at 60% -10%, rgba(4, 42, 255, 0.03), transparent 26%),
+    #fffdf6;
+}
+
+.sidebar {
+  border-right-color: #eee8dd;
+  box-shadow: 12px 0 36px rgba(48, 36, 12, 0.035);
+}
+
+.searchBox {
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.searchBox:focus-within {
+  border-color: rgba(4, 42, 255, 0.25);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(4, 42, 255, 0.07);
+}
+
+.topbar {
+  background: rgba(255, 253, 246, 0.86);
+  backdrop-filter: blur(16px);
+}
+
+.editorMode .topbar {
+  background: rgba(15, 17, 18, 0.88);
+}
+

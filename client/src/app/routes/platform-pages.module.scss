@@ -486,3 +486,198 @@
   .imageGrid { grid-template-columns: 1fr; }
 }
 
+
+/* v7 platform page polish */
+.datasetCard,
+.projectCard,
+.imageCard,
+.referenceCard,
+.panelCard,
+.sidePanel,
+.storageCard,
+.activityCard {
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.datasetCard:hover,
+.projectCard:hover,
+.imageCard:hover,
+.referenceCard:hover,
+.panelCard:hover,
+.sidePanel:hover,
+.storageCard:hover,
+.activityCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 44px rgba(38, 26, 8, 0.08);
+}
+
+.datasetPreview,
+.referencePreview,
+.imageCard {
+  overflow: hidden;
+}
+
+.datasetPreview img,
+.referencePreview img,
+.imageCard img {
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.datasetCard:hover .datasetPreview img,
+.referenceCard:hover .referencePreview img,
+.imageCard:hover img {
+  transform: scale(1.035);
+  filter: saturate(1.05) contrast(1.03);
+}
+
+.tabBar {
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(12px);
+}
+
+.runRow,
+.activityRow {
+  transition: background 0.14s ease, transform 0.14s ease;
+}
+
+.runRow:hover,
+.activityRow:hover {
+  transform: translateX(1px);
+}
+
+
+/* v8 platform polish: closer to a product workspace */
+.page {
+  gap: 20px;
+}
+
+.ultraHeader {
+  min-height: 64px;
+  align-items: center;
+}
+
+.ultraHeader h1 {
+  font-size: 30px;
+  letter-spacing: -0.06em;
+}
+
+.welcomeCard,
+.quickVideoCard,
+.workspaceCard,
+.storageCard,
+.activityCard,
+.datasetHeader,
+.panelCard,
+.galleryCard,
+.inspectCard,
+.sidePanel,
+.modalLikeCard,
+.referenceCard,
+.listPanel {
+  border-color: #eee7dc;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 253, 246, 0.98)),
+    #fffdf6;
+}
+
+.homeHeroGrid,
+.homeCards,
+.grid2,
+.grid3,
+.inspectGrid,
+.cameraGrid {
+  gap: 18px;
+}
+
+.workspaceCard,
+.storageCard,
+.activityCard,
+.panelCard,
+.sidePanel {
+  border-radius: 18px;
+}
+
+.dropzonePreview,
+.emptyState {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.035), transparent 42%),
+    #fffdf8;
+}
+
+.datasetHeader {
+  position: relative;
+  overflow: hidden;
+}
+
+.datasetHeader::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 96% 0%, rgba(4, 42, 255, 0.045), transparent 28%);
+}
+
+.datasetHeader > * {
+  position: relative;
+}
+
+.tabs {
+  position: sticky;
+  top: 52px;
+  z-index: 3;
+  box-shadow: 0 12px 28px rgba(41, 29, 9, 0.055);
+}
+
+.galleryCard,
+.referenceCard,
+.projectRow,
+.listItem {
+  outline: 0 solid transparent;
+}
+
+.galleryCard:focus-visible,
+.referenceCard:focus-visible,
+.projectRow:focus-visible,
+.listItem:focus-visible {
+  outline: 3px solid rgba(4, 42, 255, 0.16);
+  outline-offset: 2px;
+}
+
+.inspectToolbar,
+.listPanelHeader {
+  background: rgba(255, 253, 246, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.inspectStage {
+  overflow: hidden;
+}
+
+.inspectStage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.075), transparent 28%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 30%, rgba(0, 0, 0, 0.18));
+}
+
+.resultItem,
+.checkRow,
+.tableRow,
+.listItem {
+  border: 1px solid transparent;
+}
+
+.resultItem:hover,
+.checkRow:hover,
+.tableRow:hover,
+.listItem:hover {
+  border-color: #eee2d3;
+}
+

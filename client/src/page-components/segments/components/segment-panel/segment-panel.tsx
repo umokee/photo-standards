@@ -45,7 +45,11 @@ export const SegmentPanel = ({
   onDeleteContour,
 }: Props) => {
   const [classQuery, setClassQuery] = useState("");
+  const [activePanel, setActivePanel] = useState<"classes" | "objects">("classes");
   const normalizedClassQuery = classQuery.trim().toLowerCase();
+  const classesCount =
+    categories.reduce((sum, category) => sum + category.segment_classes.length, 0) +
+    ungroupedClasses.length;
   const isClassVisible = (name: string) =>
     !normalizedClassQuery || name.toLowerCase().includes(normalizedClassQuery);
 
@@ -61,7 +65,24 @@ export const SegmentPanel = ({
 
   return (
     <div className={s.root}>
-      <div className={clsx(s.section, s.classes)}>
+      <div className={s.panelTabs}>
+        <button
+          type="button"
+          className={clsx(s.panelTab, activePanel === "classes" && s.panelTabActive)}
+          onClick={() => setActivePanel("classes")}
+        >
+          Classes <span>{classesCount}</span>
+        </button>
+        <button
+          type="button"
+          className={clsx(s.panelTab, activePanel === "objects" && s.panelTabActive)}
+          onClick={() => setActivePanel("objects")}
+        >
+          Objects <span>{imageContours.length}</span>
+        </button>
+      </div>
+
+      <div className={clsx(s.section, s.classes, activePanel !== "classes" && s.hiddenSection)}>
         <div className={s.sectionHeader}>
           <span className={s.sectionTitle}>Классы</span>
           {group && (
@@ -151,7 +172,7 @@ export const SegmentPanel = ({
         </div>
       </div>
 
-      <div className={clsx(s.section, s.anns)}>
+      <div className={clsx(s.section, s.anns, activePanel !== "objects" && s.hiddenSection)}>
         <div className={s.sectionHeader}>
           <span className={s.sectionTitle}>Полигоны</span>
           <span className={s.sectionMeta}>
@@ -174,6 +195,7 @@ export const SegmentPanel = ({
                       s.selected
                   )}
                   onClick={() => {
+                    setActivePanel("objects");
                     onSelectSegmentClass(item.segmentClassId);
                     onSelectContour(item.contourIndex);
                   }}

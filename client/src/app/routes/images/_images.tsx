@@ -20,11 +20,14 @@ import { useMutationState } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Circle,
   Image as ImageIcon,
   Layers3,
   MousePointer2,
   PenLine,
+  SkipForward,
   Sparkles,
   X,
 } from "lucide-react";
@@ -88,13 +91,16 @@ const ImagesContent = () => {
 
   const categories = standard.segment_class_categories;
   const ungroupedClasses = standard.ungrouped_segment_classes;
-  const availableSegmentClassIds = useMemo(
-    () =>
-      new Set([
-        ...categories.flatMap((category) => category.segment_classes.map((item) => item.id)),
-        ...ungroupedClasses.map((item) => item.id),
-      ]),
+  const allSegmentClasses = useMemo(
+    () => [
+      ...categories.flatMap((category) => category.segment_classes),
+      ...ungroupedClasses,
+    ],
     [categories, ungroupedClasses]
+  );
+  const availableSegmentClassIds = useMemo(
+    () => new Set(allSegmentClasses.map((item) => item.id)),
+    [allSegmentClasses]
   );
   const pendingByClassId: Record<string, number[][][]> = Object.fromEntries(
     pendingAnnotations
@@ -109,6 +115,8 @@ const ImagesContent = () => {
   }));
   const selectedImageSegmentClass =
     imageSegmentClasses.find((item) => item.id === selectedSegmentClassId) ?? null;
+  const selectedSegmentClass =
+    allSegmentClasses.find((item) => item.id === selectedSegmentClassId) ?? null;
 
   const imageIds = standard.images.map((img) => img.id);
   const currentIndex = imageIds.indexOf(imageId);
@@ -131,6 +139,12 @@ const ImagesContent = () => {
   const isCurrentAnnotated = imageSegmentClasses.some((segmentClass) => segmentClass.points.length);
   const annotatedCount = standard.images.filter((item) => item.annotation_count > 0).length;
   const polygonsCount = imageSegmentClasses.reduce((sum, item) => sum + item.points.length, 0);
+  const annotationProgress = standard.images.length
+    ? Math.round((annotatedCount / standard.images.length) * 100)
+    : 0;
+  const currentProgress = standard.images.length
+    ? Math.round(((safeIndex + 1) / standard.images.length) * 100)
+    : 0;
   const canDraw = !!selectedSegmentClassId && availableSegmentClassIds.has(selectedSegmentClassId);
 
   useEffect(() => {
@@ -205,6 +219,59 @@ const ImagesContent = () => {
   };
   const handleCancelDraw = () => setMode("view");
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName.toLowerCase();
+
+      if (target?.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select") {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "escape") {
+        handleCancelDraw();
+        return;
+      }
+
+      if (key === "arrowleft") {
+        event.preventDefault();
+        handlePrev();
+        return;
+      }
+
+      if (key === "arrowright") {
+        event.preventDefault();
+        handleNext();
+        return;
+      }
+
+      if (key === "v") {
+        setMode("view");
+        return;
+      }
+
+      if (key === "d") {
+        handleStartDraw("polygon");
+        return;
+      }
+
+      if (key === "s") {
+        handleStartDraw("sam");
+        return;
+      }
+
+      if (key === "u") {
+        event.preventDefault();
+        handleNextUnannotated();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleCancelDraw, handleNext, handleNextUnannotated, handlePrev, handleStartDraw]);
+
   const panel = (
     <SegmentPanel
       group={group}
@@ -250,7 +317,14 @@ const ImagesContent = () => {
         <aside className={s.filmstrip}>
           <div className={s.filmstripHead}>
             <ImageIcon />
-            <span>{annotatedCount}/{standard.images.length}</span>
+            <div className={s.filmstripTitle}>
+              <strong>Images</strong>
+              <small>{standard.name}</small>
+            </div>
+            <span className={s.filmstripCount}>{annotatedCount}/{standard.images.length}</span>
+            <div className={s.filmstripProgress}>
+              <span style={{ width: `${annotationProgress}%` }} />
+            </div>
           </div>
           <div className={s.thumbs}>
             {standard.images.map((item, index) => {
@@ -265,6 +339,7 @@ const ImagesContent = () => {
                   onClick={() => navigate(paths.standardImage(groupId, standardId, item.id))}
                 >
                   <img src={`/storage/${item.image_path}`} alt={`Image ${index + 1}`} />
+                  <span className={s.thumbMiniStats}>{index + 1}</span>
                   <div className={s.thumbOverlay}>
                     <span className={s.thumbIndex}>#{index + 1}</span>
                     <span className={s.thumbLabel}>
@@ -287,21 +362,21 @@ const ImagesContent = () => {
               className={clsx(mode === "view" && s.toolActive)}
               onClick={() => setMode("view")}
             >
-              <MousePointer2 /> View
+              <MousePointer2 /> View <kbd>V</kbd>
             </button>
             <button
               type="button"
               className={clsx(mode === "draw-polygon" && s.toolActive)}
               onClick={() => handleStartDraw("polygon")}
             >
-              <PenLine /> Draw
+              <PenLine /> Draw <kbd>D</kbd>
             </button>
             <button
               type="button"
               className={clsx(mode === "draw-sam" && s.toolActive)}
               onClick={() => handleStartDraw("sam")}
             >
-              <Sparkles /> Smart
+              <Sparkles /> Smart <kbd>S</kbd>
             </button>
             {mode !== "view" ? (
               <button type="button" onClick={handleCancelDraw}>
@@ -321,6 +396,18 @@ const ImagesContent = () => {
             <div className={s.selectClassHint}>Выбери класс справа, затем Draw или Smart</div>
           ) : null}
 
+          <div className={s.hotkeyRow}>
+            <kbd>←</kbd><span>prev</span>
+            <kbd>→</kbd><span>next</span>
+            <kbd>U</kbd><span>empty</span>
+          </div>
+
+          <div className={clsx(s.reviewCard, isCurrentAnnotated && s.reviewCardDone)}>
+            <span>{isCurrentAnnotated ? "Labeled" : "Needs label"}</span>
+            <strong>{polygonsCount} polygons</strong>
+            <small>{selectedSegmentClass ? `Class: ${selectedSegmentClass.name}` : "No class selected"}</small>
+          </div>
+
           <CanvasSurface
             imageUrl={imageUrl}
             imageId={imageId}
@@ -334,14 +421,42 @@ const ImagesContent = () => {
             selectedContourIndex={selectedContourIndex}
             onSelectContour={setSelectedContourIndex}
           />
+
+          <div className={s.bottomNavigator}>
+            <button type="button" disabled={!prevImage} onClick={handlePrev}>
+              <ChevronLeft /> Prev
+            </button>
+            <div className={s.bottomProgressPanel}>
+              <div className={s.bottomProgressText}>
+                <span>Image {safeIndex + 1} of {imageIds.length}</span>
+                <span>{annotationProgress}% labeled</span>
+              </div>
+              <div className={s.bottomProgressTrack}>
+                <span style={{ width: `${currentProgress}%` }} />
+              </div>
+            </div>
+            <button className={s.nextButton} type="button" disabled={!nextImage} onClick={handleNext}>
+              Next <ChevronRight />
+            </button>
+            <button className={s.skipButton} type="button" disabled={!nextUnannotatedImage} onClick={handleNextUnannotated}>
+              Empty <SkipForward />
+            </button>
+          </div>
         </main>
 
         <aside className={s.editorPanel}>
-          <div className={s.panelIntro}>
-            <Layers3 />
-            <div>
-              <strong>Classes</strong>
-              <span>{standard.stats.segment_classes_count} classes · {polygonsCount} polygons</span>
+          <div className={clsx(s.panelIntro, selectedSegmentClass && s.panelIntroSelected)}>
+            {selectedSegmentClass ? (
+              <span
+                className={s.selectedDot}
+                style={{ background: `hsl(${selectedSegmentClass.hue}, 70%, 50%)` }}
+              />
+            ) : (
+              <Layers3 />
+            )}
+            <div className={s.panelIntroText}>
+              <strong>{selectedSegmentClass?.name ?? "Classes"}</strong>
+              <span>{selectedSegmentClass ? "Selected class" : `${standard.stats.segment_classes_count} classes`} · {polygonsCount} polygons</span>
             </div>
           </div>
           {panel}

@@ -541,3 +541,444 @@
   .canvasColumn { min-height: 62svh; }
 }
 
+
+/* v7 editor flow polish: bottom navigator, progress, selected class */
+.editorBody {
+  grid-template-columns: 204px minmax(0, 1fr) 332px;
+}
+
+.filmstripHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 9px;
+  row-gap: 7px;
+}
+
+.filmstripHead svg {
+  color: #e1ff25;
+}
+
+.filmstripTitle {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.filmstripTitle strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fffdf6;
+  font-size: 12px;
+  font-weight: 920;
+  letter-spacing: -0.02em;
+}
+
+.filmstripTitle small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(255, 253, 246, 0.48);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.filmstripCount {
+  color: rgba(255, 253, 246, 0.72);
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.filmstripProgress {
+  grid-column: 1 / -1;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.filmstripProgress span {
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e1ff25, #20d85a);
+  box-shadow: 0 0 18px rgba(225, 255, 37, 0.24);
+}
+
+.thumb {
+  min-height: 116px;
+}
+
+.thumbMiniStats {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.58);
+  color: rgba(255, 253, 246, 0.82);
+  font-size: 10px;
+  font-weight: 900;
+  backdrop-filter: blur(12px);
+}
+
+.canvasMeta {
+  bottom: 66px;
+}
+
+.bottomNavigator {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 6;
+  transform: translateX(-50%);
+  width: min(680px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: auto minmax(170px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
+  background: rgba(8, 9, 10, 0.76);
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.bottomNavigator button {
+  min-width: 0;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 253, 246, 0.78);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.bottomNavigator button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fffdf6;
+}
+
+.bottomNavigator button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.bottomNavigator button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.bottomNavigator .nextButton {
+  background: #e1ff25;
+  color: #061007;
+}
+
+.bottomNavigator .nextButton:hover:not(:disabled) {
+  background: #eeff5a;
+  color: #061007;
+}
+
+.bottomProgressPanel {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 0 6px;
+}
+
+.bottomProgressText {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(255, 253, 246, 0.58);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bottomProgressTrack {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.bottomProgressTrack span {
+  display: block;
+  height: 100%;
+  min-width: 7px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e1ff25, #1bdc4a);
+}
+
+.hotkeyRow {
+  position: absolute;
+  right: 16px;
+  bottom: 67px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(8, 9, 10, 0.58);
+  color: rgba(255, 253, 246, 0.54);
+  font-size: 10px;
+  font-weight: 800;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.hotkeyRow kbd {
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.11);
+  color: rgba(255, 253, 246, 0.84);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.panelIntroSelected {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(225, 255, 37, 0.08), transparent 40%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.selectedDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.panelIntroText {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.panelIntroText strong,
+.panelIntroText span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1280px) {
+  .editorBody { grid-template-columns: 172px minmax(0, 1fr) 312px; }
+  .bottomNavigator { width: min(610px, calc(100% - 28px)); }
+}
+
+@media (max-width: 1050px) {
+  .editorBody { grid-template-columns: 132px minmax(0, 1fr) 294px; }
+  .filmstripTitle small { display: none; }
+  .bottomNavigator { grid-template-columns: auto 1fr auto; }
+  .skipButton { display: none !important; }
+}
+
+@media (max-width: 900px) {
+  .bottomNavigator {
+    position: static;
+    transform: none;
+    width: auto;
+    margin: 8px 10px 10px;
+  }
+
+  .canvasMeta,
+  .hotkeyRow { display: none; }
+}
+
+
+/* v8 editor maturity polish: cleaner stage, status card, softer rails */
+.editorShell {
+  background:
+    radial-gradient(circle at 18% -8%, rgba(225, 255, 37, 0.075), transparent 26%),
+    radial-gradient(circle at 68% 4%, rgba(4, 42, 255, 0.11), transparent 24%),
+    linear-gradient(180deg, #111416 0%, #090b0c 100%);
+}
+
+.editorTopbar {
+  border-bottom-color: rgba(255, 255, 255, 0.065);
+  background: rgba(14, 16, 17, 0.92);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18);
+}
+
+.editorBody {
+  grid-template-columns: 212px minmax(0, 1fr) 340px;
+}
+
+.filmstrip {
+  border-right-color: rgba(255, 255, 255, 0.065);
+  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.13);
+}
+
+.thumbs {
+  padding-bottom: 24px;
+}
+
+.thumb {
+  min-height: 122px;
+}
+
+.thumbOverlay {
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.thumb:hover .thumbOverlay,
+.thumbActive .thumbOverlay {
+  transform: translateY(-1px);
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.canvasColumn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28), transparent 90px, transparent calc(100% - 90px), rgba(0, 0, 0, 0.22)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.24), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.32));
+}
+
+.floatingToolstrip,
+.canvasMeta,
+.hotkeyRow,
+.bottomNavigator,
+.reviewCard,
+.selectClassHint {
+  z-index: 8;
+}
+
+.floatingToolstrip {
+  gap: 5px;
+  background: rgba(12, 13, 13, 0.86);
+  border-color: rgba(255, 255, 255, 0.095);
+}
+
+.floatingToolstrip button kbd {
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: currentColor;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.floatingToolstrip .toolActive kbd {
+  background: rgba(7, 16, 6, 0.12);
+}
+
+.reviewCard {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: min(240px, calc(100% - 420px));
+  display: grid;
+  gap: 5px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  background: rgba(10, 11, 12, 0.7);
+  color: rgba(255, 253, 246, 0.7);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  pointer-events: none;
+}
+
+.reviewCard span {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(255, 176, 32, 0.14);
+  color: #ffd98d;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.reviewCard strong {
+  color: #fffdf6;
+  font-size: 17px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.reviewCard small {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(255, 253, 246, 0.52);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.reviewCardDone span {
+  background: rgba(27, 220, 74, 0.15);
+  color: #83ff9e;
+}
+
+.reviewCardDone {
+  border-color: rgba(27, 220, 74, 0.16);
+}
+
+.editorPanel {
+  border-left-color: rgba(255, 255, 255, 0.065);
+  box-shadow: -22px 0 52px rgba(0, 0, 0, 0.14);
+}
+
+.panelIntro {
+  border-bottom-color: rgba(255, 255, 255, 0.065);
+}
+
+.bottomNavigator {
+  grid-template-columns: auto minmax(190px, 1fr) auto auto;
+}
+
+.bottomProgressTrack span,
+.filmstripProgress span {
+  transition: width 0.22s ease;
+}
+
+@media (max-width: 1320px) {
+  .editorBody { grid-template-columns: 188px minmax(0, 1fr) 324px; }
+  .reviewCard { display: none; }
+}
+
+@media (max-width: 1050px) {
+  .editorBody { grid-template-columns: 142px minmax(0, 1fr) 302px; }
+  .thumb { min-height: 92px; }
+}
+
