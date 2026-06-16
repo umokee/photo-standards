@@ -1,11 +1,22 @@
-import { Brain, Camera, FolderOpen, History, InspectIcon, Settings } from "lucide-react";
+import {
+  Camera,
+  Database,
+  FolderOpen,
+  History,
+  Home,
+  Rocket,
+  Settings,
+  TrainFront,
+} from "lucide-react";
 import { paths } from "./paths";
 
 export const appNavigation = [
-  { to: paths.groups(), icon: FolderOpen, label: "Группы" },
-  { to: paths.training(), icon: Brain, label: "Обучение" },
-  { to: paths.inspection(), icon: InspectIcon, label: "Контроль" },
-  { to: paths.inspectionHistory(), icon: History, label: "История" },
-  { to: paths.cameras(), icon: Camera, label: "Камеры" },
-  { to: paths.settingsSection("system"), icon: Settings, label: "Настройки" },
+  { to: paths.home(), icon: Home, label: "Home", section: "Главная" },
+  { to: paths.groups(), icon: Database, label: "Annotate", section: "Эталоны" },
+  { to: paths.training(), icon: TrainFront, label: "Train", section: "Модели" },
+  { to: paths.inspection(), icon: Rocket, label: "Deploy", section: "Проверка" },
+  { to: paths.inspectionHistory(), icon: History, label: "Runs", section: "История" },
+  { to: paths.cameras(), icon: Camera, label: "Sources", section: "Камеры" },
+  { to: paths.settingsSection("system"), icon: Settings, label: "Settings", section: "Система" },
+  { to: paths.groups(), icon: FolderOpen, label: "Explore", section: "Обзор" },
 ] as const;

@@ -1,0 +1,152 @@
+@use "@/styles/variables" as *;
+
+.page {
+  width: 100%;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.hero {
+  padding: 26px;
+  border: 1px solid $line-soft;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 78% 0%, rgba(132, 92, 255, 0.2), transparent 20rem),
+    $surface;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
+
+  span {
+    color: $primary-text;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  h1 {
+    margin-top: 8px;
+    color: $text;
+    font-size: clamp(34px, 5vw, 54px);
+    font-weight: 920;
+    line-height: 0.95;
+    letter-spacing: -0.07em;
+  }
+
+  p {
+    max-width: 760px;
+    margin-top: 12px;
+    color: $text-sub;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.card {
+  display: grid;
+  gap: 13px;
+  min-height: 230px;
+  padding: 18px;
+  border: 1px solid $line-soft;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.052);
+
+  &:hover {
+    border-color: $primary-bd;
+    transform: translateY(-2px);
+  }
+
+  > strong {
+    color: $text;
+    font-size: 19px;
+    font-weight: 920;
+    letter-spacing: -0.045em;
+  }
+
+  > p {
+    color: $text-sub;
+    font-size: 13px;
+  }
+}
+
+.top,
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: $ml-bg;
+  color: $ml-text;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.pill,
+.meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid $line-soft;
+  border-radius: 999px;
+  background: $surface2;
+  color: $text-hint;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.meta {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.open {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #071b63;
+  font-size: 12px;
+  font-weight: 900;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 12px;
+  }
+
+  .hero {
+    padding: 20px;
+    border-radius: 22px;
+  }
+}

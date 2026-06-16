@@ -4,10 +4,12 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  margin-inline: calc(-1 * $space-6);
-  padding: $space-3 $space-6;
+  margin: 0;
+  padding: $space-4;
   border-bottom: 1px solid $line-soft;
-  background: $page;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.035);
+  backdrop-filter: blur(16px);
   flex-shrink: 0;
 }
 
@@ -28,10 +30,11 @@
 }
 
 .title {
-  font-size: $text-page;
-  font-weight: $fw-semibold;
-  line-height: 1.25;
+  font-size: clamp(18px, 2.2vw, 26px);
+  font-weight: $fw-extrabold;
+  line-height: 1.05;
   color: $text;
+  letter-spacing: -0.05em;
   margin-bottom: $space-1;
   overflow-wrap: anywhere;
 }
@@ -46,7 +49,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: $space-5;
+  gap: $space-2;
   min-width: 0;
   font-size: $text-small;
   color: $text-sub;
@@ -58,6 +61,11 @@
   align-items: center;
   min-height: 0;
   line-height: 1.25;
+  padding: 5px $space-2;
+  border: 1px solid $line-soft;
+  border-radius: 999px;
+  background: $surface2;
+  font-weight: $fw-semibold;
 }
 
 .actions {
@@ -78,7 +86,7 @@
   }
 
   .title {
-    font-size: 16px;
+    font-size: 17px;
     line-height: 1.2;
     margin-bottom: 2px;
   }
@@ -110,20 +118,5 @@
       white-space: normal;
       text-align: center;
     }
-  }
-}
-
-@media (max-width: 1023px) {
-  .root {
-    margin-inline: calc(-1 * $space-5);
-    padding-inline: $space-5;
-  }
-}
-
-@media (max-width: 767px) {
-  .root {
-    position: static;
-    margin-inline: calc(-1 * $space-4);
-    padding: $space-2 $space-4;
   }
 }

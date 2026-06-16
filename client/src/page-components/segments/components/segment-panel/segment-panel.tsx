@@ -6,7 +6,8 @@ import {
   SegmentClassWithPoints,
 } from "@/types/contracts";
 import clsx from "clsx";
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { ManageSegmentGroups } from "../manage-segment-groups/manage-segment-groups";
 import s from "./segment-panel.module.scss";
 
@@ -43,7 +44,10 @@ export const SegmentPanel = ({
   onSelectContour,
   onDeleteContour,
 }: Props) => {
-  const allClasses = [...categories.flatMap((c) => c.segment_classes), ...ungroupedClasses];
+  const [classQuery, setClassQuery] = useState("");
+  const normalizedClassQuery = classQuery.trim().toLowerCase();
+  const isClassVisible = (name: string) =>
+    !normalizedClassQuery || name.toLowerCase().includes(normalizedClassQuery);
 
   const imageContours = imageSegmentClasses.flatMap((segmentClass) =>
     segmentClass.points.map((_, contourIndex) => ({
@@ -70,12 +74,21 @@ export const SegmentPanel = ({
           )}
         </div>
 
+        <label className={s.classSearch}>
+          <Search />
+          <input
+            value={classQuery}
+            onChange={(event) => setClassQuery(event.target.value)}
+            placeholder="Search classes..."
+          />
+        </label>
+
         <div className={s.classes}>
           {categories.map((category) => (
             <div key={category.id} className={s.groupBlock}>
               <span className={s.groupLabel}>{category.name}</span>
 
-              {category.segment_classes.map((cls) => {
+              {category.segment_classes.filter((cls) => isClassVisible(cls.name)).map((cls) => {
                 const imageItem = imageSegmentClasses.find((c) => c.id === cls.id);
                 const hasPoints = !!imageItem?.points.length;
 
@@ -105,7 +118,7 @@ export const SegmentPanel = ({
             <div className={s.groupBlock}>
               <span className={s.groupLabel}>Без категории</span>
 
-              {ungroupedClasses.map((segmentClass) => {
+              {ungroupedClasses.filter((segmentClass) => isClassVisible(segmentClass.name)).map((segmentClass) => {
                 const imageItem = imageSegmentClasses.find((item) => item.id === segmentClass.id);
                 const hasPoints = !!imageItem?.points.length;
 

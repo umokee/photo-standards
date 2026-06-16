@@ -2,10 +2,12 @@
 
 .card {
   background: $surface;
-  border: 1px solid $line;
-  border-radius: $radius;
+  border: 1px solid $line-soft;
+  border-radius: 18px;
   overflow: hidden;
   margin-bottom: $space-3;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.045);
+
   &--fill {
     display: flex;
     flex-direction: column;
@@ -17,14 +19,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px $space-4;
+    padding: 12px $space-4;
     border-bottom: 1px solid $line-soft;
     gap: $space-3;
     flex-shrink: 0;
+    background: $surface2;
 
     &-title {
       font-size: $text-small;
-      font-weight: $fw-semibold;
+      font-weight: $fw-bold;
       color: $text;
       display: flex;
       align-items: center;

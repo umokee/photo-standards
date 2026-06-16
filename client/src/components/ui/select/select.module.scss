@@ -2,22 +2,31 @@
 
 .root {
   width: 100%;
-  padding: $space-2 $space-3;
+  min-height: 36px;
+  padding: 0 34px 0 $space-3;
   font-size: $text-small;
   color: $text;
-  background: $surface2;
+  background:
+    linear-gradient(45deg, transparent 50%, $text-hint 50%) calc(100% - 17px) 50% / 5px 5px no-repeat,
+    linear-gradient(135deg, $text-hint 50%, transparent 50%) calc(100% - 12px) 50% / 5px 5px no-repeat,
+    $surface2;
   border: 1px solid $line;
-  border-radius: $radius;
+  border-radius: 13px;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
 
   &:focus {
-    border-color: $primary-bd;
+    border-color: $primary;
+    box-shadow: 0 0 0 4px $primary-bg;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.55;
     cursor: not-allowed;
   }
 }
@@ -27,5 +36,6 @@
 
   &:focus {
     border-color: $danger;
+    box-shadow: 0 0 0 4px $danger-bg;
   }
 }

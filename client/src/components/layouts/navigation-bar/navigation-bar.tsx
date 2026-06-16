@@ -24,9 +24,13 @@ const Link = ({ to, icon: Icon, children }: LinkProps) => {
   useInsideRoot("NavigationBar.Link");
 
   return (
-    <NavLink to={to} className={({ isActive }) => clsx(s.link, isActive && s.linkActive)}>
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => clsx(s.link, isActive && s.linkActive)}
+    >
       <Icon className={s.linkIcon} />
-      {children}
+      <span className={s.linkLabel}>{children}</span>
     </NavLink>
   );
 };
@@ -38,6 +42,14 @@ const Root = ({ children }: { children: ReactNode }) => {
     <InsideRootContext.Provider value={true}>
       <header className={s.root}>
         <div className={s.inner}>
+          <div className={s.brand} aria-label="Контроль изделий">
+            <span className={s.brandMark}>CV</span>
+            <span className={s.brandText}>
+              <span className={s.brandTitle}>Контроль изделий</span>
+              <span className={s.brandSubtitle}>reference inspection</span>
+            </span>
+          </div>
+
           {hasSidebar && (
             <button
               type="button"

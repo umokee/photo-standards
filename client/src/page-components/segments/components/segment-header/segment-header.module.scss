@@ -4,23 +4,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $space-3;
+  gap: 12px;
   width: 100%;
   min-width: 0;
+  color: #f6f2ea;
 }
 
 .left {
   display: flex;
   align-items: center;
-  gap: $space-2;
+  gap: 8px;
   min-width: 0;
   flex: 1 1 auto;
 }
 
 .title {
-  font-size: $text-title;
-  font-weight: $fw-semibold;
-  color: $text;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fffdf6;
   line-height: 1.2;
   min-width: 0;
   white-space: nowrap;
@@ -30,9 +31,15 @@
 }
 
 .metaItem {
-  font-size: $text-small;
-  font-weight: $fw-medium;
-  color: $text-sub;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(246, 242, 234, 0.72);
+  font-size: 12px;
+  font-weight: 800;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -40,28 +47,22 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: $space-2;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
+.root button {
+  min-height: 32px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.86);
+
+  &:hover { background: rgba(255, 255, 255, 0.12); }
+}
+
 @media (max-width: 767px) {
-  .root {
-    align-items: stretch;
-    flex-direction: column;
-    gap: $space-2;
-  }
-
-  .left {
-    flex-wrap: wrap;
-  }
-
-  .title {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-  .actions {
-    flex-wrap: wrap;
-  }
+  .root { align-items: stretch; flex-direction: column; gap: 8px; }
+  .left { flex-wrap: wrap; }
+  .title { white-space: normal; overflow: visible; text-overflow: clip; }
+  .actions { flex-wrap: wrap; }
 }

@@ -4,8 +4,9 @@
   display: flex;
   flex-direction: column;
   gap: $space-2;
-  padding: $space-3 $space-4;
+  padding: $space-4;
   border-bottom: 1px solid $line-soft;
+  background: $surface;
   flex-shrink: 0;
 }
 
@@ -18,9 +19,9 @@
 
 .title {
   font-size: $text-micro;
-  font-weight: $fw-semibold;
+  font-weight: $fw-bold;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   color: $text-hint;
 }
 
@@ -31,7 +32,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: $space-1;
+  padding: $space-2;
   gap: $space-1;
 }
 
@@ -41,9 +42,9 @@
   gap: $space-2;
   width: 100%;
   min-width: 0;
-  padding: $space-2;
-  border: 0;
-  border-radius: $radius;
+  padding: 10px $space-3;
+  border: 1px solid transparent;
+  border-radius: 14px;
   background: transparent;
   text-align: left;
   font: inherit;
@@ -55,7 +56,8 @@
   }
 
   &.itemActive {
-    background: $surface2;
+    background: $primary-bg;
+    border-color: $primary-bd;
   }
 }
 
@@ -76,7 +78,7 @@
 
   .itemActive & {
     color: $text;
-    font-weight: $fw-medium;
+    font-weight: $fw-semibold;
   }
 }
 
@@ -94,20 +96,22 @@
   color: $text-hint;
   font-weight: $fw-bold;
   background: $surface2;
-  padding: 0 $space-1;
-  border-radius: $radius;
+  border: 1px solid $line-soft;
+  padding: 1px $space-2;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .itemDot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: $line;
   flex-shrink: 0;
 
   .itemActive & {
     background: $primary;
+    box-shadow: 0 0 0 4px $primary-bg;
   }
 
   &.dotOk {
@@ -124,8 +128,9 @@
 }
 
 .footer {
-  padding: $space-2;
+  padding: $space-3;
   border-top: 1px solid $line-soft;
+  background: $surface;
   flex-shrink: 0;
 }
 

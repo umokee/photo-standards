@@ -1,0 +1,117 @@
+@use "@/styles/variables" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.hero {
+  flex-shrink: 0;
+  padding: 20px 22px;
+  border: 1px solid $line-soft;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.16), transparent 18rem),
+    $surface;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.045);
+
+  span {
+    color: $primary-text;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  h1 {
+    margin-top: 4px;
+    color: $text;
+    font-size: clamp(24px, 3vw, 38px);
+    font-weight: 920;
+    line-height: 1;
+    letter-spacing: -0.06em;
+  }
+
+  p {
+    max-width: 820px;
+    margin-top: 8px;
+    color: $text-sub;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+}
+
+.setupBar {
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid $line-soft;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.045);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+.canvas,
+.inspector {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid $line-soft;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.052);
+}
+
+.canvas {
+  display: flex;
+  flex-direction: column;
+}
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .inspector {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 12px;
+    overflow-y: auto;
+  }
+
+  .hero,
+  .setupBar,
+  .canvas,
+  .inspector {
+    border-radius: 18px;
+  }
+
+  .workspace {
+    overflow: visible;
+  }
+}

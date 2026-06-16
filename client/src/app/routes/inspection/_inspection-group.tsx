@@ -5,19 +5,5 @@ import { useLoaderData } from "react-router-dom";
 export function Component() {
   const { groupId } = useLoaderData() as { groupId: string };
   const { data: group } = useGetGroup(groupId);
-
-  const hasStandards = group.standards.length > 0;
-
-  return (
-    <QueryState
-      isEmpty
-      size="page"
-      emptyTitle={hasStandards ? "Выберите эталон" : "В этой группе нет эталонов"}
-      emptyDescription={
-        hasStandards
-          ? "Выберите эталон в верхней панели"
-          : "Выберите другую группу или создайте эталон"
-      }
-    />
-  );
+  return <QueryState isEmpty size="page" emptyTitle={group.standards.length ? "Select reference" : "No references"} emptyDescription={group.standards.length ? "Выбери эталон в верхней панели." : "Сначала добавь эталонные кадры."} />;
 }

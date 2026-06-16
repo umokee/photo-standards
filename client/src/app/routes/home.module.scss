@@ -1,0 +1,425 @@
+@use "@/styles/variables" as *;
+
+.page {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 22px;
+  min-height: 330px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid rgba(209, 218, 236, 0.82);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(158, 93, 255, 0.28), transparent 22rem),
+    radial-gradient(circle at 18% 8%, rgba(47, 148, 255, 0.24), transparent 24rem),
+    linear-gradient(135deg, #ffffff 0%, #f7fbff 50%, #eef4ff 100%);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.08);
+}
+
+.heroText {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.crumb {
+  width: fit-content;
+  padding: 7px 10px;
+  border: 1px solid $primary-bd;
+  border-radius: 999px;
+  background: $primary-bg;
+  color: $primary-text;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.heroText h1 {
+  max-width: 780px;
+  color: #07112e;
+  font-size: clamp(36px, 6vw, 66px);
+  font-weight: 920;
+  line-height: 0.92;
+  letter-spacing: -0.075em;
+}
+
+.heroText p {
+  max-width: 700px;
+  color: $text-sub;
+  font-size: clamp(14px, 1.4vw, 17px);
+  line-height: 1.68;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 850;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.primaryButton {
+  background: #071b63;
+  color: #fff;
+  box-shadow: 0 18px 34px rgba(7, 27, 99, 0.22);
+}
+
+.secondaryButton {
+  border: 1px solid $line-soft;
+  background: rgba(255, 255, 255, 0.82);
+  color: $text-sub;
+}
+
+.heroPreview {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  min-height: 280px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.13);
+  backdrop-filter: blur(18px);
+}
+
+.previewTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: $text;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: $text-hint;
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  strong {
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    color: $primary;
+  }
+}
+
+.previewCanvas {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(12, 23, 52, 0.82), rgba(12, 23, 52, 0.36)),
+    radial-gradient(circle at 22% 30%, rgba(45, 212, 191, 0.55), transparent 12rem),
+    radial-gradient(circle at 72% 56%, rgba(99, 102, 241, 0.62), transparent 14rem),
+    #0a1022;
+}
+
+.mockObject {
+  position: absolute;
+  inset: 28% 18% 22% 22%;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.mockPolygonA,
+.mockPolygonB {
+  position: absolute;
+  border: 2px solid rgba(45, 212, 191, 0.96);
+  border-radius: 14px;
+  background: rgba(45, 212, 191, 0.14);
+}
+
+.mockPolygonA {
+  left: 30%;
+  top: 34%;
+  width: 26%;
+  height: 22%;
+}
+
+.mockPolygonB {
+  right: 22%;
+  bottom: 25%;
+  width: 23%;
+  height: 18%;
+  border-color: rgba(248, 113, 113, 0.96);
+  background: rgba(248, 113, 113, 0.14);
+}
+
+.mockBadge {
+  position: absolute;
+  right: 22%;
+  bottom: 20%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.95);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.previewStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  span {
+    padding: 6px 9px;
+    border: 1px solid $line-soft;
+    border-radius: 999px;
+    background: $surface;
+    color: $text-hint;
+    font-size: 11px;
+    font-weight: 850;
+  }
+}
+
+.launchGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.launchCard,
+.workflowCard,
+.sidePanel {
+  border: 1px solid rgba(209, 218, 236, 0.82);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.055);
+}
+
+.launchCard {
+  display: grid;
+  gap: 12px;
+  min-height: 214px;
+  padding: 20px;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: $primary-bd;
+    box-shadow: 0 24px 58px rgba(15, 23, 42, 0.09);
+  }
+
+  strong {
+    color: $text;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  p {
+    color: $text-sub;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: $primary-bg;
+  color: $primary-text;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.cardAction {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #071b63;
+  font-size: 12px;
+  font-weight: 900;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.workspaceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.workflowCard,
+.sidePanel {
+  padding: 20px;
+}
+
+.sectionHead {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: $text-hint;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  strong {
+    color: $text;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+    color: $primary;
+  }
+}
+
+.pipelineGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pipelineItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid $line-soft;
+  border-radius: 18px;
+  background: $surface2;
+
+  > svg {
+    width: 18px;
+    height: 18px;
+    color: $primary-text;
+  }
+
+  strong {
+    display: block;
+    color: $text;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  p {
+    margin-top: 3px;
+    color: $text-hint;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.sidePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid $line-soft;
+    border-radius: 15px;
+    background: $surface2;
+    color: $text-sub;
+    font-size: 12px;
+    font-weight: 850;
+
+    &:hover {
+      border-color: $primary-bd;
+      background: $primary-bg;
+      color: $text;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+      color: $primary-text;
+    }
+  }
+}
+
+@media (max-width: 1120px) {
+  .hero,
+  .launchGrid,
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 12px;
+  }
+
+  .hero {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .heroText h1 {
+    font-size: clamp(34px, 12vw, 48px);
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+
+  .pipelineGrid {
+    grid-template-columns: 1fr;
+  }
+}

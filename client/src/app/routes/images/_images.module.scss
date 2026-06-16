@@ -1,0 +1,543 @@
+@use "@/styles/variables" as *;
+
+.editorShell {
+  height: calc(100svh - 52px);
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 28% 0%, rgba(4, 42, 255, 0.14), transparent 34%),
+    radial-gradient(circle at 72% 12%, rgba(225, 255, 37, 0.08), transparent 28%),
+    #0f1113;
+  color: #f6f2ea;
+  overflow: hidden;
+}
+
+.editorTopbar {
+  min-height: 50px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 19, 20, 0.86);
+  backdrop-filter: blur(18px);
+  flex-shrink: 0;
+}
+
+.editorBody {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) 330px;
+  overflow: hidden;
+}
+
+.filmstrip {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 15, 16, 0.94);
+}
+
+.filmstripHead {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(246, 242, 234, 0.74);
+  font-size: 12px;
+  font-weight: 800;
+
+  svg { width: 15px; height: 15px; }
+}
+
+.thumbs {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.14;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+  background: #17191b;
+  cursor: pointer;
+  opacity: 0.72;
+  transition: opacity 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+
+  &:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+}
+
+.thumbActive {
+  opacity: 1;
+  border-color: #e1ff25;
+  box-shadow: 0 0 0 1px #e1ff25, 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
+.thumbIndex,
+.thumbState {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.thumbIndex { left: 6px; top: 6px; min-width: 18px; height: 18px; }
+.thumbState { right: 6px; top: 6px; width: 18px; height: 18px; }
+.thumbState svg { width: 12px; height: 12px; }
+.thumbStateDone { color: #7dff9f; }
+
+.canvasColumn {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0b0d0f;
+}
+
+.canvasMeta {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 4;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 32px);
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(8, 9, 10, 0.72);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+
+  span {
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  span:last-child {
+    color: #08110b;
+    background: #e1ff25;
+  }
+}
+
+.editorPanel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 20, 21, 0.96);
+}
+
+.panelIntro {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  svg { width: 18px; height: 18px; color: #e1ff25; }
+
+  div { min-width: 0; display: grid; gap: 2px; }
+  strong { font-size: 14px; letter-spacing: -0.02em; }
+  span { color: rgba(246, 242, 234, 0.56); font-size: 11px; font-weight: 700; }
+}
+
+@media (max-width: 1180px) {
+  .editorBody { grid-template-columns: 88px minmax(0, 1fr) 300px; }
+}
+
+@media (max-width: 900px) {
+  .editorShell { height: auto; min-height: calc(100svh - 52px); overflow: visible; }
+  .editorBody { grid-template-columns: 1fr; overflow: visible; }
+  .filmstrip { display: none; }
+  .canvasColumn { height: 62svh; min-height: 420px; }
+  .editorPanel { min-height: 420px; }
+}
+
+
+/* v5 editor fix + polish */
+.editorShell {
+  height: calc(100svh - 48px);
+}
+
+.editorBody {
+  grid-template-columns: 104px minmax(0, 1fr) 318px;
+}
+
+.canvasColumn {
+  isolation: isolate;
+}
+
+.floatingToolstrip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 14, 14, 0.76);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.floatingToolstrip button {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 253, 246, 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.floatingToolstrip button:hover,
+.floatingToolstrip .toolActive {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fffdf6;
+}
+
+.floatingToolstrip .toolActive {
+  background: #e1ff25;
+  color: #071006;
+}
+
+.floatingToolstrip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.selectClassHint {
+  position: absolute;
+  left: 12px;
+  top: 56px;
+  z-index: 5;
+  max-width: 280px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(225, 255, 37, 0.24);
+  background: rgba(225, 255, 37, 0.11);
+  color: #f3ff8b;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.thumb {
+  aspect-ratio: 0.92;
+}
+
+.editorPanel {
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.16);
+}
+
+@media (max-width: 1180px) {
+  .editorBody { grid-template-columns: 84px minmax(0, 1fr) 294px; }
+}
+
+@media (max-width: 900px) {
+  .floatingToolstrip {
+    left: 10px;
+    right: 10px;
+    overflow-x: auto;
+  }
+
+  .selectClassHint {
+    left: 10px;
+    top: 58px;
+  }
+}
+
+
+/* v6 editor filmstrip + polish */
+.editorShell {
+  height: calc(100svh - 48px);
+  background:
+    radial-gradient(circle at 20% -10%, rgba(225, 255, 37, 0.09), transparent 28%),
+    radial-gradient(circle at 78% 0%, rgba(4, 42, 255, 0.12), transparent 26%),
+    #0f1113;
+}
+
+.editorBody {
+  grid-template-columns: 196px minmax(0, 1fr) 320px;
+}
+
+.filmstrip {
+  gap: 12px;
+  padding: 12px 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 120px),
+    rgba(13, 15, 16, 0.97);
+}
+
+.filmstripHead {
+  height: auto;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 253, 246, 0.82);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.filmstripHead span {
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+
+.thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 0 4px 14px 0;
+  scroll-padding-block: 14px;
+}
+
+.thumbs::-webkit-scrollbar,
+.classes::-webkit-scrollbar,
+.anns::-webkit-scrollbar {
+  width: 8px;
+}
+
+.thumbs::-webkit-scrollbar-thumb,
+.classes::-webkit-scrollbar-thumb,
+.anns::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.thumb {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 108px;
+  aspect-ratio: 1.56;
+  border-radius: 15px;
+  opacity: 0.86;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #0b0c0d;
+  overflow: hidden;
+  scroll-margin-block: 18px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+}
+
+.thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 38%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent 58%);
+  pointer-events: none;
+}
+
+.thumb:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+  border-color: rgba(225, 255, 37, 0.32);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.98) contrast(1.02);
+  transform: scale(1.001);
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.thumb:hover img,
+.thumbActive img {
+  transform: scale(1.035);
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.thumbActive {
+  opacity: 1;
+  border-color: #e1ff25;
+  box-shadow:
+    0 0 0 1px #e1ff25,
+    0 18px 38px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.thumbOverlay {
+  position: absolute;
+  inset: auto 7px 7px;
+  z-index: 2;
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.62);
+  color: rgba(255, 253, 246, 0.88);
+  backdrop-filter: blur(13px);
+}
+
+.thumbOverlay .thumbIndex,
+.thumbOverlay .thumbState {
+  position: static;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+
+.thumbIndex {
+  min-width: 27px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fffdf6;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.thumbLabel {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(255, 253, 246, 0.76);
+  font-size: 10px;
+  font-weight: 850;
+  text-align: left;
+}
+
+.thumbState {
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 253, 246, 0.64);
+}
+
+.thumbStateDone {
+  background: rgba(27, 220, 74, 0.18);
+  color: #73ff94;
+}
+
+.canvasColumn {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.055), transparent 34%),
+    #080a0b;
+}
+
+.canvasColumn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 55%, rgba(0, 0, 0, 0.28));
+}
+
+.floatingToolstrip {
+  top: 14px;
+  left: 14px;
+  border-radius: 14px;
+  padding: 6px;
+  background: rgba(15, 16, 16, 0.82);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+}
+
+.floatingToolstrip button {
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 10px;
+}
+
+.canvasMeta {
+  bottom: 18px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(8, 9, 10, 0.76);
+}
+
+.selectClassHint {
+  top: 62px;
+  left: 14px;
+}
+
+.editorPanel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 96px),
+    rgba(18, 20, 21, 0.98);
+}
+
+.panelIntro {
+  min-height: 62px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+@media (max-width: 1280px) {
+  .editorBody { grid-template-columns: 164px minmax(0, 1fr) 304px; }
+  .thumb { min-height: 94px; }
+}
+
+@media (max-width: 1050px) {
+  .editorBody { grid-template-columns: 128px minmax(0, 1fr) 294px; }
+  .thumb { min-height: 78px; border-radius: 13px; }
+  .thumbLabel { display: none; }
+  .thumbOverlay { grid-template-columns: auto auto; justify-content: space-between; }
+}
+
+@media (max-width: 900px) {
+  .editorBody { grid-template-columns: 1fr; }
+  .filmstrip { display: none; }
+  .canvasColumn { min-height: 62svh; }
+}
+

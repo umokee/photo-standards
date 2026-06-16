@@ -1,6 +1,6 @@
 import { queryClient } from "@/lib/query-client";
 import { getConstantsQueryOptions } from "@/page-components/meta/get-constants";
-import { createBrowserRouter, redirect } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { paths } from "./paths";
 import { camerasRoute } from "./routes/cameras/routes";
 import { groupsRoute } from "./routes/groups/routes";
@@ -13,6 +13,8 @@ import RouteLoadingFallback from "./routes/route-loading-fallback";
 import { settingsRoute } from "./routes/settings/routes";
 import { trainingRoute } from "./routes/training/routes";
 
+const HomeRoute = () => import("./routes/home");
+
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
@@ -24,9 +26,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: paths.home(),
-        loader: async () => {
-          throw redirect(paths.groups());
-        },
+        lazy: HomeRoute,
       },
       groupsRoute,
       imagesRoute,

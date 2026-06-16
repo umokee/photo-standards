@@ -1,89 +1,36 @@
-import { Sidebar } from "@/components/layouts/sidebar/sidebar";
-import { SplitLayout } from "@/components/layouts/split-layout/split-layout";
+import { paths } from "@/app/paths";
 import Input from "@/components/ui/input/input";
 import QueryState from "@/components/ui/query-state/query-state";
-import useSidebar from "@/hooks/use-sidebar";
 import { useGetCameras } from "@/page-components/cameras/api/get-cameras";
 import { CreateCamera } from "@/page-components/cameras/components/create-camera";
-import {
-  filterCamerasBySearch,
-  getCameraSidebarMeta,
-  getCameraStatusMeta,
-} from "@/page-components/cameras/lib/camera-view";
+import { filterCamerasBySearch, getCameraSidebarMeta, getCameraStatusMeta } from "@/page-components/cameras/lib/camera-view";
 import { useCameraStatusLive } from "@/page-components/cameras/hooks/use-camera-status-live";
+import clsx from "clsx";
 import { useMemo, useState } from "react";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
-import { paths } from "../../paths";
+import { Link, Outlet, useParams } from "react-router-dom";
+import p from "../platform-pages.module.scss";
 
 export function Component() {
   const { cameraId = null } = useParams();
   const [search, setSearch] = useState("");
-
-  const navigate = useNavigate();
-  const { close: closeSidebar } = useSidebar();
   const { data: cameras = [], isLoading, isError } = useGetCameras();
-
   useCameraStatusLive({ scope: "cameras" });
-
   const filtered = useMemo(() => filterCamerasBySearch(cameras, search), [cameras, search]);
 
   return (
-    <SplitLayout>
-      <SplitLayout.Sidebar>
-        <Sidebar>
-          <Sidebar.Header>
-            <Sidebar.HeaderTop>
-              <Sidebar.Title>Камеры</Sidebar.Title>
-            </Sidebar.HeaderTop>
-
-            <Input placeholder="Поиск..." noMargin value={search} onChange={setSearch} />
-          </Sidebar.Header>
-
-          <Sidebar.List>
-            <QueryState
-              isLoading={isLoading}
-              isError={isError}
-              isEmpty={!filtered.length}
-              emptyTitle="Нет камер"
-              emptyDescription={search && "Попробуйте изменить запрос или очистить поиск"}
-            >
-              {filtered.map((camera) => {
-                const status = getCameraStatusMeta(camera);
-
-                return (
-                  <Sidebar.Item
-                    key={camera.id}
-                    active={cameraId === camera.id}
-                    onClick={() => {
-                      navigate(paths.cameraDetail(camera.id));
-                      closeSidebar();
-                    }}
-                  >
-                    <Sidebar.ItemDot status={status.dotStatus} />
-
-                    <Sidebar.ItemBody>
-                      <Sidebar.ItemName>{camera.name}</Sidebar.ItemName>
-                      <Sidebar.ItemMeta>{getCameraSidebarMeta(camera)}</Sidebar.ItemMeta>
-                    </Sidebar.ItemBody>
-
-                    <Sidebar.ItemSide>{camera.protocol.toUpperCase()}</Sidebar.ItemSide>
-                  </Sidebar.Item>
-                );
-              })}
+    <div className={p.page}>
+      <header className={p.ultraHeader}><div><h1>Sources</h1><p>IP/USB камеры для snapshot и realtime deployment.</p></div><div className={p.headerActions}><CreateCamera /></div></header>
+      <div className={p.cameraGrid}>
+        <aside className={p.listPanel}>
+          <div className={p.listPanelHeader}><Input noMargin placeholder="Search cameras..." value={search} onChange={setSearch} /></div>
+          <div className={p.listItems}>
+            <QueryState isLoading={isLoading} isError={isError} isEmpty={!filtered.length} emptyTitle="No cameras">
+              {filtered.map((camera) => { const status = getCameraStatusMeta(camera); return <Link key={camera.id} className={clsx(p.listItem, cameraId === camera.id && p.listItemActive)} to={paths.cameraDetail(camera.id)}><span className={clsx(p.statusDot, status.dotStatus === "success" && p.statusOnline, status.dotStatus === "danger" && p.statusOffline)} /><span><strong>{camera.name}</strong><small>{getCameraSidebarMeta(camera)}</small></span><small>{camera.protocol.toUpperCase()}</small></Link>; })}
             </QueryState>
-          </Sidebar.List>
-
-          <Sidebar.Footer>
-            <CreateCamera />
-          </Sidebar.Footer>
-        </Sidebar>
-      </SplitLayout.Sidebar>
-
-      <SplitLayout.Content>
-        <SplitLayout.Body>
-          <Outlet />
-        </SplitLayout.Body>
-      </SplitLayout.Content>
-    </SplitLayout>
+          </div>
+        </aside>
+        <Outlet />
+      </div>
+    </div>
   );
 }
