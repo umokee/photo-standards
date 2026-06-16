@@ -22,13 +22,22 @@ export function Component() {
   const selectedGroup = groupsById[groupId] ?? null;
   const getInspectionSearchText = useCallback((item: InspectionHistoryItem) => [item.id, item.standard_name, item.camera_name, item.model_name, item.mode, inspectionModeLabel(item.mode), item.status, inspectionStatusLabel(item.status), item.notes, formatInspectionHistoryDateTime(item.inspected_at)].filter(Boolean).join(" "), []);
   const { search, setSearch, filtered } = useSearch({ items: groupHistory, getText: getInspectionSearchText });
+  const passedRuns = filtered.filter((item) => item.status === "passed").length;
+  const issueRuns = filtered.filter((item) => item.status !== "passed").length;
+  const photoRuns = filtered.filter((item) => item.mode === "photo").length;
 
   if (!selectedGroup) return <QueryState isEmpty size="page" emptyTitle="Dataset not found" />;
 
   return (
     <div className={p.page}>
       <header className={p.ultraHeader}><div><h1>{selectedGroup.name}</h1><p>{filtered.length} inspection runs</p></div></header>
-      <div className={p.panelCard}><Input noMargin placeholder="Search runs..." value={search} onChange={setSearch} /></div>
+      <div className={p.runSummaryGrid}>
+        <div className={p.runSummaryCard}><b>{filtered.length}</b><span>Total runs</span><small>Saved inspections</small></div>
+        <div className={`${p.runSummaryCard} ${p.runSummaryOk}`}><b>{passedRuns}</b><span>Passed</span><small>Without missing items</small></div>
+        <div className={`${p.runSummaryCard} ${p.runSummaryWarn}`}><b>{issueRuns}</b><span>Need review</span><small>Missing or uncertain</small></div>
+        <div className={p.runSummaryCard}><b>{photoRuns}</b><span>Photo mode</span><small>Manual uploads</small></div>
+      </div>
+      <div className={p.panelCard}><Input noMargin placeholder="Search runs, reference, status, camera..." value={search} onChange={setSearch} /></div>
       <Outlet context={{ groupId, selectedGroup, history: filtered, buildInspectionPath: (inspectionId: string | null) => inspectionId ? paths.inspectionHistoryDetail(groupId, inspectionId) : paths.inspectionHistoryGroup(groupId) }} />
     </div>
   );

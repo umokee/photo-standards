@@ -2,40 +2,40 @@
 
 .root {
   width: 100%;
-  min-height: 36px;
-  padding: 0 34px 0 $space-3;
-  font-size: $text-small;
-  color: $text;
+  height: 40px;
+  padding: 0 36px 0 12px;
+  font-size: 13px;
+  color: #191510;
   background:
-    linear-gradient(45deg, transparent 50%, $text-hint 50%) calc(100% - 17px) 50% / 5px 5px no-repeat,
-    linear-gradient(135deg, $text-hint 50%, transparent 50%) calc(100% - 12px) 50% / 5px 5px no-repeat,
-    $surface2;
-  border: 1px solid $line;
-  border-radius: 13px;
+    linear-gradient(45deg, transparent 50%, #7b7064 50%) calc(100% - 17px) 17px / 5px 5px no-repeat,
+    linear-gradient(135deg, #7b7064 50%, transparent 50%) calc(100% - 12px) 17px / 5px 5px no-repeat,
+    #fffdf9;
+  border: 1px solid #e8ddce;
+  border-radius: 11px;
   outline: none;
   cursor: pointer;
-  -webkit-appearance: none;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background-color 0.16s ease;
+  appearance: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+
+  &:hover { border-color: #d9c8b3; }
 
   &:focus {
-    border-color: $primary;
-    box-shadow: 0 0 0 4px $primary-bg;
+    border-color: #8ea2ff;
+    background-color: #fff;
+    box-shadow: 0 0 0 4px rgba(4, 42, 255, 0.11);
   }
 
   &:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 }
 
 .fieldError {
-  border-color: $danger-bd;
+  border-color: #f5a29a;
 
   &:focus {
-    border-color: $danger;
-    box-shadow: 0 0 0 4px $danger-bg;
+    border-color: #d92d20;
+    box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.11);
   }
 }

@@ -1,4 +1,6 @@
 import clsx from "clsx";
+import { AlertTriangle, Box, Loader2, SearchX } from "lucide-react";
+import type { ReactNode } from "react";
 import s from "./query-state.module.scss";
 
 type Size = "inline" | "block" | "page";
@@ -13,21 +15,28 @@ interface Props {
   errorDescription?: string;
   emptyTitle?: string;
   emptyDescription?: string;
-  action?: React.ReactNode;
-  children?: React.ReactNode;
+  action?: ReactNode;
+  children?: ReactNode;
 }
 
-const StateContainer = ({ size, children }: { size: Size; children: React.ReactNode }) => {
-  return <div className={clsx(s.state, s[`state--${size}`])}>{children}</div>;
+const StateContainer = ({ size, tone, children }: { size: Size; tone?: "loading" | "empty" | "error"; children: ReactNode }) => {
+  return <div className={clsx(s.state, s[`state--${size}`], tone && s[`state--${tone}`])}>{children}</div>;
 };
 
 const LoadingState = ({ size, text }: { size: Size; text: string }) => {
   return (
-    <StateContainer size={size}>
+    <StateContainer size={size} tone="loading">
       <div className={clsx(s.icon, s.iconLoading)}>
-        <span className={s.ring} />
+        <Loader2 />
       </div>
       <span className={s.title}>{text}</span>
+      {size !== "inline" ? (
+        <div className={s.skeletonGrid} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : null}
     </StateContainer>
   );
 };
@@ -41,10 +50,13 @@ const ErrorState = ({
   size: Size;
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) => {
   return (
-    <StateContainer size={size}>
+    <StateContainer size={size} tone="error">
+      <div className={clsx(s.icon, s.iconError)}>
+        <AlertTriangle />
+      </div>
       <span className={clsx(s.title, s.titleError)}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}
@@ -61,10 +73,13 @@ const EmptyState = ({
   size: Size;
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) => {
   return (
-    <StateContainer size={size}>
+    <StateContainer size={size} tone="empty">
+      <div className={s.icon}>
+        {description ? <SearchX /> : <Box />}
+      </div>
       <span className={s.title}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}
@@ -90,15 +105,11 @@ export default function QueryState({
   }
 
   if (isError) {
-    return (
-      <ErrorState size={size} title={errorTitle} description={errorDescription} action={action} />
-    );
+    return <ErrorState size={size} title={errorTitle} description={errorDescription} action={action} />;
   }
 
   if (isEmpty) {
-    return (
-      <EmptyState size={size} title={emptyTitle} description={emptyDescription} action={action} />
-    );
+    return <EmptyState size={size} title={emptyTitle} description={emptyDescription} action={action} />;
   }
 
   return children ?? null;

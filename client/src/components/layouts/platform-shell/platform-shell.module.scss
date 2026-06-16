@@ -444,3 +444,367 @@
   background: rgba(15, 17, 18, 0.88);
 }
 
+
+/* v9 shell micro-polish */
+.main {
+  min-width: 0;
+}
+
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 246, 0.98), rgba(255, 250, 241, 0.98));
+}
+
+.navItem,
+.navSubItem,
+.utilityLink {
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.navItem:hover,
+.navSubItem:hover,
+.utilityLink:hover {
+  transform: translateX(1px);
+}
+
+.topIconButton,
+.balancePill {
+  transition: transform 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+
+.topIconButton:hover,
+.balancePill:hover {
+  transform: translateY(-1px);
+}
+
+
+/* v10 page rhythm polish */
+.content {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(4, 42, 255, 0.035), transparent 26%),
+    linear-gradient(180deg, #fffdf8, #fffaf3 320px, #fffdf8);
+}
+
+.sidebar {
+  border-right-color: #efe6da;
+}
+
+.navSubItem sup {
+  min-width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f5eadc;
+  color: #83786d;
+  font-size: 9px;
+}
+
+/* v13 command palette and mature shell polish */
+.searchBox {
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+}
+
+.searchBox span,
+.topbarCenter span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #82796e;
+}
+
+.topbarCenter {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 38px;
+  border: 1px solid #eee7dc;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #80766b;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease, transform .14s ease;
+}
+
+.topbarCenter:hover {
+  transform: translateY(-1px);
+  border-color: rgba(4, 42, 255, .18);
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(48, 36, 12, .06);
+}
+
+.topbarCenter svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.treeHeader b {
+  margin-left: auto;
+  min-width: 20px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f3eadf;
+  color: #81766b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.treeHeader > svg:last-child {
+  margin-left: 0;
+}
+
+.commandOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: min(12svh, 92px) 18px 24px;
+  background: rgba(22, 17, 10, 0.32);
+  backdrop-filter: blur(14px) saturate(118%);
+}
+
+.commandDialog {
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100svh - 80px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(238, 229, 218, 0.92);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.07), transparent 35%),
+    #fffdf8;
+  box-shadow: 0 34px 100px rgba(35, 24, 10, 0.24);
+}
+
+.commandSearchRow {
+  display: grid;
+  grid-template-columns: 22px 1fr 34px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0e7dc;
+}
+
+.commandSearchRow svg {
+  width: 18px;
+  height: 18px;
+  color: #82786c;
+}
+
+.commandSearchRow input {
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #17130f;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.commandSearchRow input::placeholder {
+  color: #a1978a;
+}
+
+.commandSearchRow button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #eee5da;
+  border-radius: 12px;
+  background: #fffaf2;
+  color: #766c61;
+  cursor: pointer;
+}
+
+.commandMetaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f2e9df;
+  color: #897d70;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.commandMetaRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.commandMetaRow svg {
+  width: 15px;
+  height: 15px;
+}
+
+.commandList {
+  min-height: 180px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.commandItem {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background .14s ease, transform .14s ease;
+}
+
+.commandItem:hover {
+  transform: translateY(-1px);
+  background: #f6efe6;
+}
+
+.commandIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ece2d6;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #fff, #fff8ef);
+  color: #042aff;
+}
+
+.commandIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.commandText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.commandText strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #17130f;
+  font-size: 13px;
+  font-weight: 860;
+}
+
+.commandText small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #81766b;
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.commandItem b {
+  padding: 5px 8px;
+  border: 1px solid #eee5da;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #81766b;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.commandEmpty {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #81766b;
+  text-align: center;
+}
+
+.commandEmpty svg {
+  width: 28px;
+  height: 28px;
+  color: #a2978b;
+}
+
+.commandEmpty strong {
+  color: #17130f;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.commandEmpty span {
+  max-width: 320px;
+  font-size: 12px;
+  font-weight: 640;
+  line-height: 1.45;
+}
+
+.editorMode .commandDialog {
+  border-color: rgba(255,255,255,.12);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(225, 255, 37, 0.08), transparent 35%),
+    #17191a;
+}
+
+.editorMode .commandSearchRow,
+.editorMode .commandMetaRow {
+  border-color: rgba(255,255,255,.08);
+}
+
+.editorMode .commandSearchRow input,
+.editorMode .commandText strong,
+.editorMode .commandEmpty strong {
+  color: #f7f4ec;
+}
+
+.editorMode .commandSearchRow button,
+.editorMode .commandIcon,
+.editorMode .commandItem b {
+  border-color: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.06);
+}
+
+.editorMode .commandItem:hover {
+  background: rgba(255,255,255,.07);
+}
+
+@media (max-width: 720px) {
+  .commandOverlay {
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  .commandDialog {
+    max-height: calc(100svh - 24px);
+    border-radius: 22px;
+  }
+
+  .commandItem {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .commandItem b {
+    display: none;
+  }
+}
+

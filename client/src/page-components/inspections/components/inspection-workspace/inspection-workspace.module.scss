@@ -17,3 +17,136 @@
 .overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(6,8,17,.72); backdrop-filter: blur(8px); }
 .streamError { position: absolute; left: 16px; right: 16px; bottom: 16px; padding: 12px; border-radius: 12px; background: rgba(255,77,90,.16); color: #fff; }
 .deviceCaptureVideo { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+
+/* v9 inspection workspace polish */
+.root {
+  position: relative;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 74% 18%, rgba(4, 42, 255, 0.24), transparent 26%),
+    radial-gradient(circle at 25% 78%, rgba(225, 255, 37, 0.1), transparent 30%),
+    #050712;
+}
+
+.viewer {
+  isolation: isolate;
+}
+
+.viewer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at 50% 50%, black, transparent 78%);
+  opacity: 0.5;
+}
+
+.viewer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.34));
+}
+
+.imageViewer,
+.video,
+.centerState,
+.overlay,
+.streamError,
+.referenceThumbDock {
+  position: relative;
+  z-index: 3;
+}
+
+.emptyCard {
+  width: min(460px, calc(100% - 32px));
+  padding: 28px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(9, 11, 17, 0.76);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.emptyTitle {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.emptyText {
+  line-height: 1.55;
+}
+
+.referenceThumbDock {
+  width: 138px;
+  right: 18px;
+  bottom: 18px;
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.46);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(16px);
+}
+
+.overlay {
+  z-index: 10;
+}
+
+.streamError {
+  left: 18px;
+  right: auto;
+  max-width: 520px;
+  border: 1px solid rgba(255, 77, 90, 0.26);
+  background: rgba(48, 10, 14, 0.78);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+}
+
+/* v13 inspection viewer maturity polish */
+.workspace,
+.viewer,
+.panel,
+.preview,
+.resultImage,
+.referenceCard {
+  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease, transform .14s ease;
+}
+
+.viewer:hover,
+.panel:hover,
+.preview:hover,
+.referenceCard:hover {
+  border-color: rgba(4, 42, 255, .16);
+  box-shadow: 0 18px 48px rgba(55, 42, 16, .07);
+}
+
+.resultImage img,
+.preview img,
+.referenceCard img {
+  transition: transform .22s ease, filter .22s ease;
+}
+
+.resultImage:hover img,
+.preview:hover img,
+.referenceCard:hover img {
+  transform: scale(1.015);
+  filter: saturate(1.04) contrast(1.02);
+}
+
+.statusBadge,
+.resultBadge,
+.metricBadge {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+}
+

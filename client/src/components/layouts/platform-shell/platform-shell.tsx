@@ -3,13 +3,16 @@ import { getGroupsQueryOptions } from "@/page-components/groups/api/get-groups";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
+  Activity,
   Bell,
+  Camera,
   ChevronDown,
   Database,
   FolderOpen,
   Grid3X3,
   HelpCircle,
   Home,
+  ListChecks,
   Menu,
   Moon,
   Plus,
@@ -17,6 +20,7 @@ import {
   Search,
   Settings,
   Trash2,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -34,6 +38,14 @@ type Props = {
   navigation: readonly NavigationItem[];
 };
 
+type CommandItem = {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  group: string;
+};
+
 const pageMeta = [
   { test: (path: string) => path === "/", title: "Home", trail: ["Home"] },
   { test: (path: string) => path.startsWith("/groups"), title: "Annotate", trail: ["Home", "Annotate"] },
@@ -48,12 +60,92 @@ export const PlatformShell = ({ navigation }: Props) => {
   const location = useLocation();
   const routerNavigation = useNavigation();
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+  const [isCommandOpen, setIsCommandOpen] = React.useState(false);
+  const [commandQuery, setCommandQuery] = React.useState("");
   const { data: groups = [] } = useQuery(getGroupsQueryOptions());
   const meta = pageMeta.find((item) => item.test(location.pathname)) ?? pageMeta[0];
   const isNavigating = routerNavigation.state !== "idle";
   const isEditorRoute = location.pathname.includes("/standards/") && location.pathname.includes("/images/");
 
+  const commandItems = React.useMemo<CommandItem[]>(() => {
+    const staticItems: CommandItem[] = [
+      { to: paths.home(), icon: Home, label: "Home", hint: "Dashboard overview", group: "Navigation" },
+      { to: paths.groups(), icon: Database, label: "Annotate", hint: "Datasets, references and images", group: "Navigation" },
+      { to: paths.training(), icon: FolderOpen, label: "Train", hint: "Model projects and active weights", group: "Navigation" },
+      { to: paths.inspection(), icon: Rocket, label: "Deploy", hint: "Run visual inspection", group: "Navigation" },
+      { to: paths.inspectionHistory(), icon: Activity, label: "Runs", hint: "Inspection history and results", group: "Navigation" },
+      { to: paths.cameras(), icon: Camera, label: "Sources", hint: "IP cameras and image sources", group: "Navigation" },
+      { to: paths.settingsSection("system"), icon: Settings, label: "System", hint: "Runtime, storage and diagnostics", group: "Navigation" },
+    ];
+
+    const projectItems = groups.flatMap<CommandItem>((group) => [
+      {
+        to: paths.groupDetail(group.id),
+        icon: Database,
+        label: group.name,
+        hint: `${group.stats.images_count} images · ${group.stats.standards_count} refs`,
+        group: "Datasets",
+      },
+      {
+        to: paths.trainingGroup(group.id),
+        icon: FolderOpen,
+        label: `${group.name} / train`,
+        hint: `${group.stats.models_count} models · ${group.stats.segment_classes_count} classes`,
+        group: "Projects",
+      },
+      {
+        to: paths.inspectionGroup("photo", group.id),
+        icon: Rocket,
+        label: `${group.name} / deploy`,
+        hint: `${group.stats.inspections_count} runs`,
+        group: "Deploy",
+      },
+    ]);
+
+    return [...staticItems, ...projectItems];
+  }, [groups]);
+
+  const normalizedQuery = commandQuery.trim().toLowerCase();
+  const filteredCommands = React.useMemo(() => {
+    if (!normalizedQuery) return commandItems.slice(0, 12);
+
+    return commandItems
+      .filter((item) => {
+        const haystack = `${item.group} ${item.label} ${item.hint}`.toLowerCase();
+        return haystack.includes(normalizedQuery);
+      })
+      .slice(0, 18);
+  }, [commandItems, normalizedQuery]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandQuery("");
+        setIsCommandOpen(true);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setIsCommandOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  React.useEffect(() => {
+    setIsMobileOpen(false);
+    setIsCommandOpen(false);
+  }, [location.pathname]);
+
   const closeMobile = () => setIsMobileOpen(false);
+  const openCommand = () => {
+    setCommandQuery("");
+    setIsCommandOpen(true);
+  };
+  const closeCommand = () => setIsCommandOpen(false);
 
   return (
     <div className={clsx(s.root, isEditorRoute && s.editorMode)}>
@@ -74,11 +166,11 @@ export const PlatformShell = ({ navigation }: Props) => {
           <span className={s.logoText}>VisionQC</span>
         </Link>
 
-        <div className={s.searchBox}>
+        <button className={s.searchBox} type="button" onClick={openCommand}>
           <Search />
-          <input placeholder="Search..." aria-label="Поиск" />
+          <span>Search...</span>
           <kbd>Ctrl K</kbd>
-        </div>
+        </button>
 
         <nav className={s.mainNav} aria-label="Основная навигация">
           <NavLink
@@ -108,6 +200,7 @@ export const PlatformShell = ({ navigation }: Props) => {
           to={paths.groups()}
           count={groups.length}
           active={location.pathname.startsWith("/groups")}
+          onClick={closeMobile}
         >
           {groups.slice(0, 8).map((group) => (
             <Link key={group.id} to={paths.groupDetail(group.id)} onClick={closeMobile}>
@@ -124,6 +217,7 @@ export const PlatformShell = ({ navigation }: Props) => {
           to={paths.training()}
           count={groups.reduce((sum, group) => sum + group.stats.models_count, 0)}
           active={location.pathname.startsWith("/training")}
+          onClick={closeMobile}
         >
           {groups.slice(0, 8).map((group) => (
             <Link key={group.id} to={paths.trainingGroup(group.id)} onClick={closeMobile}>
@@ -140,6 +234,7 @@ export const PlatformShell = ({ navigation }: Props) => {
           to={paths.inspection()}
           count={groups.reduce((sum, group) => sum + group.stats.inspections_count, 0)}
           active={location.pathname.startsWith("/inspection")}
+          onClick={closeMobile}
         >
           {groups.slice(0, 6).map((group) => (
             <Link key={group.id} to={paths.inspectionGroup("photo", group.id)} onClick={closeMobile}>
@@ -195,10 +290,10 @@ export const PlatformShell = ({ navigation }: Props) => {
             </div>
           </div>
 
-          <div className={s.topbarCenter}>
+          <button className={s.topbarCenter} type="button" onClick={openCommand}>
             <Search />
-            <input placeholder="Search projects, standards, cameras..." />
-          </div>
+            <span>Search projects, standards, cameras...</span>
+          </button>
 
           <div className={s.topbarActions}>
             <Link className={s.pillButton} to={paths.groups()}>
@@ -221,6 +316,59 @@ export const PlatformShell = ({ navigation }: Props) => {
           <Outlet />
         </main>
       </section>
+
+      {isCommandOpen ? (
+        <div className={s.commandOverlay} role="presentation" onMouseDown={closeCommand}>
+          <section
+            className={s.commandDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={s.commandSearchRow}>
+              <Search />
+              <input
+                autoFocus
+                placeholder="Search page, dataset, model, source..."
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+              />
+              <button type="button" onClick={closeCommand} aria-label="Close search"><X /></button>
+            </div>
+
+            <div className={s.commandMetaRow}>
+              <span><ListChecks /> {filteredCommands.length} results</span>
+              <span>Ctrl K</span>
+            </div>
+
+            <div className={s.commandList}>
+              {filteredCommands.length ? (
+                filteredCommands.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link className={s.commandItem} key={`${item.group}-${item.to}-${item.label}`} to={item.to} onClick={closeCommand}>
+                      <span className={s.commandIcon}><Icon /></span>
+                      <span className={s.commandText}>
+                        <strong>{item.label}</strong>
+                        <small>{item.hint}</small>
+                      </span>
+                      <b>{item.group}</b>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className={s.commandEmpty}>
+                  <Search />
+                  <strong>Nothing found</strong>
+                  <span>Попробуй dataset, train, deploy, camera или название изделия.</span>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -231,6 +379,8 @@ function SidebarTree({
   to,
   children,
   active,
+  count,
+  onClick,
 }: {
   icon: LucideIcon;
   title: string;
@@ -238,12 +388,14 @@ function SidebarTree({
   count: number;
   children: React.ReactNode;
   active?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <div className={s.tree}>
-      <Link className={clsx(s.treeHeader, active && s.treeHeaderActive)} to={to}>
+      <Link className={clsx(s.treeHeader, active && s.treeHeaderActive)} to={to} onClick={onClick}>
         <Icon />
         <span>{title}</span>
+        <b>{count}</b>
         <ChevronDown />
       </Link>
       <div className={s.treeChildren}>{children}</div>

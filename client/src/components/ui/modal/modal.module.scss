@@ -1,25 +1,143 @@
 @use "@/styles/variables" as *;
-.overlay { display: flex; justify-content: center; align-items: center; inset: 0; position: fixed; background: rgba(38, 30, 18, .28); backdrop-filter: blur(14px); z-index: 200; }
-.overlayBottom { align-items: flex-end; }
-.root { background: #fffdf6; border: 1px solid #eee8dd; border-radius: 16px; width: 640px; max-width: calc(100vw - 24px); max-height: calc(100svh - 24px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 70px rgba(40, 30, 10, .18); }
-.rootBottom { width: min(100%, 560px); max-width: 100vw; max-height: min(88vh, 720px); border-radius: 16px 16px 0 0; border-bottom: 0; }
-.wide { width: 760px; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; padding: 26px 28px 8px; flex-shrink: 0; }
-.title { font-size: 24px; font-weight: 800; letter-spacing: -0.04em; color: #080808; }
-.close { width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; border-radius: 8px; color: #756d63; }
-.close svg { width: 18px; height: 18px; display: block; }
-.close:hover { background: #fbf1e4; color: #111; }
-.body { padding: 8px 28px 22px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; min-height: 0; }
-.footer { padding: 16px 28px 22px; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
-@media (max-width: 767px) { .rootBottom { width: 100%; } .root,.wide { width: calc(100vw - 16px); } }
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(27, 24, 19, 0.38);
+  backdrop-filter: blur(18px) saturate(120%);
+  animation: modalOverlayIn 140ms ease both;
+}
 
-/* v6 modal polish */
+.overlayBottom {
+  align-items: flex-end;
+  padding: 0;
+}
+
 .root {
-  backdrop-filter: blur(18px) saturate(1.08);
+  width: 440px;
+  max-width: min(95vw, 680px);
+  max-height: min(90vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(231, 220, 204, 0.92);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 245, 0.98));
+  box-shadow:
+    0 30px 80px rgba(41, 32, 20, 0.22),
+    0 8px 28px rgba(41, 32, 20, 0.12);
+  animation: modalContentIn 160ms cubic-bezier(.2, .8, .2, 1) both;
 }
 
-.content {
-  box-shadow: 0 28px 80px rgba(39, 26, 8, 0.18), 0 8px 26px rgba(39, 26, 8, 0.08);
+.rootBottom {
+  width: min(100%, 620px);
+  max-width: 100vw;
+  max-height: min(88vh, 720px);
+  border-radius: 22px 22px 0 0;
+  border-bottom: 0;
 }
 
+.wide {
+  width: 640px;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid rgba(237, 228, 216, 0.8);
+  flex-shrink: 0;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 20px;
+    right: 56px;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, #042aff, transparent 52%);
+    opacity: 0.16;
+  }
+}
+
+.title {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: #15120f;
+}
+
+.close {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #8a8176;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
+
+  svg {
+    width: 17px;
+    height: 17px;
+    display: block;
+  }
+
+  &:hover {
+    background: #f6efe6;
+    border-color: #eadbca;
+    color: #15120f;
+    transform: translateY(-1px);
+  }
+}
+
+.body {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.footer {
+  padding: 14px 20px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(237, 228, 216, 0.78);
+  background: rgba(255, 250, 244, 0.72);
+  flex-shrink: 0;
+}
+
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalContentIn {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 767px) {
+  .overlay { padding: 12px; }
+  .root { max-width: 100%; border-radius: 18px; }
+  .rootBottom { width: 100%; border-radius: 18px 18px 0 0; }
+  .wide { width: 100%; }
+  .footer { flex-wrap: wrap; }
+}

@@ -4,3 +4,36 @@ body { background: $page; color: $text; }
 * { box-sizing: border-box; }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
+
+/* v13 global finishing polish */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: #fffdf8;
+}
+
+::selection {
+  color: #061036;
+  background: rgba(225, 255, 37, 0.82);
+}
+
+:focus-visible {
+  outline: 3px solid rgba(4, 42, 255, 0.16);
+  outline-offset: 2px;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+

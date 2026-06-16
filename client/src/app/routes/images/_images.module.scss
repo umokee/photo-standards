@@ -982,3 +982,96 @@
   .thumb { min-height: 92px; }
 }
 
+/* v13 editor maturity polish */
+.editorShell {
+  isolation: isolate;
+}
+
+.editorTopbar,
+.editorFilmstrip,
+.editorInspector,
+.editorBottomBar,
+.frameStatusCard {
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.editorToolButton,
+.editorModeButton,
+.editorBottomButton,
+.thumbnailCard,
+.objectRow,
+.classRow {
+  transition: transform .14s ease, border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+
+.editorToolButton:hover,
+.editorModeButton:hover,
+.editorBottomButton:hover,
+.thumbnailCard:hover,
+.objectRow:hover,
+.classRow:hover {
+  transform: translateY(-1px);
+}
+
+.thumbnailCard {
+  position: relative;
+}
+
+.thumbnailCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.thumbnailCardActive::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 999px;
+  background: #e1ff25;
+  box-shadow: 0 0 18px rgba(225, 255, 37, 0.6);
+}
+
+.canvasStage {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 0 80px rgba(0,0,0,.45),
+    0 28px 70px rgba(0,0,0,.28);
+}
+
+.editorCanvasWrap {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.06), transparent 36%),
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+    #0b0d0e;
+  background-size: auto, 28px 28px, 28px 28px, auto;
+}
+
+.rightTabs button,
+.editorTabButton {
+  transition: background .14s ease, color .14s ease, transform .14s ease;
+}
+
+.rightTabs button:hover,
+.editorTabButton:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 980px) {
+  .thumbnailCardActive::before {
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: -6px;
+    width: auto;
+    height: 3px;
+  }
+}
+

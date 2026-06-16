@@ -1,103 +1,149 @@
 @use "@/styles/variables" as *;
 
 .root {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  margin-bottom: $space-3;
+  display: grid;
+  gap: 8px;
+  width: 100%;
 }
 
 .label {
-  display: block;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
-  color: $text-hint;
-  margin-bottom: $space-1;
+  color: #4d463d;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .zone {
+  position: relative;
   display: flex;
+  min-height: 188px;
+  width: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
-  flex: 1;
-  width: 100%;
-  min-height: 108px;
-  padding: $space-7;
-  font-size: $text-body;
-  border: 3px solid $line;
-  border-radius: $radius;
-  background: $card-hover;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px dashed #d8c7b2;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.08), transparent 42%),
+    linear-gradient(180deg, #fffdf9, #fff7ee);
+  color: #6b6157;
   cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: #9fb0ff;
+    box-shadow: inset 0 0 0 1px rgba(4, 42, 255, 0.08), 0 14px 34px rgba(41, 32, 20, 0.08);
+    transform: translateY(-1px);
+  }
 }
 
 .zoneDragging {
-  border-color: $primary;
-  background: $primary-bd;
+  border-color: #042aff;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.14), transparent 46%),
+    #f5f7ff;
+  box-shadow: 0 0 0 4px rgba(4, 42, 255, 0.1);
 }
 
 .zoneError {
-  color: $danger;
-  border-color: $danger;
-  background: $danger-bd;
+  border-color: #f5a29a;
+  background: #fff6f4;
 }
 
 .icon {
-  margin-bottom: $space-2;
-  color: $text-hint;
-  pointer-events: none;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 10px;
+  border-radius: 16px;
+  background: #042aff;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(4, 42, 255, 0.2);
 }
 
 .title {
-  text-align: center;
-  pointer-events: none;
+  color: #18140f;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
-  margin-top: $space-2;
-  color: $text-hint;
-  pointer-events: none;
+  color: #81776b;
+  font-size: 12px;
 }
 
 .errorText {
+  position: relative;
+  z-index: 1;
+  max-width: 85%;
+  color: #b42318;
   text-align: center;
-  pointer-events: none;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .files {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  place-items: center;
   width: 100%;
   pointer-events: none;
 }
 
 .filesCount {
-  color: $text-hint;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid #e8ddce;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #191510;
+  font-weight: 700;
   text-align: center;
+  box-shadow: 0 8px 22px rgba(41, 32, 20, 0.08);
 }
 
 .clearButton {
-  display: flex;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  top: $space-3;
-  right: $space-3;
-  z-index: 1;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  border: 0;
-  border-radius: $radius;
-  background: transparent;
-  color: $text-hint;
+  border: 1px solid #e8ddce;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #81776b;
   cursor: pointer;
   pointer-events: auto;
 
   &:hover {
-    background: $line-soft;
-    color: $text;
+    background: #fff;
+    color: #15120f;
   }
+}
+
+@media (max-width: 760px) {
+  .zone { min-height: 150px; }
 }

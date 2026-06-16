@@ -2,35 +2,32 @@
 
 .root {
   width: 100%;
-  min-height: 36px;
-  padding: 0 $space-3;
-  font-size: $text-small;
-  color: $text;
-  background: $surface2;
-  border: 1px solid $line;
-  border-radius: 13px;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #191510;
+  background: #fffdf9;
+  border: 1px solid #e8ddce;
+  border-radius: 11px;
   outline: none;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background 0.16s ease;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 
-  &::placeholder {
-    color: $text-off;
-  }
+  &::placeholder { color: #a39788; }
+
+  &:hover { border-color: #d9c8b3; }
 
   &:focus {
-    background: $surface;
-    border-color: $primary;
-    box-shadow: 0 0 0 4px $primary-bg;
+    border-color: #8ea2ff;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(4, 42, 255, 0.11);
   }
 }
 
 .fieldError {
-  border-color: $danger-bd;
+  border-color: #f5a29a;
 
   &:focus {
-    border-color: $danger;
-    box-shadow: 0 0 0 4px $danger-bg;
+    border-color: #d92d20;
+    box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.11);
   }
 }

@@ -20,7 +20,7 @@ export function Component() {
             {history.map((item) => <button type="button" className={p.tableRow} key={item.id} onClick={() => navigate(item.id === inspectionId ? buildInspectionPath(null) : buildInspectionPath(item.id))}><span>{item.standard_name || "—"}</span><span>{inspectionModeLabel(item.mode)}</span><span><b className={item.status === "passed" ? p.ok : undefined}>{inspectionStatusLabel(item.status)}</b></span><span>{item.camera_name || "—"}</span><span>{new Date(item.inspected_at).toLocaleString()}</span></button>)}
           </div>
         </section>
-        <aside className={p.sidePanel}>{inspectionId ? <ExpandedInspectionHistoryDetail inspectionId={inspectionId} /> : <><h3>Run details</h3><p>Выбери проверку слева, чтобы открыть результат.</p></>}</aside>
+        <aside className={p.sidePanel}>{inspectionId ? <><h3>Inspection result</h3><ExpandedInspectionHistoryDetail inspectionId={inspectionId} /></> : <><h3>Run details</h3><p>Выбери проверку слева, чтобы открыть результат.</p></>}</aside>
       </div>
     </QueryState>
   );

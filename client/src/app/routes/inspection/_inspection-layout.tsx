@@ -20,6 +20,8 @@ export function Component() {
   const classSource = inspection.standard ?? inspection.group;
   const classes = getClasses(classSource);
   const selectedResult = currentMode === "realtime" && inspection.realtimeSessionId ? inspection.realtimeStatus : inspection.result;
+  const resultDetailsCount = selectedResult?.details?.length ?? 0;
+  const issueCount = selectedResult?.details?.filter((detail) => detail.status !== "ok").length ?? 0;
 
   const modeCards = [
     { mode: "photo", icon: Upload, label: "Photo" },
@@ -72,6 +74,21 @@ export function Component() {
         </div>
       </section>
 
+      <section className={p.pipelineStrip} aria-label="Inspection pipeline">
+        <div className={`${p.pipelineStep} ${groupId ? p.pipelineStepDone : p.pipelineStepActive}`}>
+          <span>1</span><b>Dataset</b><small>{inspection.group?.name ?? "Select dataset"}</small>
+        </div>
+        <div className={`${p.pipelineStep} ${standardId ? p.pipelineStepDone : groupId ? p.pipelineStepActive : p.pipelineStepMuted}`}>
+          <span>2</span><b>Reference</b><small>{inspection.standard?.name ?? "Choose standard view"}</small>
+        </div>
+        <div className={`${p.pipelineStep} ${currentMode === "photo" || inspection.cameraId ? p.pipelineStepDone : standardId ? p.pipelineStepActive : p.pipelineStepMuted}`}>
+          <span>3</span><b>Source</b><small>{currentMode === "photo" ? "Upload inspection photo" : inspection.cameraId ? "Camera selected" : "Select camera"}</small>
+        </div>
+        <div className={`${p.pipelineStep} ${selectedResult ? p.pipelineStepDone : standardId ? p.pipelineStepActive : p.pipelineStepMuted}`}>
+          <span>4</span><b>Result</b><small>{selectedResult ? `${resultDetailsCount} checked · ${issueCount} issues` : "Run inspection"}</small>
+        </div>
+      </section>
+
       <div className={p.inspectGrid}>
         <section className={p.inspectCard}>
           <div className={p.inspectToolbar}>
@@ -86,6 +103,12 @@ export function Component() {
         <aside className={p.sidePanel}>
           <h3>Inspector</h3>
           <p>Фильтр классов и результат проверки.</p>
+          <div className={p.inspectorStats}>
+            <div className={p.inspectorMetric}><b>{classes.length}</b><span>Classes</span></div>
+            <div className={p.inspectorMetric}><b>{resultDetailsCount}</b><span>Checked</span></div>
+            <div className={p.inspectorMetric}><b>{issueCount}</b><span>Issues</span></div>
+          </div>
+          <div className={p.inspectorSectionTitle}>Classes <small>{inspection.selectedClassIds.length || "all"} selected</small></div>
           <div className={p.classList}>
             {classes.map((item) => {
               const checked = inspection.selectedClassIds.includes(item.id);
@@ -101,6 +124,7 @@ export function Component() {
             })}
           </div>
 
+          <div className={p.inspectorSectionTitle}>Results <small>{selectedResult ? selectedResult.status : "idle"}</small></div>
           <div className={p.resultList}>
             {selectedResult?.details?.slice(0, 12).map((detail) => (
               <div className={p.resultItem} key={detail.annotation_id ?? detail.class_key}>
