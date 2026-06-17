@@ -1,3 +1,4 @@
+
 import { client } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import type { InspectionHistoryItem } from "@/types/contracts";
@@ -20,3 +21,7 @@ export const getInspectionHistoryQueryOptions = (groupId: string | null = null) 
 export const useGetInspectionHistory = (groupId: string | null = null) => {
   return useSuspenseQuery(getInspectionHistoryQueryOptions(groupId));
 };
+
+// Backward-compatible aliases for older generated route chunks.
+export const getProverkaionHistoryQueryOptions = getInspectionHistoryQueryOptions;
+export const getПроверкаionHistoryQueryOptions = getInspectionHistoryQueryOptions;

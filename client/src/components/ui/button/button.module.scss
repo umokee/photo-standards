@@ -1,27 +1,46 @@
+
 @use "@/styles/variables" as *;
 
 .button {
+  --button-bg: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
+  --button-bg-hover: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
+  --button-fg: var(--vc-text, #101113);
+  --button-border: var(--vc-line, rgba(15, 23, 42, 0.12));
+  --button-ring: var(--vc-focus-ring, rgba(37, 99, 235, 0.18));
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
+  min-width: 0;
+  height: var(--vc-control-height, 36px);
   padding: 0 14px;
+  border: 1px solid var(--button-border);
+  border-radius: var(--vc-radius-control, 10px);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font: inherit;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 720;
   line-height: 1;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  cursor: pointer;
+  letter-spacing: -0.01em;
   appearance: none;
+  cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: none;
   transition:
-    transform 120ms ease,
-    box-shadow 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease,
-    color 120ms ease;
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   svg {
     display: block;
@@ -32,6 +51,7 @@
   }
 
   &:hover:not(:disabled) {
+    background: var(--button-bg-hover);
     transform: translateY(-1px);
   }
 
@@ -41,20 +61,21 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px rgba(4, 42, 255, 0.16);
+    box-shadow: 0 0 0 3px var(--button-ring);
   }
 
   &:disabled {
-    opacity: 0.45;
+    opacity: 0.48;
     cursor: not-allowed;
     pointer-events: none;
     box-shadow: none;
+    transform: none;
   }
 }
 
 .sm {
   height: 30px;
-  padding: 0 11px;
+  padding: 0 10px;
   font-size: 12px;
   border-radius: 9px;
 
@@ -62,78 +83,65 @@
 }
 
 .lg {
-  height: 44px;
-  padding: 0 18px;
+  height: 42px;
+  padding: 0 17px;
   font-size: 14px;
-  font-weight: 700;
-  border-radius: 13px;
+  border-radius: 12px;
 
   svg { width: 16px; height: 16px; }
 }
 
 .icon {
-  padding: 0;
   width: 34px;
   height: 34px;
+  padding: 0;
+
+  span { display: none; }
 }
 
 .full { width: 100%; }
 
 .primary {
-  background: linear-gradient(180deg, #1740ff, #042aff);
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(4, 42, 255, 0.18);
-
-  &:hover:not(:disabled) {
-    background: linear-gradient(180deg, #2a51ff, #1237ff);
-    box-shadow: 0 14px 30px rgba(4, 42, 255, 0.22);
-  }
+  --button-bg: var(--vc-accent, #2563eb);
+  --button-bg-hover: var(--vc-accent-hover, #1d4ed8);
+  --button-fg: var(--vc-on-accent, #ffffff);
+  --button-border: color-mix(in srgb, var(--vc-accent, #2563eb), #000 8%);
+  --button-ring: color-mix(in srgb, var(--vc-accent, #2563eb), transparent 78%);
 }
 
 .ghost {
-  background: #fffdf9;
-  color: #4d463d;
-  border-color: #eadfce;
-
-  &:hover:not(:disabled) {
-    background: #f8f0e6;
-    color: #15120f;
-    border-color: #decdb9;
-  }
+  --button-bg: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
+  --button-bg-hover: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
+  --button-fg: var(--vc-text, #101113);
+  --button-border: var(--vc-line, rgba(15, 23, 42, 0.12));
 }
 
 .warning {
-  background: #fff7dc;
-  color: #8b5a00;
-  border-color: #f5d98a;
+  --button-bg: var(--vc-warning-soft, rgba(245, 158, 11, 0.12));
+  --button-bg-hover: var(--vc-warning, #d97706);
+  --button-fg: var(--vc-warning-text, #92400e);
+  --button-border: var(--vc-warning-line, rgba(245, 158, 11, 0.34));
+  --button-ring: rgba(245, 158, 11, 0.18);
 
-  &:hover:not(:disabled) {
-    background: #f1a800;
-    color: #fff;
-    border-color: #f1a800;
-  }
+  &:hover:not(:disabled) { color: #fff; }
 }
 
 .danger {
-  background: #fff0ee;
-  color: #b42318;
-  border-color: #ffd0cb;
+  --button-bg: var(--vc-danger-soft, rgba(239, 68, 68, 0.10));
+  --button-bg-hover: var(--vc-danger, #dc2626);
+  --button-fg: var(--vc-danger-text, #b91c1c);
+  --button-border: var(--vc-danger-line, rgba(239, 68, 68, 0.30));
+  --button-ring: rgba(239, 68, 68, 0.18);
 
-  &:hover:not(:disabled) {
-    background: #d92d20;
-    color: #fff;
-    border-color: #d92d20;
-  }
+  &:hover:not(:disabled) { color: #fff; }
 }
 
 .ml {
-  background: #f0f4ff;
-  color: #042aff;
-  border-color: #dce5ff;
+  --button-bg: var(--vc-accent-soft, rgba(37, 99, 235, 0.10));
+  --button-bg-hover: var(--vc-accent, #2563eb);
+  --button-fg: var(--vc-accent-text, var(--vc-accent, #2563eb));
+  --button-border: var(--vc-accent-line, rgba(37, 99, 235, 0.22));
+  --button-ring: color-mix(in srgb, var(--vc-accent, #2563eb), transparent 80%);
 
-  &:hover:not(:disabled) {
-    background: #042aff;
-    color: #fff;
-    border-color: #042aff;
-  }
+  &:hover:not(:disabled) { color: var(--vc-on-accent, #fff); }
 }

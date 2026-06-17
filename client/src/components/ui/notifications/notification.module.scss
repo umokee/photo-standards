@@ -1,14 +1,15 @@
+
 @use "@/styles/variables" as *;
 
 .container {
   position: fixed;
-  top: calc($nav-height + $space-1);
+  top: calc(var(--vc-topbar-height, 56px) + 8px);
   left: 50%;
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: $space-2;
-  width: 300px;
+  gap: 8px;
+  width: min(360px, calc(100vw - 24px));
   pointer-events: none;
   transform: translateX(-50%);
 }
@@ -17,46 +18,32 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: $space-2;
-  padding: $space-3;
-  padding-right: 30px;
-  background: $surface;
-  border-radius: $radius;
-  border: 1px solid $line-soft;
+  gap: 10px;
+  padding: 12px;
+  padding-right: 34px;
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  border-radius: 14px;
+  background: var(--vc-surface, #ffffff);
+  color: var(--vc-text, #111827);
+  box-shadow: var(--vc-shadow-popover, 0 18px 48px rgba(15, 23, 42, 0.16));
   overflow: hidden;
   pointer-events: all;
 }
 
-.success {
-  border-color: $primary;
-}
-.error {
-  border-color: $danger;
-}
-.warning {
-  border-color: $warning;
-}
-.info {
-  border-color: $ml;
-}
+.success { border-color: var(--vc-success-line, rgba(34, 197, 94, 0.28)); }
+.error { border-color: var(--vc-danger-line, rgba(239, 68, 68, 0.30)); }
+.warning { border-color: var(--vc-warning-line, rgba(245, 158, 11, 0.34)); }
+.info { border-color: var(--vc-accent-line, rgba(37, 99, 235, 0.24)); }
 
 .icon {
   flex-shrink: 0;
   margin-top: 1px;
   display: flex;
 
-  .success & {
-    color: $primary-text;
-  }
-  .error & {
-    color: $danger-text;
-  }
-  .warning & {
-    color: $warning-text;
-  }
-  .info & {
-    color: $ml-text;
-  }
+  .success & { color: var(--vc-success-text, #15803d); }
+  .error & { color: var(--vc-danger-text, #b91c1c); }
+  .warning & { color: var(--vc-warning-text, #92400e); }
+  .info & { color: var(--vc-accent, #2563eb); }
 }
 
 .content {
@@ -67,35 +54,36 @@
 }
 
 .title {
-  font-size: $text-body;
-  font-weight: $fw-medium;
-  color: $text;
-  line-height: 1.4;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.35;
 }
 
 .message {
-  font-size: $text-small;
-  color: $text-sub;
-  line-height: 1.4;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .close {
   position: absolute;
-  top: $space-2;
-  right: $space-2;
+  top: 8px;
+  right: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: none;
-  border: none;
-  border-radius: $radius;
-  cursor: pointer;
-  color: $text-hint;
+  width: 22px;
+  height: 22px;
   padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vc-text-muted, #6b7280);
+  cursor: pointer;
+
   &:hover {
-    background: $surface2;
-    color: $text-sub;
+    background: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
+    color: var(--vc-text, #111827);
   }
 }

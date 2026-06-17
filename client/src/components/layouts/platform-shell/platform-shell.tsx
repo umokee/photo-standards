@@ -4,19 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
   Activity,
-  Bell,
   Brain,
   Camera,
   ChevronDown,
   CircleDot,
   FolderKanban,
-  Grid3X3,
   Home,
   Image,
   ListChecks,
   Menu,
   Moon,
-  Plus,
   Search,
   Settings,
   Sparkles,
@@ -26,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigation } from "react-router-dom";
 import s from "./platform-shell.module.scss";
 
@@ -49,28 +47,19 @@ type CommandItem = {
 };
 
 type SectionId = "assets" | "train" | "inspect";
-
-type ColorTheme = "light" | "dark";
-
-const THEME_STORAGE_KEY = "visionqc-theme";
-
-function getInitialTheme(): ColorTheme {
-  if (typeof window === "undefined") return "light";
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === "dark" || stored === "light") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-
-const pageMeta = [
-  { test: (path: string) => path === "/", title: "Home", trail: ["Home"] },
-  { test: (path: string) => path.startsWith("/groups"), title: "Projects", trail: ["Home", "Projects"] },
-  { test: (path: string) => path.startsWith("/training"), title: "Train", trail: ["Home", "Train"] },
-  { test: (path: string) => path.startsWith("/inspection-history"), title: "Runs", trail: ["Home", "Runs"] },
-  { test: (path: string) => path.startsWith("/inspection") && !path.startsWith("/inspection-history"), title: "Inspect", trail: ["Home", "Inspect"] },
-  { test: (path: string) => path.startsWith("/cameras"), title: "Cameras", trail: ["Home", "Cameras"] },
-  { test: (path: string) => path.startsWith("/settings"), title: "System", trail: ["Home", "System"] },
-];
+type Crumb = { label: string; to?: string };
+type ProjectLike = {
+  id: string;
+  name: string;
+  stats: {
+    standards_count: number;
+    images_count: number;
+    segment_classes_count: number;
+    models_count: number;
+    inspections_count: number;
+    annotated_images_count?: number;
+  };
+};
 
 function getProjectIdFromPath(pathname: string) {
   return (
@@ -82,6 +71,61 @@ function getProjectIdFromPath(pathname: string) {
   );
 }
 
+function getModeFromPath(pathname: string) {
+  return pathname.match(/^\/inspection\/([^/]+)/)?.[1] ?? null;
+}
+
+function buildBreadcrumbs(pathname: string, project: ProjectLike | null, projectIdFromPath: string | null): Crumb[] {
+  const crumbs: Crumb[] = [{ label: "Home", to: paths.home() }];
+
+  if (pathname === "/") return [{ label: "Home" }];
+
+  if (pathname.startsWith("/groups")) {
+    crumbs.push({ label: "Projects", to: paths.groups() });
+    if (!projectIdFromPath || !project) return crumbs.map((crumb, index) => index === crumbs.length - 1 ? { label: crumb.label } : crumb);
+
+    crumbs.push({ label: project.name, to: paths.groupDetail(project.id) });
+    if (pathname.includes("/references")) crumbs.push({ label: "References" });
+    else if (pathname.includes("/classes")) crumbs.push({ label: "Classes" });
+    else if (pathname.includes("/standards/") && pathname.includes("/images/")) crumbs.push({ label: "Reference", to: pathname.split("/images/")[0] }, { label: "Editor" });
+    else if (pathname.includes("/standards/")) crumbs.push({ label: "Reference" });
+    else crumbs.push({ label: "Assets" });
+    return crumbs;
+  }
+
+  if (pathname.startsWith("/training")) {
+    crumbs.push({ label: "Train", to: project ? paths.trainingOverview(project.id) : paths.training() });
+    if (project) crumbs.push({ label: project.name, to: paths.trainingOverview(project.id) });
+    if (pathname.includes("/models/")) crumbs.push({ label: "Models", to: project ? paths.trainingModels(project.id) : undefined }, { label: "Model" });
+    else if (pathname.includes("/models")) crumbs.push({ label: "Models" });
+    else if (pathname.includes("/runs")) crumbs.push({ label: "Training runs" });
+    else crumbs.push({ label: "Overview" });
+    return crumbs;
+  }
+
+  if (pathname.startsWith("/inspection-history")) {
+    crumbs.push({ label: "Inspect", to: project ? paths.inspectionGroup("photo", project.id) : paths.inspection() });
+    crumbs.push({ label: "Runs", to: project ? paths.inspectionHistoryGroup(project.id) : paths.inspectionHistory() });
+    if (project) crumbs.push({ label: project.name, to: paths.inspectionHistoryGroup(project.id) });
+    if (/^\/inspection-history\/[^/]+\/[^/]+/.test(pathname)) crumbs.push({ label: "Report" });
+    return crumbs;
+  }
+
+  if (pathname.startsWith("/inspection")) {
+    const mode = getModeFromPath(pathname);
+    crumbs.push({ label: "Inspect", to: paths.inspection() });
+    if (mode) crumbs.push({ label: mode[0]?.toUpperCase() + mode.slice(1), to: paths.inspectionMode(mode as never) });
+    if (project) crumbs.push({ label: project.name, to: paths.inspectionGroup(mode ?? "photo", project.id) });
+    if (pathname.includes("/standards/")) crumbs.push({ label: "Reference" });
+    return crumbs;
+  }
+
+  if (pathname.startsWith("/cameras")) return [...crumbs, { label: "Cameras" }];
+  if (pathname.startsWith("/settings")) return [...crumbs, { label: "System" }];
+
+  return crumbs;
+}
+
 export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const location = useLocation();
   const routerNavigation = useNavigation();
@@ -90,26 +134,21 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const [commandQuery, setCommandQuery] = React.useState("");
   const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = React.useState(false);
   const [manualProjectId, setManualProjectId] = React.useState<string | null>(null);
-  const [theme, setTheme] = React.useState<ColorTheme>(() => getInitialTheme());
+  const [projectMenuPosition, setProjectMenuPosition] = React.useState({ top: 0, left: 0 });
+  const [theme, setTheme] = React.useState<"light" | "dark">(() =>
+    document.documentElement.dataset.theme === "light" ? "light" : "dark"
+  );
   const [expandedSections, setExpandedSections] = React.useState<Record<SectionId, boolean>>({
     assets: true,
     train: true,
     inspect: true,
   });
 
-  const { data: groups = [] } = useQuery(getGroupsQueryOptions());
-  const meta = pageMeta.find((item) => item.test(location.pathname)) ?? pageMeta[0];
-  const isNavigating = routerNavigation.state !== "idle";
-  React.useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // no-op: localStorage can be unavailable in private/locked contexts
-    }
-  }, [theme]);
+  const projectSwitcherRef = React.useRef<HTMLButtonElement | null>(null);
+  const projectMenuRef = React.useRef<HTMLDivElement | null>(null);
 
-  const toggleTheme = () => setTheme((current) => (current === "dark" ? "light" : "dark"));
+  const { data: groups = [] } = useQuery(getGroupsQueryOptions());
+  const isNavigating = routerNavigation.state !== "idle";
   const isEditorRoute = location.pathname.includes("/standards/") && location.pathname.includes("/images/");
   const projectIdFromPath = getProjectIdFromPath(location.pathname);
   const selectedProject =
@@ -119,9 +158,15 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
     null;
 
   const selectedProjectId = selectedProject?.id ?? null;
-  const assetsActive = location.pathname.startsWith("/groups");
+  const assetsActive = /^\/groups\/[^/]+/.test(location.pathname);
   const trainActive = location.pathname.startsWith("/training");
-  const inspectActive = location.pathname.startsWith("/inspection") && !location.pathname.startsWith("/inspection-history");
+  const inspectActive =
+    (location.pathname.startsWith("/inspection") && !location.pathname.startsWith("/inspection-history")) ||
+    location.pathname.startsWith("/inspection-history");
+  const crumbs = React.useMemo(
+    () => buildBreadcrumbs(location.pathname, selectedProject, projectIdFromPath),
+    [location.pathname, selectedProject, projectIdFromPath]
+  );
 
   const totals = React.useMemo(
     () => ({
@@ -135,6 +180,40 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   React.useEffect(() => {
     if (projectIdFromPath) setManualProjectId(projectIdFromPath);
   }, [projectIdFromPath]);
+
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("vc-theme", theme);
+  }, [theme]);
+
+  const updateProjectMenuPosition = React.useCallback(() => {
+    const button = projectSwitcherRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const width = 286;
+    const left = Math.min(rect.right + 10, Math.max(10, window.innerWidth - width - 10));
+    setProjectMenuPosition({ top: Math.max(10, rect.top), left });
+  }, []);
+
+  React.useEffect(() => {
+    if (!isProjectSwitcherOpen) return;
+    updateProjectMenuPosition();
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (projectSwitcherRef.current?.contains(target)) return;
+      if (projectMenuRef.current?.contains(target)) return;
+      setIsProjectSwitcherOpen(false);
+    };
+    window.addEventListener("resize", updateProjectMenuPosition);
+    window.addEventListener("scroll", updateProjectMenuPosition, true);
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("resize", updateProjectMenuPosition);
+      window.removeEventListener("scroll", updateProjectMenuPosition, true);
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isProjectSwitcherOpen, updateProjectMenuPosition]);
 
   const commandItems = React.useMemo<CommandItem[]>(() => {
     const staticItems: CommandItem[] = [
@@ -160,7 +239,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
         to: paths.trainingGroup(group.id),
         icon: Sparkles,
         label: `${group.name} / Train`,
-        hint: `${group.stats.models_count} models · ${group.stats.annotated_images_count} labeled`,
+        hint: `${group.stats.models_count} models · ${group.stats.annotated_images_count ?? 0} labeled`,
         group: "Train",
       },
       {
@@ -178,7 +257,6 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const normalizedQuery = commandQuery.trim().toLowerCase();
   const filteredCommands = React.useMemo(() => {
     if (!normalizedQuery) return commandItems.slice(0, 14);
-
     return commandItems
       .filter((item) => `${item.group} ${item.label} ${item.hint}`.toLowerCase().includes(normalizedQuery))
       .slice(0, 20);
@@ -192,7 +270,6 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
         setIsCommandOpen(true);
         return;
       }
-
       if (event.key === "Escape") {
         setIsCommandOpen(false);
         setIsProjectSwitcherOpen(false);
@@ -222,6 +299,10 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
     setManualProjectId(projectId);
     setIsProjectSwitcherOpen(false);
   };
+  const toggleProjectSwitcher = () => {
+    updateProjectMenuPosition();
+    setIsProjectSwitcherOpen((value) => !value);
+  };
 
   return (
     <div className={clsx(s.root, isEditorRoute && s.editorMode)}>
@@ -235,10 +316,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
 
       <aside className={clsx(s.sidebar, isMobileOpen && s.sidebarOpen)}>
         <Link className={s.logo} to={paths.home()} onClick={closeMobile}>
-          <span className={s.logoMark}>
-            <span />
-            <span />
-          </span>
+          <span className={s.logoMark}><span /><span /></span>
           <span className={s.logoText}>VisionQC</span>
         </Link>
 
@@ -249,22 +327,11 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
         </button>
 
         <nav className={s.mainNav} aria-label="Основная навигация">
-          <NavLink
-            to={paths.home()}
-            end
-            className={({ isActive }) => clsx(s.navItem, isActive && s.navItemActive)}
-            onClick={closeMobile}
-          >
-            <Home />
-            <span>Home</span>
+          <NavLink to={paths.home()} end className={({ isActive }) => clsx(s.navItem, isActive && s.navItemActive)} onClick={closeMobile}>
+            <Home /><span>Home</span>
           </NavLink>
-          <NavLink
-            to={paths.groups()}
-            className={({ isActive }) => clsx(s.navItem, isActive && s.navItemActive)}
-            onClick={closeMobile}
-          >
-            <FolderKanban />
-            <span>Projects</span>
+          <NavLink to={paths.groups()} end className={({ isActive }) => clsx(s.navItem, isActive && s.navItemActive)} onClick={closeMobile}>
+            <FolderKanban /><span>Projects</span>
           </NavLink>
         </nav>
 
@@ -272,7 +339,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
           <div className={s.sidebarSectionTitle}>Current project</div>
           {selectedProject ? (
             <div className={s.projectSwitcherWrapV19}>
-              <button className={s.projectSwitcherV19} type="button" onClick={() => setIsProjectSwitcherOpen((value) => !value)}>
+              <button ref={projectSwitcherRef} className={s.projectSwitcherV19} type="button" onClick={toggleProjectSwitcher}>
                 <ProjectAvatar name={selectedProject.name} />
                 <span>
                   <strong>{selectedProject.name}</strong>
@@ -280,31 +347,9 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
                 </span>
                 <ChevronDown />
               </button>
-              {isProjectSwitcherOpen ? (
-                <div className={s.projectMenuV19}>
-                  {groups.map((group) => (
-                    <Link
-                      className={clsx(group.id === selectedProject.id && s.projectMenuItemActiveV19)}
-                      key={group.id}
-                      to={paths.groupDetail(group.id)}
-                      onClick={() => {
-                        chooseProject(group.id);
-                        closeMobile();
-                      }}
-                    >
-                      <ProjectAvatar name={group.name} />
-                      <span>
-                        <strong>{group.name}</strong>
-                        <small>{group.stats.standards_count} refs · {group.stats.models_count} models · {group.stats.inspections_count} runs</small>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
             </div>
           ) : (
             <Link className={s.createFirstProjectV19} to={paths.groups()} onClick={closeMobile}>
-              <Plus />
               <span>Create first project</span>
             </Link>
           )}
@@ -312,90 +357,45 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
 
         <div className={s.sidebarSectionTitle}>Workspace</div>
 
-        <WorkspaceSection
-          id="assets"
-          icon={Image}
-          title="Assets"
-          count={selectedProject?.stats.standards_count ?? 0}
-          isOpen={expandedSections.assets}
-          active={assetsActive}
-          addTo={selectedProjectId ? paths.assetReferences(selectedProjectId) : paths.groups()}
-          addTitle="Создать эталон"
-          onToggle={toggleSection}
-        >
+        <WorkspaceSection id="assets" icon={Image} title="Assets" count={selectedProject?.stats.standards_count ?? 0} isOpen={expandedSections.assets} active={assetsActive} onToggle={toggleSection}>
           {selectedProject ? (
             <>
               <WorkspaceLink to={paths.assetOverview(selectedProject.id)} icon={FolderKanban} label="Overview" exact onClick={closeMobile} />
               <WorkspaceLink to={paths.assetReferences(selectedProject.id)} icon={Image} label="References" exact onClick={closeMobile} />
               <WorkspaceLink to={paths.assetClasses(selectedProject.id)} icon={Tags} label="Classes" exact onClick={closeMobile} />
             </>
-          ) : (
-            <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create first project</EmptyTreeLink>
-          )}
+          ) : <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create first project</EmptyTreeLink>}
         </WorkspaceSection>
 
-        <WorkspaceSection
-          id="train"
-          icon={Sparkles}
-          title="Train"
-          count={selectedProject?.stats.models_count ?? totals.models}
-          isOpen={expandedSections.train}
-          active={trainActive}
-          addTo={selectedProjectId ? paths.trainingOverview(selectedProjectId) : paths.training()}
-          addTitle="Обучить или импортировать модель"
-          onToggle={toggleSection}
-        >
+        <WorkspaceSection id="train" icon={Sparkles} title="Train" count={selectedProject?.stats.models_count ?? totals.models} isOpen={expandedSections.train} active={trainActive} onToggle={toggleSection}>
           {selectedProject ? (
             <>
-              <WorkspaceLink to={paths.trainingOverview(selectedProject.id)} icon={Sparkles} label="Overview" onClick={closeMobile} />
-              <WorkspaceLink to={paths.trainingModels(selectedProject.id)} icon={Brain} label="Models" onClick={closeMobile} />
-              <WorkspaceLink to={paths.trainingRuns(selectedProject.id)} icon={Activity} label="Training runs" onClick={closeMobile} />
+              <WorkspaceLink to={paths.trainingOverview(selectedProject.id)} icon={Sparkles} label="Overview" exact onClick={closeMobile} />
+              <WorkspaceLink to={paths.trainingModels(selectedProject.id)} icon={Brain} label="Models" exact onClick={closeMobile} />
+              <WorkspaceLink to={paths.trainingRuns(selectedProject.id)} icon={Activity} label="Training runs" exact onClick={closeMobile} />
             </>
-          ) : (
-            <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create project first</EmptyTreeLink>
-          )}
+          ) : <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create project first</EmptyTreeLink>}
         </WorkspaceSection>
 
-        <WorkspaceSection
-          id="inspect"
-          icon={ListChecks}
-          title="Inspect"
-          count={selectedProject?.stats.inspections_count ?? totals.runs}
-          isOpen={expandedSections.inspect}
-          active={inspectActive || location.pathname.startsWith("/inspection-history")}
-          addTo={selectedProjectId ? paths.inspectionGroup("photo", selectedProjectId) : paths.inspection()}
-          addTitle="Запустить проверку"
-          onToggle={toggleSection}
-        >
+        <WorkspaceSection id="inspect" icon={ListChecks} title="Inspect" count={selectedProject?.stats.inspections_count ?? totals.runs} isOpen={expandedSections.inspect} active={inspectActive} onToggle={toggleSection}>
           {selectedProject ? (
             <>
-              <WorkspaceLink to={paths.inspectionGroup("photo", selectedProject.id)} icon={ListChecks} label="Station" onClick={closeMobile} />
-              <WorkspaceLink to={paths.inspectionHistoryGroup(selectedProject.id)} icon={Activity} label="Runs" onClick={closeMobile} />
+              <WorkspaceLink to={paths.inspectionGroup("photo", selectedProject.id)} icon={ListChecks} label="Station" exact onClick={closeMobile} />
+              <WorkspaceLink to={paths.inspectionHistoryGroup(selectedProject.id)} icon={Activity} label="Runs" exact onClick={closeMobile} />
             </>
-          ) : (
-            <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create project first</EmptyTreeLink>
-          )}
+          ) : <EmptyTreeLink to={paths.groups()} onClick={closeMobile}>Create project first</EmptyTreeLink>}
         </WorkspaceSection>
 
         <div className={s.sidebarSpacer} />
 
         <nav className={s.footerNav} aria-label="Служебная навигация">
-          <Link to={paths.cameras()} onClick={closeMobile}>
-            <Camera />
-            <span>Cameras</span>
-          </Link>
-          <Link to={paths.settingsSection("system")} onClick={closeMobile}>
-            <Settings />
-            <span>System</span>
-          </Link>
+          <Link to={paths.cameras()} onClick={closeMobile}><Camera /><span>Cameras</span></Link>
+          <Link to={paths.settingsSection("system")} onClick={closeMobile}><Settings /><span>System</span></Link>
         </nav>
 
         <div className={s.profileCard}>
           <span className={s.profileAvatar}>Q</span>
-          <span className={s.profileBody}>
-            <strong>local workspace</strong>
-            <small>quality-control.local</small>
-          </span>
+          <span className={s.profileBody}><strong>local workspace</strong><small>quality-control.local</small></span>
           <span className={s.profileDots}>⋮</span>
         </div>
       </aside>
@@ -403,17 +403,22 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
       <section className={s.workspace}>
         <header className={s.topbar}>
           <div className={s.topbarLeft}>
-            <button className={s.mobileMenu} type="button" onClick={() => setIsMobileOpen(true)}>
-              <Menu />
-            </button>
-            <div className={s.breadcrumbs}>
-              {meta.trail.map((crumb, index) => (
-                <React.Fragment key={`${crumb}-${index}`}>
-                  {index > 0 ? <span className={s.crumbSep}>›</span> : null}
-                  <span className={index === meta.trail.length - 1 ? s.crumbActive : undefined}>{crumb}</span>
-                </React.Fragment>
-              ))}
-            </div>
+            <button className={s.mobileMenu} type="button" onClick={() => setIsMobileOpen(true)}><Menu /></button>
+            <nav className={s.breadcrumbs} aria-label="Breadcrumbs">
+              {crumbs.map((crumb, index) => {
+                const isLast = index === crumbs.length - 1;
+                return (
+                  <React.Fragment key={`${crumb.label}-${index}`}>
+                    {index > 0 ? <span className={s.crumbSep}>›</span> : null}
+                    {crumb.to && !isLast ? (
+                      <Link className={s.crumbLinkV50} to={crumb.to}>{crumb.label}</Link>
+                    ) : (
+                      <span className={clsx(isLast && s.crumbActive)}>{crumb.label}</span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </nav>
           </div>
 
           <button className={s.topbarCenter} type="button" onClick={openCommand}>
@@ -422,17 +427,9 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
           </button>
 
           <div className={s.topbarActions}>
-            <Link className={s.pillButton} to={paths.groups()}>
-              <FolderKanban />
-              Projects
-            </Link>
-            <Link className={s.darkButton} to={selectedProjectId ? paths.inspectionGroup("photo", selectedProjectId) : paths.inspection()}>
-              Inspect
-            </Link>
-            <span className={s.balance}>LOCAL</span>
-            <button type="button" aria-label="Приложения"><Grid3X3 /></button>
-            <button type="button" aria-label="Уведомления"><Bell /></button>
-            <button className={s.themeButton} type="button" aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Light theme" : "Dark theme"} onClick={toggleTheme}>
+            <Link className={s.pillButton} to={paths.groups()}><FolderKanban />Projects</Link>
+            <Link className={s.darkButton} to={selectedProjectId ? paths.inspectionGroup("photo", selectedProjectId) : paths.inspection()}>Inspect</Link>
+            <button type="button" aria-label="Сменить тему" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}>
               {theme === "dark" ? <Sun /> : <Moon />}
             </button>
           </div>
@@ -445,53 +442,45 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
         </main>
       </section>
 
+      {isProjectSwitcherOpen && typeof document !== "undefined" ? createPortal(
+        <div ref={projectMenuRef} className={s.projectMenuPortalV50} style={{ top: projectMenuPosition.top, left: projectMenuPosition.left }}>
+          <div className={s.projectMenuHeaderV50}><span>Projects</span><b>{groups.length} изделий</b></div>
+          {groups.map((group) => (
+            <Link
+              className={clsx(s.projectMenuItemV50, group.id === selectedProject?.id && s.projectMenuItemActiveV19)}
+              key={group.id}
+              to={paths.groupDetail(group.id)}
+              onClick={() => { chooseProject(group.id); closeMobile(); }}
+            >
+              <ProjectAvatar name={group.name} />
+              <span><strong>{group.name}</strong><small>{group.stats.standards_count} refs · {group.stats.models_count} models · {group.stats.inspections_count} runs</small></span>
+            </Link>
+          ))}
+        </div>,
+        document.body
+      ) : null}
+
       {isCommandOpen ? (
         <div className={s.commandOverlay} role="presentation" onMouseDown={closeCommand}>
-          <section
-            className={s.commandDialog}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Command palette"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+          <section className={s.commandDialog} role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={(event) => event.stopPropagation()}>
             <div className={s.commandSearchRow}>
               <Search />
-              <input
-                autoFocus
-                placeholder="Search project, reference, model, camera..."
-                value={commandQuery}
-                onChange={(event) => setCommandQuery(event.target.value)}
-              />
+              <input autoFocus placeholder="Search project, reference, model, camera..." value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} />
               <button type="button" onClick={closeCommand} aria-label="Close search"><X /></button>
             </div>
-
-            <div className={s.commandMetaRow}>
-              <span><CircleDot /> {filteredCommands.length} results</span>
-              <span>Ctrl K</span>
-            </div>
-
+            <div className={s.commandMetaRow}><span><CircleDot /> {filteredCommands.length} results</span><span>Ctrl K</span></div>
             <div className={s.commandList}>
-              {filteredCommands.length ? (
-                filteredCommands.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <Link className={s.commandItem} key={`${item.group}-${item.to}-${item.label}`} to={item.to} onClick={closeCommand}>
-                      <span className={s.commandIcon}><Icon /></span>
-                      <span className={s.commandText}>
-                        <strong>{item.label}</strong>
-                        <small>{item.hint}</small>
-                      </span>
-                      <b>{item.group}</b>
-                    </Link>
-                  );
-                })
-              ) : (
-                <div className={s.commandEmpty}>
-                  <Search />
-                  <strong>Nothing found</strong>
-                  <span>Попробуй project, reference, train, inspect или camera.</span>
-                </div>
+              {filteredCommands.length ? filteredCommands.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link className={s.commandItem} key={`${item.group}-${item.to}-${item.label}`} to={item.to} onClick={closeCommand}>
+                    <span className={s.commandIcon}><Icon /></span>
+                    <span className={s.commandText}><strong>{item.label}</strong><small>{item.hint}</small></span>
+                    <b>{item.group}</b>
+                  </Link>
+                );
+              }) : (
+                <div className={s.commandEmpty}><Search /><strong>Nothing found</strong><span>Попробуй project, reference, train, inspect или camera.</span></div>
               )}
             </div>
           </section>
@@ -501,18 +490,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   );
 };
 
-function WorkspaceSection({
-  id,
-  icon: Icon,
-  title,
-  children,
-  active,
-  isOpen,
-  count,
-  addTo,
-  addTitle,
-  onToggle,
-}: {
+function WorkspaceSection({ id, icon: Icon, title, children, active, isOpen, count, onToggle }: {
   id: SectionId;
   icon: LucideIcon;
   title: string;
@@ -520,8 +498,6 @@ function WorkspaceSection({
   active?: boolean;
   isOpen: boolean;
   count: number;
-  addTo: string;
-  addTitle: string;
   onToggle: (section: SectionId) => void;
 }) {
   return (
@@ -533,9 +509,6 @@ function WorkspaceSection({
           <b>{count}</b>
           <ChevronDown className={s.treeChevronV19} />
         </button>
-        <Link className={s.treePlusV19} to={addTo} title={addTitle} aria-label={addTitle}>
-          <Plus />
-        </Link>
       </div>
       {isOpen ? <div className={s.workspaceTreeChildrenV19}>{children}</div> : null}
     </div>
@@ -545,19 +518,13 @@ function WorkspaceSection({
 function WorkspaceLink({ to, icon: Icon, label, exact, onClick }: { to: string; icon: LucideIcon; label: string; exact?: boolean; onClick?: () => void }) {
   return (
     <NavLink to={to} end={exact} className={({ isActive }) => clsx(s.workspaceLinkV19, isActive && s.workspaceLinkActiveV19)} onClick={onClick}>
-      <Icon />
-      <span>{label}</span>
+      <Icon /><span>{label}</span>
     </NavLink>
   );
 }
 
 function EmptyTreeLink({ to, onClick, children }: { to: string; onClick?: () => void; children: React.ReactNode }) {
-  return (
-    <Link className={s.emptyTreeLinkV19} to={to} onClick={onClick}>
-      <Plus />
-      <span>{children}</span>
-    </Link>
-  );
+  return <Link className={s.emptyTreeLinkV19} to={to} onClick={onClick}><span>{children}</span></Link>;
 }
 
 function ProjectAvatar({ name }: { name: string }) {

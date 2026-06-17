@@ -1,0 +1,79 @@
+
+/* v45 common components hardening: final bridge for old generic UI pieces. */
+:root {
+  --vc-control-height: 36px;
+  --vc-control-height-lg: 40px;
+  --vc-radius-control: 10px;
+  --vc-radius: 14px;
+  --vc-radius-lg: 18px;
+  --vc-accent: #2563eb;
+  --vc-accent-hover: #1d4ed8;
+  --vc-on-accent: #ffffff;
+  --vc-focus-ring: rgba(37, 99, 235, 0.16);
+  --vc-success-soft: rgba(34, 197, 94, 0.10);
+  --vc-success-line: rgba(34, 197, 94, 0.25);
+  --vc-success-text: #15803d;
+  --vc-warning: #d97706;
+  --vc-warning-soft: rgba(245, 158, 11, 0.12);
+  --vc-warning-line: rgba(245, 158, 11, 0.32);
+  --vc-warning-text: #92400e;
+  --vc-danger: #dc2626;
+  --vc-danger-soft: rgba(239, 68, 68, 0.10);
+  --vc-danger-line: rgba(239, 68, 68, 0.28);
+  --vc-danger-text: #b91c1c;
+  --vc-backdrop: rgba(3, 7, 18, 0.52);
+  --vc-shadow-popover: 0 18px 48px rgba(15, 23, 42, 0.16);
+  --vc-shadow-modal: 0 28px 84px rgba(15, 23, 42, 0.28);
+}
+
+[data-theme="dark"] {
+  --vc-control-bg: var(--vc-surface-2, #111315);
+  --vc-control-bg-focus: var(--vc-surface, #151719);
+  --vc-control-hover: var(--vc-surface-3, #1a1d20);
+  --vc-control-border: var(--vc-line, rgba(255, 255, 255, 0.10));
+  --vc-control-border-hover: var(--vc-line-strong, rgba(255, 255, 255, 0.18));
+  --vc-backdrop: rgba(0, 0, 0, 0.68);
+  --vc-shadow-popover: 0 18px 52px rgba(0, 0, 0, 0.48);
+  --vc-shadow-modal: 0 30px 90px rgba(0, 0, 0, 0.62);
+}
+
+:where(input, select, textarea, button) {
+  font: inherit;
+}
+
+:where(input, select, textarea) {
+  color-scheme: light dark;
+}
+
+:where(.card, .data-table, .badge) {
+  box-sizing: border-box;
+}
+
+:where(.card, .data-table, .badge, .page, .panel, .toolbar) :where(input, select, textarea) {
+  min-width: 0;
+}
+
+:where(.data-table) {
+  overflow: hidden;
+}
+
+:where(.data-table__cell, .data-table__head-cell) > * {
+  min-width: 0;
+}
+
+[data-theme="dark"] :where(.card, .data-table, .badge) {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] :where(.card) {
+  background: var(--vc-surface, #151719);
+  border-color: var(--vc-line, rgba(255, 255, 255, 0.10));
+}
+
+[data-theme="dark"] :where(.data-table__head-row, .data-table__row:hover) {
+  background: var(--vc-surface-2, #111315);
+}
+
+[data-theme="dark"] :where(.data-table__head-cell, .data-table__cell) {
+  border-color: var(--vc-line, rgba(255, 255, 255, 0.10));
+}

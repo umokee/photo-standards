@@ -1,3 +1,4 @@
+
 @use "@/styles/variables" as *;
 
 .root {
@@ -7,36 +8,39 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .card {
   display: flex;
   align-items: center;
-  gap: $space-3;
-  max-width: 340px;
-  padding: $space-3 $space-4;
-  background: $surface;
-  border: 1px solid $line;
-  border-radius: $radius;
+  gap: 12px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--vc-radius-md, 14px);
+  background: rgba(16, 18, 20, 0.84);
+  color: #f4f6f8;
   pointer-events: auto;
+  backdrop-filter: blur(12px);
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: 4px;
   min-width: 0;
 }
 
 .title {
-  color: $text;
-  font-weight: $fw-semibold;
+  color: #f4f6f8;
+  font-size: 13px;
+  font-weight: 850;
 }
 
 .message {
-  color: $text-sub;
-  font-size: $text-small;
+  color: rgba(244, 246, 248, 0.72);
+  font-size: 12px;
   line-height: 1.4;
   word-break: break-word;
 }
@@ -51,4 +55,34 @@
     opacity: 0.5;
     transform: scale(1.2);
   }
+}
+
+/* v49 real regression hardfix */
+:global(html[data-theme="dark"]) .page,
+:global(html[data-theme="dark"]) .root,
+:global(html[data-theme="dark"]) .layout,
+:global(html[data-theme="dark"]) .workspace,
+:global(.theme-dark) .page,
+:global(.theme-dark) .root,
+:global(.theme-dark) .layout,
+:global(.theme-dark) .workspace {
+  background: var(--vc-bg, #080a0b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}
+
+:global(html[data-theme="dark"]) .hero,
+:global(html[data-theme="dark"]) .panel,
+:global(html[data-theme="dark"]) .card,
+:global(html[data-theme="dark"]) .rail,
+:global(html[data-theme="dark"]) .detail,
+:global(html[data-theme="dark"]) .tile,
+:global(.theme-dark) .hero,
+:global(.theme-dark) .panel,
+:global(.theme-dark) .card,
+:global(.theme-dark) .rail,
+:global(.theme-dark) .detail,
+:global(.theme-dark) .tile {
+  background: var(--vc-surface, #0f1314) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
+  color: var(--vc-text, #f4f7f8) !important;
 }

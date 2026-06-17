@@ -1,0 +1,1014 @@
+.page {
+  --train-bg: var(--vc-bg, #f6f7f9);
+  --train-surface: var(--vc-surface, #ffffff);
+  --train-surface-2: var(--vc-surface-2, #f3f5f8);
+  --train-surface-3: var(--vc-surface-3, #e7ebf1);
+  --train-line: var(--vc-line, rgba(15, 23, 42, 0.12));
+  --train-line-strong: var(--vc-line-strong, rgba(15, 23, 42, 0.2));
+  --train-text: var(--vc-text, #111827);
+  --train-muted: var(--vc-muted, #64748b);
+  --train-faint: var(--vc-faint, #94a3b8);
+  --train-accent: var(--vc-accent, #0b46ff);
+  --train-accent-2: var(--vc-accent-2, #00a3ff);
+  --train-success: var(--vc-success, #16a34a);
+  --train-warning: var(--vc-warning, #f59e0b);
+  --train-danger: var(--vc-danger, #ef4444);
+  --train-radius-xl: var(--vc-radius-xl, 24px);
+  --train-radius-lg: var(--vc-radius-lg, 18px);
+  --train-radius-md: var(--vc-radius-md, 14px);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 20px;
+  overflow: hidden;
+  color: var(--train-text);
+  background: var(--train-bg);
+}
+
+.header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-xl);
+  background: var(--train-surface);
+  box-shadow: var(--vc-shadow-sm, 0 16px 36px rgba(15, 23, 42, 0.06));
+}
+
+.headerMain {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--train-muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.header h1 {
+  margin: 7px 0 6px;
+  color: var(--train-text);
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.header p {
+  max-width: 780px;
+  margin: 0;
+  color: var(--train-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.shell {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 14px;
+  overflow: hidden;
+}
+
+.rail {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-xl);
+  background: var(--train-surface);
+  overflow: hidden;
+}
+
+.railCollapsed {
+  grid-template-rows: auto;
+  align-self: start;
+}
+
+.railTop {
+  display: grid;
+  gap: 8px;
+}
+
+.search {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--train-line);
+  border-radius: 13px;
+  background: var(--train-surface-2);
+  color: var(--train-muted);
+}
+
+.search svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+}
+
+.search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--train-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search input::placeholder {
+  color: var(--train-faint);
+}
+
+.railControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filters,
+.sortBar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filters svg,
+.sortBar svg {
+  width: 14px;
+  height: 14px;
+  color: var(--train-muted);
+}
+
+.filterButton,
+.sortButton,
+.collapseButton,
+.softButton,
+.primaryButton,
+.dangerButton,
+.iconButton {
+  min-height: 34px;
+  border: 1px solid var(--train-line);
+  border-radius: 12px;
+  background: var(--train-surface-2);
+  color: var(--train-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.filterButton,
+.sortButton,
+.collapseButton,
+.softButton,
+.primaryButton,
+.dangerButton {
+  padding: 0 11px;
+}
+
+.iconButton {
+  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButton svg,
+.softButton svg,
+.primaryButton svg,
+.dangerButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.filterButton:hover,
+.sortButton:hover,
+.collapseButton:hover,
+.softButton:hover,
+.iconButton:hover {
+  border-color: var(--train-line-strong);
+  background: var(--train-surface-3);
+}
+
+.filterActive,
+.sortActive,
+.primaryButton {
+  border-color: color-mix(in srgb, var(--train-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--train-accent) 12%, var(--train-surface));
+  color: var(--train-accent);
+}
+
+.dangerButton {
+  color: var(--train-danger);
+  background: color-mix(in srgb, var(--train-danger) 10%, var(--train-surface));
+}
+
+.railSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.miniStat {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--train-line);
+  border-radius: 14px;
+  background: var(--train-surface-2);
+}
+
+.miniStat span {
+  display: block;
+  color: var(--train-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.miniStat strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--train-text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.railBody {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.modelList {
+  display: grid;
+  gap: 10px;
+}
+
+.family {
+  display: grid;
+  gap: 8px;
+}
+
+.familyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--train-muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.modelCard {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--train-line);
+  border-radius: 16px;
+  background: var(--train-surface-2);
+  color: var(--train-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modelCard:hover,
+.modelCardActive {
+  border-color: color-mix(in srgb, var(--train-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--train-accent) 8%, var(--train-surface));
+}
+
+.modelCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modelTitle {
+  min-width: 0;
+}
+
+.modelTitle strong {
+  display: block;
+  overflow: hidden;
+  color: var(--train-text);
+  font-size: 13px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelTitle span {
+  display: block;
+  margin-top: 3px;
+  color: var(--train-muted);
+  font-size: 11px;
+}
+
+.statusPill,
+.sourcePill,
+.activePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--train-line);
+  border-radius: 999px;
+  background: var(--train-surface);
+  color: var(--train-muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.activePill {
+  border-color: color-mix(in srgb, var(--train-success) 40%, transparent);
+  color: var(--train-success);
+  background: color-mix(in srgb, var(--train-success) 10%, var(--train-surface));
+}
+
+.modelMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.modelMetric {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--train-line);
+  border-radius: 12px;
+  background: var(--train-surface);
+}
+
+.modelMetric span {
+  display: block;
+  color: var(--train-muted);
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.modelMetric strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--train-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.emptyRail,
+.emptyMain {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 1px dashed var(--train-line-strong);
+  border-radius: var(--train-radius-lg);
+  color: var(--train-muted);
+  text-align: center;
+}
+
+.main {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
+}
+
+.modelHeader {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+  padding: 14px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-xl);
+  background: var(--train-surface);
+}
+
+.modelIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modelAvatar {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--train-line);
+  border-radius: 16px;
+  background: var(--train-surface-2);
+  color: var(--train-accent);
+}
+
+.modelAvatar svg {
+  width: 22px;
+  height: 22px;
+}
+
+.modelIdentity h2 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--train-text);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelIdentity p {
+  margin: 5px 0 0;
+  color: var(--train-muted);
+  font-size: 12px;
+}
+
+.modelBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.modelActions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.contentScroll {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metricCard {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-lg);
+  background: var(--train-surface);
+}
+
+.metricCard span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--train-muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.metricCard strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--train-text);
+  font-size: 28px;
+  font-weight: 920;
+  letter-spacing: -0.04em;
+}
+
+.metricCard small {
+  display: block;
+  margin-top: 5px;
+  color: var(--train-faint);
+  font-size: 11px;
+}
+
+.block {
+  min-width: 0;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-xl);
+  background: var(--train-surface);
+  overflow: hidden;
+}
+
+.blockHeader {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--train-line);
+  background: transparent;
+  color: var(--train-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.blockHeaderTitle {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.blockHeaderTitle svg {
+  width: 17px;
+  height: 17px;
+  color: var(--train-accent);
+}
+
+.blockHeaderTitle strong {
+  display: block;
+  color: var(--train-text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.blockHeaderTitle span {
+  display: block;
+  margin-top: 1px;
+  color: var(--train-muted);
+  font-size: 11px;
+}
+
+.blockBody {
+  padding: 14px;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.chartCard {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(150px, 1fr) auto;
+  gap: 10px;
+  min-height: 242px;
+  padding: 12px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-lg);
+  background: var(--train-surface-2);
+}
+
+.chartTop {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chartTop strong {
+  display: block;
+  color: var(--train-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.chartTop span {
+  display: block;
+  margin-top: 3px;
+  color: var(--train-muted);
+  font-size: 11px;
+}
+
+.chartSvg {
+  width: 100%;
+  height: 160px;
+  display: block;
+  border: 1px solid var(--train-line);
+  border-radius: 14px;
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--train-line) 50%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--train-line) 50%, transparent) 1px, transparent 1px),
+    var(--train-surface);
+  background-size: 25% 100%, 100% 25%, auto;
+}
+
+.chartLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--train-muted);
+  font-size: 11px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--train-accent);
+}
+
+.todoChart {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 1px dashed var(--train-line-strong);
+  border-radius: 14px;
+  background: var(--train-surface);
+  color: var(--train-muted);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metaCard,
+.jobCard,
+.classCard {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-lg);
+  background: var(--train-surface-2);
+}
+
+.metaCard span,
+.jobCard span,
+.classCard span {
+  display: block;
+  color: var(--train-muted);
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metaCard strong,
+.jobCard strong,
+.classCard strong {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--train-text);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobCard {
+  display: grid;
+  gap: 12px;
+}
+
+.progressTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--train-surface-3);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--train-accent), var(--train-accent-2));
+}
+
+.jobActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.classGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.classCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.classDot {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--train-line-strong);
+  border-radius: 999px;
+  background: hsl(var(--class-hue, 210), 80%, 52%);
+}
+
+.splits {
+  display: grid;
+  gap: 10px;
+}
+
+.splitRow {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 10px;
+  color: var(--train-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.splitBar {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--train-surface-3);
+}
+
+.splitFill {
+  height: 100%;
+  width: var(--split-width, 0%);
+  border-radius: inherit;
+  background: var(--train-accent);
+}
+
+.compareGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.compareCard {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-lg);
+  background: var(--train-surface-2);
+}
+
+.compareCard header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compareCard strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compareBars {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.compareRow {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 46px;
+  gap: 8px;
+  align-items: center;
+  color: var(--train-muted);
+  font-size: 11px;
+}
+
+.compareBar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--train-surface-3);
+}
+
+.compareFill {
+  height: 100%;
+  width: var(--compare-width, 0%);
+  border-radius: inherit;
+  background: var(--train-accent);
+}
+
+@media (max-width: 1180px) {
+  .shell {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .metricGrid,
+  .metaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .page {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .header,
+  .modelHeader {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .shell {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .rail,
+  .main,
+  .contentScroll,
+  .railBody {
+    height: auto;
+    overflow: visible;
+  }
+
+  .metricGrid,
+  .metaGrid,
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v47 train models should scroll inside shell, not squeeze vertically */
+.page {
+  height: 100%;
+  min-height: min(760px, calc(100svh - var(--vc-topbar-height, 56px) - 36px));
+  padding: 12px;
+  gap: 12px;
+}
+
+.header {
+  padding: 13px 16px;
+  border-radius: 20px;
+}
+
+.header h1 {
+  font-size: clamp(24px, 2.6vw, 34px);
+}
+
+.shell {
+  min-height: 0;
+}
+
+.railBody,
+.contentScroll {
+  scrollbar-gutter: stable;
+}
+
+@media (max-height: 760px) {
+  .page { min-height: 720px; }
+}
+
+/* v48 nav/scroll regression: the route content scrolls under sticky shell topbar.
+   Do not squeeze model graphs into the viewport. */
+.page {
+  height: auto !important;
+  min-height: 100% !important;
+  grid-template-rows: auto auto !important;
+  overflow: visible !important;
+  padding: clamp(10px, 1.2vw, 16px) !important;
+}
+
+.header {
+  flex-shrink: 0;
+}
+
+.shell {
+  min-height: 0 !important;
+  align-items: start !important;
+  overflow: visible !important;
+}
+
+.rail {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  max-height: calc(100svh - var(--vc-topbar-height, 56px) - 32px);
+}
+
+.railBody {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.main {
+  display: block !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+.contentScroll {
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  padding-bottom: 28px;
+}
+
+.metricGrid,
+.chartGrid,
+.metaGrid,
+.classGrid,
+.compareGrid {
+  min-height: 0;
+}
+
+.block {
+  overflow: clip;
+}
+
+.chartCard {
+  min-height: 266px;
+  grid-template-rows: auto minmax(180px, 180px) auto;
+}
+
+.chartSvg,
+.todoChart {
+  min-height: 180px;
+  height: 180px;
+}
+
+@media (max-width: 860px) {
+  .rail {
+    position: static;
+    max-height: none;
+  }
+
+  .railBody {
+    overflow: visible;
+  }
+}

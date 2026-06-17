@@ -1,41 +1,44 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: flex;
   align-items: center;
-  gap: $space-2;
+  gap: 8px;
+  min-width: 0;
 }
 
 .track {
   position: relative;
   flex: 1;
+  min-width: 0;
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: $surface2;
-  border: 1px solid $line-soft;
+  background: var(--vc-surface-3, #e5e7eb);
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
 }
 
 .fill {
   height: 100%;
   border-radius: inherit;
-  background: $primary;
+  background: var(--vc-accent, #2563eb);
+  transition: width 180ms ease;
 
-  &.warn {
-    background: $warning;
-  }
+  &.warn { background: var(--vc-warning, #d97706); }
 }
 
 .label {
-  font-size: $text-small;
-  color: $text-sub;
-  white-space: nowrap;
-  min-width: 40px;
+  min-width: 42px;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 12px;
+  font-weight: 680;
   text-align: right;
+  white-space: nowrap;
 }
 
 .warn {
-  color: $warning;
+  color: var(--vc-warning-text, #92400e);
   flex-shrink: 0;
 }
 

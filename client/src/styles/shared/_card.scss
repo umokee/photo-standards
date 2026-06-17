@@ -1,17 +1,21 @@
+
 @use "../variables" as *;
 
 .card {
-  background: $surface;
-  border: 1px solid $line-soft;
-  border-radius: 18px;
+  min-width: 0;
+  margin-bottom: 12px;
   overflow: hidden;
-  margin-bottom: $space-3;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.045);
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  border-radius: var(--vc-radius-lg, 18px);
+  background: var(--vc-surface, #ffffff);
+  color: var(--vc-text, #111827);
+  box-shadow: none;
 
   &--fill {
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0;
     margin-bottom: 0;
   }
 
@@ -19,29 +23,33 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px $space-4;
-    border-bottom: 1px solid $line-soft;
-    gap: $space-3;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+    background: var(--vc-surface-2, #f8fafc);
     flex-shrink: 0;
-    background: $surface2;
 
     &-title {
-      font-size: $text-small;
-      font-weight: $fw-bold;
-      color: $text;
       display: flex;
       align-items: center;
-      gap: $space-2;
+      gap: 8px;
+      min-width: 0;
+      color: var(--vc-text, #111827);
+      font-size: 13px;
+      font-weight: 760;
     }
   }
 
   &__body {
-    padding: $space-3 $space-4;
+    min-width: 0;
+    padding: 12px 14px;
   }
 
   &__actions {
     display: flex;
     align-items: center;
-    gap: $space-2;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 }

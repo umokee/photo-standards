@@ -263,3 +263,41 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
+
+/* v43 inspect strict result panel */
+.root {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--vc-surface, #ffffff);
+  color: var(--vc-text, #101114);
+}
+
+.summary,
+.saveDock {
+  border-color: var(--vc-line, rgba(127, 127, 127, 0.18));
+}
+
+.eyebrow,
+.summaryLabel,
+.summaryHint,
+.saveHint,
+.saveStateText,
+.saveMeta {
+  color: var(--vc-muted, #6f737b);
+}
+
+.summaryValue,
+.summaryTitle,
+.saveStateTitle,
+.summaryRatio {
+  color: var(--vc-text, #101114);
+}
+
+.summaryText,
+.resultStatus,
+.noteSummary {
+  color: var(--vc-muted, #6f737b);
+}

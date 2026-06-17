@@ -1,9 +1,11 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: inline-flex;
   align-items: center;
-  gap: $space-2;
+  gap: 8px;
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -13,14 +15,18 @@
   width: 0;
   height: 0;
 
+  &:focus-visible + .track {
+    box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.16));
+  }
+
   &:checked + .track {
-    background: $primary;
-    border-color: $primary;
+    background: var(--vc-accent, #2563eb);
+    border-color: var(--vc-accent, #2563eb);
   }
 
   &:checked + .track .thumb {
     transform: translateX(16px);
-    background: $text-white;
+    background: var(--vc-on-accent, #fff);
   }
 }
 
@@ -30,10 +36,11 @@
   align-items: center;
   width: 36px;
   height: 20px;
-  border-radius: 10px;
-  background: $surface2;
-  border: 1px solid $line;
+  border-radius: 999px;
+  background: var(--vc-surface-3, #e5e7eb);
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
   flex-shrink: 0;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .thumb {
@@ -43,11 +50,14 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: $text-hint;
+  background: var(--vc-text-muted, #6b7280);
   pointer-events: none;
+  transition: transform 140ms ease, background-color 140ms ease;
 }
 
 .label {
-  font-size: $text-small;
-  color: $text-sub;
+  min-width: 0;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 12px;
+  font-weight: 620;
 }

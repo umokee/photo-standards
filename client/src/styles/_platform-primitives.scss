@@ -1,0 +1,138 @@
+
+/*
+  Platform primitives foundation.
+  New pages should use these classes instead of inventing page-local surfaces.
+  Existing pages are bridged from platform-pages.module.scss until migrated.
+*/
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+body {
+  font-family: var(--vc-font-ui);
+}
+
+::selection {
+  color: var(--vc-accent-contrast);
+  background: color-mix(in srgb, var(--vc-accent) 72%, transparent);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vc-accent) 18%, transparent);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  min-height: var(--vc-control-h);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius-md, 14px);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--vc-text-subtle);
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.vc-page {
+  min-width: 0;
+  min-height: 0;
+  color: var(--vc-text);
+}
+
+.vc-panel,
+.vc-card,
+.vc-toolbar,
+.vc-rail,
+.vc-inspector {
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-xs);
+}
+
+.vc-panel,
+.vc-card {
+  border-radius: var(--vc-radius-lg, 18px);
+}
+
+.vc-toolbar {
+  min-height: 52px;
+  border-radius: var(--vc-radius-lg, 18px);
+}
+
+.vc-rail,
+.vc-inspector {
+  border-radius: var(--vc-radius-lg, 18px);
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.vc-list-scroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.vc-muted { color: var(--vc-text-muted); }
+.vc-subtle { color: var(--vc-text-subtle); }
+.vc-accent { color: var(--vc-accent); }
+
+.vc-button {
+  min-height: var(--vc-control-h);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius-md, 14px);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  font-weight: 750;
+}
+
+.vc-button:hover {
+  border-color: var(--vc-border-strong);
+  background: var(--vc-surface-2);
+}
+
+.vc-button-primary {
+  border-color: var(--vc-accent);
+  background: var(--vc-accent);
+  color: var(--vc-accent-contrast);
+}
+
+.vc-button-primary:hover {
+  border-color: var(--vc-accent-hover);
+  background: var(--vc-accent-hover);
+}
+
+.vc-grid-bg {
+  background-image:
+    linear-gradient(var(--vc-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--vc-grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+}

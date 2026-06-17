@@ -1,107 +1,108 @@
+
 @use "@/styles/variables" as *;
 
 .fileRow {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: $space-3;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .fileMeta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   min-width: min(100%, 260px);
 }
 
-.fileName {
-  color: $text;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
+.fileName,
+.fileStatus {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.fileName {
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 850;
+}
+
 .fileStatus {
-  color: $text-sub;
-  font-size: $text-small;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--vc-text-muted, #667085);
+  font-size: 12px;
 }
 
 .mappings {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
-  max-height: 420px;
+  gap: 10px;
+  max-height: min(48vh, 520px);
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .mappingRow {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
-  padding: $space-3;
-  border: 1px solid $line-soft;
-  border-radius: calc($radius + 2px);
-  background: $surface2;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--vc-border, #dfe3e8);
+  border-radius: var(--vc-radius-lg, 18px);
+  background: var(--vc-surface-2, #f7f8fa);
 }
 
-.mappingTop {
+.mappingTop,
+.mappingInfo,
+.mappingControls {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.mappingInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   min-width: 0;
 }
 
+.mappingTop,
+.mappingInfo {
+  gap: 4px;
+}
+
+.mappingControls {
+  gap: 10px;
+}
+
 .nativeName {
-  color: $text;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 850;
   overflow-wrap: anywhere;
 }
 
 .nativeMeta {
-  color: $text-sub;
-  font-size: $text-small;
+  color: var(--vc-text-muted, #667085);
+  font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
 .nativeMetaAuto {
-  color: $primary-text;
+  color: var(--vc-accent-text, var(--vc-accent, #2563eb));
 }
 
 .autoMatchLabel {
-  font-weight: $fw-semibold;
+  font-weight: 820;
 }
 
 .autoMatchValue {
-  color: $text;
-}
-
-.mappingControls {
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
+  color: var(--vc-text, #111827);
 }
 
 .modeTabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $space-2;
+  gap: 8px;
 }
 
 .modeBtn {
@@ -109,30 +110,27 @@
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  padding: 6px 10px;
-  border: 1px solid $line-soft;
-  border-radius: $radius;
-  background: transparent;
-  color: $text-sub;
-  font-size: $text-small;
-  font-weight: $fw-medium;
+  padding: 7px 10px;
+  border: 1px solid var(--vc-border, #dfe3e8);
+  border-radius: var(--vc-radius-md, 14px);
+  background: var(--vc-surface, #fff);
+  color: var(--vc-text-muted, #667085);
+  font-size: 12px;
+  font-weight: 780;
   text-align: center;
   cursor: pointer;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    color 0.2s;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 
   &:hover {
-    background: $surface;
-    color: $text;
+    border-color: var(--vc-border-strong, #cfd6df);
+    color: var(--vc-text, #111827);
   }
 }
 
 .modeBtnActive {
-  color: $primary-text;
-  border-color: $primary-bd;
-  background: $primary-bg;
+  border-color: var(--vc-accent-border, rgba(37, 99, 235, 0.34));
+  background: var(--vc-accent-soft, rgba(37, 99, 235, 0.08));
+  color: var(--vc-accent-text, var(--vc-accent, #2563eb));
 }
 
 .existingRow {
@@ -143,7 +141,7 @@
 .newGrid {
   display: grid;
   grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: $space-2;
+  gap: 10px;
   align-items: center;
 }
 
@@ -158,21 +156,22 @@
   width: 42px;
   height: 42px;
   padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--vc-border, #dfe3e8);
+  border-radius: var(--vc-radius-md, 14px);
+  background: var(--vc-surface, #fff);
   cursor: pointer;
 }
 
 .colorOpen {
-  background: transparent;
+  border-color: var(--vc-accent-border, rgba(37, 99, 235, 0.34));
 }
 
 .colorSwatch {
   display: block;
   width: 22px;
   height: 22px;
-  border-radius: 4px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 0 0 1px var(--vc-border, #dfe3e8);
 }
 
 .colorPanel {
@@ -180,15 +179,12 @@
 }
 
 .inlineMeta {
-  color: $text-sub;
-  font-size: $text-micro;
+  color: var(--vc-text-muted, #667085);
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
-  .newGrid {
-    grid-template-columns: 1fr;
-  }
-
+  .newGrid,
   .modeTabs {
     grid-template-columns: 1fr;
   }

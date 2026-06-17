@@ -45,7 +45,7 @@
   height: 6px;
   margin: 0;
   appearance: none;
-  border: 1px solid rgba($line, 0.9);
+  border: 1px solid var(--vc-line);
   border-radius: 999px;
   background: linear-gradient(
     90deg,

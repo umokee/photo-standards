@@ -1,62 +1,65 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
-  padding: $space-3;
-  border: 1px solid $line;
-  border-radius: $radius;
-  background: $surface;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  border-radius: var(--vc-radius, 14px);
+  background: var(--vc-surface, #ffffff);
 
   &.transparent {
     background: transparent;
+    border-color: transparent;
+    padding: 0;
   }
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: 4px;
+  min-width: 0;
 }
 
 .headerWithAside {
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-start;
-  gap: $space-3;
+  gap: 12px;
 }
 
 .headerContent {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: 4px;
   min-width: 0;
 }
 
 .title {
-  color: $text;
-  font-size: $text-body;
-  font-weight: $fw-semibold;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 740;
+  letter-spacing: -0.01em;
 }
 
 .hint {
-  color: $text-sub;
-  font-size: $text-small;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 12px;
   line-height: 1.5;
 }
 
-.aside {
-  flex-shrink: 0;
-}
+.aside { flex-shrink: 0; }
 
 .content {
   display: flex;
-  gap: $space-1;
+  gap: 6px;
+  min-width: 0;
 
-  &.column {
-    flex-direction: column;
-  }
+  &.column { flex-direction: column; }
 
   &.row {
     flex-direction: row;
@@ -66,11 +69,6 @@
 }
 
 @media (max-width: 900px) {
-  .headerWithAside {
-    flex-direction: column;
-  }
-
-  .aside {
-    width: 100%;
-  }
+  .headerWithAside { flex-direction: column; }
+  .aside { width: 100%; }
 }

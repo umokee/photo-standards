@@ -1,0 +1,97 @@
+
+/* v39 strict neutral theme foundation. Keep this file last in main.scss. */
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+  --vc-bg: #f5f6f8;
+  --vc-bg-2: #eef1f4;
+  --vc-surface: #ffffff;
+  --vc-surface-2: #f8f9fb;
+  --vc-surface-3: #f1f3f6;
+  --vc-elevated: rgba(255, 255, 255, 0.96);
+  --vc-overlay: rgba(15, 23, 42, 0.48);
+  --vc-line: #dfe4ea;
+  --vc-line-soft: #ebeff4;
+  --vc-line-strong: #c9d1db;
+  --vc-text: #101316;
+  --vc-text-2: #30363d;
+  --vc-muted: #68717b;
+  --vc-faint: #929aa4;
+  --vc-accent: #0b39ff;
+  --vc-accent-contrast: #ffffff;
+  --vc-accent-soft: rgba(11, 57, 255, 0.09);
+  --vc-success: #15945b;
+  --vc-success-soft: rgba(21, 148, 91, 0.12);
+  --vc-warning: #a66500;
+  --vc-warning-soft: rgba(166, 101, 0, 0.12);
+  --vc-danger: #d92d3d;
+  --vc-danger-soft: rgba(217, 45, 61, 0.12);
+  --vc-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+  --vc-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.06);
+  --vc-sidebar-width: 248px;
+  --vc-topbar-height: 64px;
+  --vc-radius-sm: 10px;
+  --vc-radius: 14px;
+  --vc-radius-lg: 20px;
+  --vc-radius-xl: 26px;
+  --vc-control: 40px;
+  --vc-gap: 12px;
+  --vc-page-pad: clamp(14px, 1.6vw, 24px);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --vc-bg: #080a0b;
+  --vc-bg-2: #0c0f10;
+  --vc-surface: #101315;
+  --vc-surface-2: #15191b;
+  --vc-surface-3: #1b2023;
+  --vc-elevated: rgba(20, 24, 26, 0.96);
+  --vc-overlay: rgba(0, 0, 0, 0.66);
+  --vc-line: #283035;
+  --vc-line-soft: #20272b;
+  --vc-line-strong: #3a454b;
+  --vc-text: #f3f6f7;
+  --vc-text-2: #d8dedf;
+  --vc-muted: #9ca5a8;
+  --vc-faint: #6f797d;
+  --vc-accent: #dfff21;
+  --vc-accent-contrast: #090b0c;
+  --vc-accent-soft: rgba(223, 255, 33, 0.11);
+  --vc-success: #62e58f;
+  --vc-success-soft: rgba(98, 229, 143, 0.12);
+  --vc-warning: #ffd166;
+  --vc-warning-soft: rgba(255, 209, 102, 0.12);
+  --vc-danger: #ff5b66;
+  --vc-danger-soft: rgba(255, 91, 102, 0.12);
+  --vc-shadow: none;
+  --vc-shadow-soft: none;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--vc-bg);
+  color: var(--vc-text);
+}
+
+body {
+  accent-color: var(--vc-accent);
+}
+
+::selection {
+  color: var(--vc-accent-contrast);
+  background: var(--vc-accent);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--vc-accent) 62%, transparent);
+  outline-offset: 2px;
+}
+
+:where(input, select, textarea) {
+  color: var(--vc-text);
+  background: var(--vc-surface-2);
+  border-color: var(--vc-line);
+}

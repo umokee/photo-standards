@@ -1,6 +1,5 @@
-
-$font-sans: "Inter", "Geist", "Segoe UI", sans-serif;
-$font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+$font-sans: var(--vc-font-sans);
+$font-mono: var(--vc-font-mono);
 
 $text-micro: 11px;
 $text-small: 12px;
@@ -30,52 +29,52 @@ $sidebar-width: 256px;
 $panel-width: 360px;
 $content-max: 1280px;
 
-$primary: #0a38ff;
-$primary-hover: #082ed1;
-$primary-active: #06229e;
-$primary-text: #0a38ff;
-$primary-bg: #eef3ff;
-$primary-bd: #cfdcff;
+$primary: var(--vc-accent-strong);
+$primary-hover: var(--vc-accent);
+$primary-active: var(--vc-accent-strong);
+$primary-text: var(--vc-accent);
+$primary-bg: var(--vc-accent-bg);
+$primary-bd: var(--vc-accent-soft);
 
-$ml: #7c3aed;
-$ml-hover: #6d28d9;
-$ml-text: #6d28d9;
-$ml-bg: #f3edff;
-$ml-bd: #ded0ff;
+$ml: var(--vc-ml);
+$ml-hover: var(--vc-ml);
+$ml-text: var(--vc-ml);
+$ml-bg: var(--vc-ml-bg);
+$ml-bd: var(--vc-ml-bg);
 
-$warning: #d88a00;
-$warning-hover: #b87300;
-$warning-text: #8a5600;
-$warning-bg: #fff7e8;
-$warning-bd: #f0d4a0;
+$warning: var(--vc-warning);
+$warning-hover: var(--vc-warning);
+$warning-text: var(--vc-warning);
+$warning-bg: var(--vc-warning-bg);
+$warning-bd: var(--vc-warning-bg);
 
-$danger: #dc2626;
-$danger-hover: #b91c1c;
-$danger-text: #b91c1c;
-$danger-bg: #fff1f1;
-$danger-bd: #ffd0d0;
+$danger: var(--vc-danger);
+$danger-hover: var(--vc-danger);
+$danger-text: var(--vc-danger);
+$danger-bg: var(--vc-danger-bg);
+$danger-bd: var(--vc-danger-bg);
 
-// Neutral light foundation. No cream/yellow shell colors here.
-$page: #f6f7fb;
-$page2: #eef1f6;
-$surface: #ffffff;
-$surface2: #f9fafc;
-$card-hover: #f2f5fa;
-$line: #dfe5ee;
-$line-soft: #ebeff5;
-$line-strong: #cbd5e1;
-$text: #111318;
-$text-sub: #586173;
-$text-hint: #7a8497;
-$text-off: #a8b1c0;
-$text-white: #ffffff;
+$page: var(--vc-page);
+$page2: var(--vc-page-2);
+$surface: var(--vc-surface);
+$surface2: var(--vc-surface-2);
+$card-hover: var(--vc-hover);
 
-$nav-bg: #ffffff;
-$nav-border: #dfe5ee;
-$nav-text: #586173;
-$nav-text-hover: #111318;
-$nav-active-bg: #eef3ff;
-$nav-active-text: #0a38ff;
-$nav-avatar-bg: #eef3ff;
-$nav-avatar-text: #0a38ff;
-$nav-meta: #7a8497;
+$line: var(--vc-line);
+$line-soft: var(--vc-line-soft);
+$line-strong: var(--vc-line-strong);
+$text: var(--vc-text);
+$text-sub: var(--vc-muted);
+$text-hint: var(--vc-faint);
+$text-off: var(--vc-disabled);
+$text-white: #fff;
+
+$nav-bg: var(--vc-sidebar);
+$nav-border: var(--vc-line);
+$nav-text: var(--vc-muted);
+$nav-text-hover: var(--vc-text);
+$nav-active-bg: var(--vc-active);
+$nav-active-text: var(--vc-accent);
+$nav-avatar-bg: var(--vc-accent-bg);
+$nav-avatar-text: var(--vc-accent);
+$nav-meta: var(--vc-faint);

@@ -4,9 +4,10 @@ import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { CreateGroup } from "@/page-components/groups/components/create-group";
 import type { GroupListItem } from "@/types/contracts";
 import { formatDate } from "@/utils/formatDate";
-import { Activity, Box, CheckCircle2, FolderKanban, Image, ListChecks, Plus, Sparkles, Tags, type LucideIcon } from "lucide-react";
+import { Activity, ArrowRight, Box, CheckCircle2, FolderKanban, Image, ListChecks, Search, Sparkles, Tags, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_project-assets-strict.module.scss";
 
 function percent(part: number, total: number) {
   if (!total) return 0;
@@ -34,7 +35,10 @@ function nextAction(group: GroupListItem) {
 }
 
 export function Component() {
-  const { data: groups } = useGetGroups();
+  const { data } = useGetGroups();
+  const groups = data ?? [];
+  const [query, setQuery] = useState("");
+
   const totals = groups.reduce(
     (acc, group) => ({
       references: acc.references + group.stats.standards_count,
@@ -45,98 +49,115 @@ export function Component() {
       models: acc.models + group.stats.models_count,
       runs: acc.runs + group.stats.inspections_count,
     }),
-    { references: 0, images: 0, labeled: 0, polygons: 0, classes: 0, models: 0, runs: 0 }
+    { references: 0, images: 0, labeled: 0, polygons: 0, classes: 0, models: 0, runs: 0 },
   );
+
+  const filteredGroups = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return groups;
+    return groups.filter((group) => [group.name, group.description ?? ""].some((value) => value.toLowerCase().includes(normalized)));
+  }, [groups, query]);
+
   const readyProjects = groups.filter((group) => readiness(group) >= 80).length;
   const globalLabeling = percent(totals.labeled, totals.images);
 
   return (
-    <div className={`${p.page} ${p.projectsWorkspaceV19}`}>
-      <header className={p.workspaceHeroV19}>
-        <div>
-          <span className={p.eyebrow}><FolderKanban /> Project workspace</span>
-          <h1>Projects</h1>
-          <p>Проект — это изделие. Внутри него связаны references, images, classes, polygons, models и inspection runs.</p>
-        </div>
-        <div className={p.headerActions}><CreateGroup /></div>
-      </header>
-
-      <section className={p.projectMetricGridV19}>
-        <Metric icon={FolderKanban} value={groups.length} label="Projects" hint={`${readyProjects} inspection-ready`} />
-        <Metric icon={Image} value={totals.images} label="Images" hint={`${globalLabeling}% labeled`} />
-        <Metric icon={Tags} value={totals.classes} label="Classes" hint={`${totals.polygons} polygons`} />
-        <Metric icon={Sparkles} value={totals.models} label="Models" hint="trained/imported" />
-        <Metric icon={ListChecks} value={totals.runs} label="Runs" hint="inspection history" />
-      </section>
-
-      <div className={p.projectsLayoutV19}>
-        <section className={p.surfacePanelV16}>
-          <div className={p.panelHeadV16}>
-            <div>
-              <h3>Product queue</h3>
-              <p>Выбирай изделие и работай дальше внутри одного project context.</p>
-            </div>
-            <span>{groups.length} projects</span>
+    <div className={s.workspacePage}>
+      <div className={s.page}>
+        <header className={s.header}>
+          <div>
+            <span className={s.eyebrow}><FolderKanban /> Product workspace</span>
+            <h1>Projects</h1>
+            <p>Изделия, эталоны, классы, разметка, модели и проверки. Страница теперь работает как строгий project registry, а не как промо-блок.</p>
           </div>
+          <div className={s.headerActions}>
+            <CreateGroup />
+          </div>
+        </header>
 
-          <QueryState isEmpty={!groups.length} size="block" emptyTitle="No projects yet" emptyDescription="Создай первое изделие, затем добавь эталоны и классы.">
-            <div className={p.projectQueueV19}>
-              {groups.map((group) => {
-                const score = readiness(group);
-                const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
-
-                return (
-                  <Link className={p.projectQueueItemV19} key={group.id} to={paths.groupDetail(group.id)}>
-                    <div className={p.projectQueueAvatarV19}>{group.name.slice(0, 1).toUpperCase()}</div>
-                    <div className={p.projectQueueMainV19}>
-                      <div className={p.projectQueueTitleV19}>
-                        <strong>{group.name}</strong>
-                        <span>{score}% ready</span>
-                      </div>
-                      <p>{group.description || "Изделие с эталонами, разметкой, моделями и проверками."}</p>
-                      <div className={p.progressTrackV16}><span style={{ width: `${score}%` }} /></div>
-                      <div className={p.projectQueueMetaV19}>
-                        <span><Image /> {group.stats.images_count} images</span>
-                        <span><CheckCircle2 /> {labeled}% labeled</span>
-                        <span><Box /> {group.stats.standards_count} refs</span>
-                        <span><Sparkles /> {group.stats.models_count} models</span>
-                        <span><Activity /> {group.stats.inspections_count} runs</span>
-                      </div>
-                    </div>
-                    <div className={p.projectQueueActionV19}>
-                      <small>Next action</small>
-                      <b>{nextAction(group)}</b>
-                      <em>{formatDate(group.created_at)}</em>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </QueryState>
+        <section className={`${s.summaryGrid} ${s.summaryGridSix}`}>
+          <Metric icon={FolderKanban} value={groups.length} label="Projects" hint={`${readyProjects} ready`} />
+          <Metric icon={Box} value={totals.references} label="References" hint="эталонные виды" />
+          <Metric icon={Image} value={totals.images} label="Images" hint={`${globalLabeling}% labeled`} />
+          <Metric icon={Tags} value={totals.classes} label="Classes" hint={`${totals.polygons} polygons`} />
+          <Metric icon={Sparkles} value={totals.models} label="Models" hint="trained/imported" />
+          <Metric icon={ListChecks} value={totals.runs} label="Runs" hint="inspection history" />
         </section>
 
-        <aside className={p.commandRailV16}>
-          <section className={p.surfacePanelV16}>
-            <div className={p.panelHeadV16}><div><h3>Project structure</h3><p>Один project собирает весь QC lifecycle.</p></div></div>
-            <div className={p.workflowStepsV16}>
-              <Step icon={Image} title="Assets" text="References, images, classes and polygons." />
-              <Step icon={Sparkles} title="Train" text="Models trained/imported for this product." />
-              <Step icon={ListChecks} title="Inspect" text="Photo, snapshot or realtime quality check." />
-              <Step icon={Activity} title="Runs" text="Saved reports with matched/missing components." />
-            </div>
-          </section>
-
-          <section className={p.surfacePanelV16}>
-            <div className={p.panelHeadV16}><div><h3>Next global action</h3><p>Самая частая причина, почему проверка ещё не готова.</p></div></div>
-            <div className={p.actionHintV16}>
-              <Plus />
+        <section className={s.contentGrid}>
+          <main className={s.panel}>
+            <div className={s.panelHead}>
               <div>
-                <strong>{groups.length ? "Open project overview" : "Create first project"}</strong>
-                <span>{groups.length ? "Теперь основная работа идёт внутри выбранного изделия." : "Проект создаёт контейнер для эталонов, моделей и проверок."}</span>
+                <span>Registry</span>
+                <h3>Изделия</h3>
+              </div>
+              <label className={s.searchBox}>
+                <Search />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects..." />
+              </label>
+            </div>
+
+            <div className={s.panelBody}>
+              <QueryState isEmpty={!groups.length} size="block" emptyTitle="No projects yet" emptyDescription="Создай первое изделие, затем добавь эталоны, классы и модели.">
+                <div className={s.projectGrid}>
+                  {filteredGroups.map((group) => {
+                    const score = readiness(group);
+                    const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
+
+                    return (
+                      <Link className={s.projectCard} key={group.id} to={paths.groupDetail(group.id)}>
+                        <div className={s.projectTop}>
+                          <div className={s.avatar}>{group.name.slice(0, 1).toUpperCase()}</div>
+                          <span className={score >= 80 ? s.donePill : s.openPill}>{score}% ready</span>
+                        </div>
+
+                        <div className={s.projectTitle}>
+                          <strong>{group.name}</strong>
+                          <p>{group.description || "Изделие с эталонами, разметкой, моделями и проверками."}</p>
+                        </div>
+
+                        <div className={s.progressTrack}><i style={{ width: `${score}%` }} /></div>
+
+                        <div className={s.metaGrid}>
+                          <span><Box /> {group.stats.standards_count} refs</span>
+                          <span><Image /> {group.stats.images_count} images</span>
+                          <span><CheckCircle2 /> {labeled}% labeled</span>
+                          <span><Tags /> {group.stats.segment_classes_count} classes</span>
+                          <span><Sparkles /> {group.stats.models_count} models</span>
+                          <span><Activity /> {group.stats.inspections_count} runs</span>
+                        </div>
+
+                        <div className={s.taskRow}>
+                          <ArrowRight />
+                          <span><strong>{nextAction(group)}</strong><small>Created {formatDate(group.created_at)}</small></span>
+                          <ArrowRight />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {groups.length > 0 && filteredGroups.length === 0 ? (
+                  <div className={s.emptyInline}><Search /><strong>No projects match search</strong><span>Очисти поиск или создай новый проект.</span></div>
+                ) : null}
+              </QueryState>
+            </div>
+          </main>
+
+          <aside className={s.panel}>
+            <div className={s.panelHead}>
+              <div><span>Lifecycle</span><h3>Зоны ответственности</h3></div>
+            </div>
+            <div className={s.panelBody}>
+              <div className={s.taskList}>
+                <Lifecycle icon={Image} title="Assets" text="References, images, classes and polygons." />
+                <Lifecycle icon={Sparkles} title="Train" text="Models and training/import jobs." />
+                <Lifecycle icon={ListChecks} title="Inspect" text="Photo, snapshot and realtime station." />
+                <Lifecycle icon={Activity} title="Runs" text="Saved inspection history and reports." />
               </div>
             </div>
-          </section>
-        </aside>
+          </aside>
+        </section>
       </div>
     </div>
   );
@@ -144,20 +165,19 @@ export function Component() {
 
 function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: number; label: string; hint: string }) {
   return (
-    <div className={p.metricCardV16}>
+    <div className={s.metricCard}>
       <Icon />
-      <b>{value}</b>
-      <span>{label}</span>
-      <small>{hint}</small>
+      <div><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>
     </div>
   );
 }
 
-function Step({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
+function Lifecycle({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <div className={p.workflowStepV16}>
+    <div className={s.taskRow}>
       <Icon />
-      <div><strong>{title}</strong><span>{text}</span></div>
+      <span><strong>{title}</strong><small>{text}</small></span>
+      <ArrowRight />
     </div>
   );
 }

@@ -1,0 +1,185 @@
+/* v49 real regression hardfix
+   Last layer: fixes active states, dark leaks, full-height states and legacy page shells. */
+
+:root {
+  --v49-content-pad-x: clamp(16px, 2.2vw, 28px);
+  --v49-content-pad-y: clamp(14px, 2vw, 24px);
+  --v49-topbar-h: 64px;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--vc-bg, #f4f6f8) !important;
+  color: var(--vc-text, #111827);
+}
+
+html[data-theme="dark"] body,
+body[data-theme="dark"],
+body.theme-dark,
+.theme-dark body {
+  background: var(--vc-bg, #080a0b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+  color-scheme: dark;
+}
+
+/* Main shell/content should own scrolling. Sidebar and topbar stay fixed/sticky. */
+:where([class*="PlatformShell"], [class*="platform-shell"], [class*="root"]):has(> aside):has(main) {
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+:where(main, [class*="content"]):not([class*="editor"]):not([class*="canvas"]) {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Full-page loading/error states: never occupy only one third of the screen. */
+:where([class*="query-state"], [class*="QueryState"], [class*="state--page"], [class*="state_page"]),
+:where([class*="state"])[class*="page"] {
+  width: 100% !important;
+}
+
+:where([class*="state--page"], [class*="state_page"]) {
+  min-height: calc(100dvh - var(--v49-topbar-h) - 2px) !important;
+  height: calc(100dvh - var(--v49-topbar-h) - 2px) !important;
+  border-radius: 0 !important;
+}
+
+html[data-theme="dark"] :where([class*="state"], [class*="State"]):not([class*="editor"]),
+.theme-dark :where([class*="state"], [class*="State"]):not([class*="editor"]) {
+  background: var(--vc-surface, #0f1314) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.1)) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}
+
+html[data-theme="dark"] :where([class*="state"] span, [class*="state"] strong, [class*="state"] p),
+.theme-dark :where([class*="state"] span, [class*="state"] strong, [class*="state"] p) {
+  color: inherit !important;
+}
+
+/* Dark theme leaks from old light modules. Keep images/video/canvas untouched. */
+html[data-theme="dark"] :where(
+  [class*="page"], [class*="Page"],
+  [class*="hero"], [class*="Hero"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="card"], [class*="Card"],
+  [class*="tile"], [class*="Tile"],
+  [class*="toolbar"], [class*="Toolbar"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"],
+  [class*="inspector"], [class*="Inspector"],
+  [class*="camera"], [class*="Camera"],
+  [class*="monitor"], [class*="Monitor"],
+  [class*="settings"], [class*="Settings"]
+):not(img):not(video):not(canvas):not(svg):not([class*="editorCanvas"]):not([class*="viewport"]),
+.theme-dark :where(
+  [class*="page"], [class*="Page"],
+  [class*="hero"], [class*="Hero"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="card"], [class*="Card"],
+  [class*="tile"], [class*="Tile"],
+  [class*="toolbar"], [class*="Toolbar"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"],
+  [class*="inspector"], [class*="Inspector"],
+  [class*="camera"], [class*="Camera"],
+  [class*="monitor"], [class*="Monitor"],
+  [class*="settings"], [class*="Settings"]
+):not(img):not(video):not(canvas):not(svg):not([class*="editorCanvas"]):not([class*="viewport"]) {
+  border-color: var(--vc-line, rgba(255,255,255,.11));
+  color: var(--vc-text, #f4f7f8);
+}
+
+html[data-theme="dark"] :where(
+  [class*="page"], [class*="Page"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"]
+):not([class*="editor"]):not([class*="canvas"]),
+.theme-dark :where(
+  [class*="page"], [class*="Page"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"]
+):not([class*="editor"]):not([class*="canvas"]) {
+  background: var(--vc-bg, #080a0b) !important;
+}
+
+html[data-theme="dark"] :where(
+  [class*="hero"], [class*="Hero"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="card"], [class*="Card"],
+  [class*="tile"], [class*="Tile"],
+  [class*="toolbar"], [class*="Toolbar"],
+  [class*="inspector"], [class*="Inspector"]
+):not([class*="viewer"]):not([class*="Viewer"]):not([class*="canvas"]):not([class*="Canvas"]),
+.theme-dark :where(
+  [class*="hero"], [class*="Hero"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="card"], [class*="Card"],
+  [class*="tile"], [class*="Tile"],
+  [class*="toolbar"], [class*="Toolbar"],
+  [class*="inspector"], [class*="Inspector"]
+):not([class*="viewer"]):not([class*="Viewer"]):not([class*="canvas"]):not([class*="Canvas"]) {
+  background-color: var(--vc-surface, #0f1314) !important;
+}
+
+html[data-theme="dark"] :where(input, textarea, select),
+.theme-dark :where(input, textarea, select) {
+  background-color: var(--vc-surface-2, #151a1b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.12)) !important;
+}
+
+html[data-theme="dark"] :where(input::placeholder, textarea::placeholder),
+.theme-dark :where(input::placeholder, textarea::placeholder) {
+  color: var(--vc-muted, rgba(244,247,248,.5)) !important;
+}
+
+/* Old black-on-black and cream-on-dark text leaks. */
+html[data-theme="dark"] :where(
+  [class*="title"], [class*="Title"],
+  [class*="label"], [class*="Label"],
+  [class*="name"], [class*="Name"],
+  [class*="strong"], strong, h1, h2, h3, h4
+):not([class*="editor"]):not([style*="color"]),
+.theme-dark :where(
+  [class*="title"], [class*="Title"],
+  [class*="label"], [class*="Label"],
+  [class*="name"], [class*="Name"],
+  [class*="strong"], strong, h1, h2, h3, h4
+):not([class*="editor"]):not([style*="color"]) {
+  color: var(--vc-text, #f4f7f8);
+}
+
+html[data-theme="dark"] :where(p, small, [class*="hint"], [class*="Hint"], [class*="meta"], [class*="Meta"]):not([class*="editor"]):not([style*="color"]),
+.theme-dark :where(p, small, [class*="hint"], [class*="Hint"], [class*="meta"], [class*="Meta"]):not([class*="editor"]):not([style*="color"]) {
+  color: var(--vc-muted, rgba(244,247,248,.62));
+}
+
+/* Continue arrow: icon background must not create a black square/box. */
+:where(a, button)[class*="continue" i] :where(svg, span:last-child),
+:where(a, button)[class*="Continue"] :where(svg, span:last-child),
+:where(a, button):has(> span):has(> svg):where([class*="next" i], [class*="continue" i]) > svg:last-child {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* The legacy monitoring/cameras pages should not expose white page gutters in dark mode. */
+html[data-theme="dark"] :where([class*="cameras"], [class*="Cameras"], [class*="monitoring"], [class*="Monitoring"], [class*="settings"], [class*="Settings"])::before,
+html[data-theme="dark"] :where([class*="cameras"], [class*="Cameras"], [class*="monitoring"], [class*="Monitoring"], [class*="settings"], [class*="Settings"])::after,
+.theme-dark :where([class*="cameras"], [class*="Cameras"], [class*="monitoring"], [class*="Monitoring"], [class*="settings"], [class*="Settings"])::before,
+.theme-dark :where([class*="cameras"], [class*="Cameras"], [class*="monitoring"], [class*="Monitoring"], [class*="settings"], [class*="Settings"])::after {
+  background: transparent !important;
+  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
+}

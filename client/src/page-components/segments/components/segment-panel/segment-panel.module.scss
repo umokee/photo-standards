@@ -258,7 +258,7 @@
   outline: 0;
   padding: 0 11px 0 8px;
   background: transparent;
-  color: #fffdf6;
+  color: var(--vc-surface);
   font: inherit;
   font-size: 12px;
   font-weight: 750;
@@ -457,3 +457,25 @@
   font-weight: 900;
 }
 
+/* v47 editor classes/objects tab contrast hotfix */
+.panelTab {
+  color: rgba(246, 242, 234, 0.72) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+.panelTab span {
+  color: rgba(246, 242, 234, 0.68) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+.panelTabActive {
+  color: #071006 !important;
+  background: #e1ff25 !important;
+  border-color: #e1ff25 !important;
+}
+
+.panelTabActive span {
+  color: #071006 !important;
+  background: rgba(7, 16, 6, 0.13) !important;
+}

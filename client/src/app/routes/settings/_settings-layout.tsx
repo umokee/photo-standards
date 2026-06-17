@@ -1,9 +1,10 @@
+
 import { Outlet } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_settings-strict.module.scss";
 
 export function Component() {
   return (
-    <div className={p.page}>
+    <div className={s.page}>
       <Outlet />
     </div>
   );

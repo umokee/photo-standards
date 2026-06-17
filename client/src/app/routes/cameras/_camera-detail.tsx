@@ -1,50 +1,83 @@
+
 import { useGetCamera } from "@/page-components/cameras/api/get-camera";
 import { CameraPreviewPanel } from "@/page-components/cameras/components/camera-preview-panel/camera-preview-panel";
 import { DeleteCamera } from "@/page-components/cameras/components/delete-camera";
 import { UpdateCamera } from "@/page-components/cameras/components/update-camera";
-import { buildCameraDisplayUrl, formatCameraDateTime, formatCameraLastCheckedAgo, getCameraStatusMeta } from "@/page-components/cameras/lib/camera-view";
+import {
+  buildCameraDisplayUrl,
+  formatCameraDateTime,
+  formatCameraLastCheckedAgo,
+  getCameraStatusMeta,
+} from "@/page-components/cameras/lib/camera-view";
+import type { LucideIcon } from "lucide-react";
 import clsx from "clsx";
-import { Activity, Camera, CheckCircle2, Clock3, Link2, MapPin, Network, RadioTower, ShieldCheck, Timer, Wifi } from "lucide-react";
+import {
+  Activity,
+  Camera,
+  CheckCircle2,
+  Clock3,
+  Link2,
+  MapPin,
+  Network,
+  RadioTower,
+  ShieldCheck,
+  Timer,
+  Wifi,
+} from "lucide-react";
 import { useLoaderData } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_cameras-strict.module.scss";
 
 export function Component() {
   const { cameraId } = useLoaderData() as { cameraId: string };
   const { data: camera } = useGetCamera(cameraId);
+
+  if (!camera) {
+    return null;
+  }
+
   const cameraUrl = buildCameraDisplayUrl(camera);
   const status = getCameraStatusMeta(camera);
 
   return (
-    <section className={p.cameraDetailSurface}>
-      <header className={p.cameraDetailHero}>
-        <div className={p.sourceAvatar}><Camera /></div>
-        <div>
-          <span className={p.eyebrow}><RadioTower /> Source detail</span>
+    <section className={s.detailSurface}>
+      <header className={s.detailHeader}>
+        <div className={s.sourceAvatar}><Camera /></div>
+        <div className={s.detailTitle}>
+          <span className={s.eyebrow}><RadioTower /> Source detail</span>
           <h3>{camera.name}</h3>
           <p>{camera.location || "No location"} · {camera.protocol.toUpperCase()} · {formatCameraLastCheckedAgo(camera.last_checked_at)}</p>
         </div>
-        <span className={clsx(p.sourceStatusBadge, camera.last_status === "online" && p.sourceStatusOnline, camera.last_status === "offline" && p.sourceStatusOffline)}>{status.label}</span>
-        <div className={p.headerActions}><UpdateCamera camera={camera} /><DeleteCamera id={camera.id} name={camera.name} /></div>
+        <span
+          className={clsx(
+            s.statusBadge,
+            status.dotStatus === "ok" && s.statusBadgeOk,
+            status.dotStatus === "warning" && s.statusBadgeWarning,
+            status.dotStatus === "error" && s.statusBadgeError,
+          )}
+        >
+          {status.label}
+        </span>
+        <div className={s.actions}><UpdateCamera camera={camera} /><DeleteCamera id={camera.id} name={camera.name} /></div>
       </header>
 
-      <div className={p.cameraDetailBody}>
-        <section className={p.cameraPreviewCard}>
-          <div className={p.previewCardHead}>
+      <div className={s.detailBody}>
+        <section className={s.previewCard}>
+          <div className={s.cardHead}>
             <div><h3>Live preview</h3><p>Проверь поток перед использованием в Inspect.</p></div>
             <span>{camera.protocol.toUpperCase()}</span>
           </div>
           <CameraPreviewPanel camera={camera} />
         </section>
 
-        <aside className={p.cameraDiagnosticsPanel}>
-          <div className={p.sourceStatsGridCompact}>
+        <aside className={s.diagnostics}>
+          <div className={s.statGrid}>
             <SourceStat icon={ShieldCheck} label="Active" value={camera.is_active ? "Yes" : "No"} />
             <SourceStat icon={Activity} label="Status" value={camera.last_status} />
             <SourceStat icon={Timer} label="Timeout" value={`${camera.timeout_sec} sec`} />
             <SourceStat icon={Clock3} label="Checked" value={formatCameraDateTime(camera.last_checked_at)} />
           </div>
 
-          <section className={p.detailInfoCard}>
+          <section className={s.infoCard}>
             <h3>Connection</h3>
             <Info icon={Link2} label="URL" value={cameraUrl} />
             <Info icon={Network} label="Host" value={camera.host || "—"} />
@@ -52,7 +85,7 @@ export function Component() {
             <Info icon={MapPin} label="Path" value={camera.path || camera.stream_path || camera.device_path || "—"} />
           </section>
 
-          <section className={p.detailInfoCard}>
+          <section className={s.infoCard}>
             <h3>Diagnostics</h3>
             <Info icon={Clock3} label="Last checked" value={formatCameraDateTime(camera.last_checked_at)} />
             <Info icon={CheckCircle2} label="Error" value={camera.last_error || "—"} />
@@ -64,9 +97,9 @@ export function Component() {
   );
 }
 
-function SourceStat({ icon: Icon, label, value }: { icon: typeof Camera; label: string; value: string | number }) {
+function SourceStat({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string | number }) {
   return (
-    <div className={p.sourceStatCard}>
+    <div className={s.statCard}>
       <Icon />
       <span>{label}</span>
       <strong>{value}</strong>
@@ -74,9 +107,9 @@ function SourceStat({ icon: Icon, label, value }: { icon: typeof Camera; label: 
   );
 }
 
-function Info({ icon: Icon, label, value }: { icon: typeof Camera; label: string; value: string | number }) {
+function Info({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string | number }) {
   return (
-    <div className={p.connectionInfoRow}>
+    <div className={s.infoRow}>
       <Icon />
       <span>{label}</span>
       <strong>{value}</strong>

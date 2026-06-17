@@ -16,15 +16,15 @@
 .galleryCard,
 .inspectCard,
 .sidePanel,
-.modalLikeCard { border: 1px solid #eee8dd; border-radius: 16px; background: #fffdf6; box-shadow: 0 10px 28px rgba(38, 28, 10, .035); }
+.modalLikeCard { border: 1px solid #eee8dd; border-radius: 16px; background: var(--vc-surface); box-shadow: 0 10px 28px rgba(38, 28, 10, .035); }
 .welcomeCard { padding: 22px; display: grid; gap: 20px; }
 .userRow { display: flex; align-items: center; gap: 14px; }
 .bigAvatar { width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; background: #9614c7; color: #fff; font-size: 26px; font-weight: 800; }
 .userRow h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.04em; }
 .userRow p { margin: 0; color: #756e65; }
-.planBadge,.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #fbf1e4; color: #3e352b; font-size: 11px; font-weight: 800; }
+.planBadge,.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--vc-active); color: #3e352b; font-size: 11px; font-weight: 800; }
 .statStrip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.statBox { min-height: 54px; display: grid; grid-template-columns: 20px 1fr; align-items: center; gap: 0 10px; padding: 10px 12px; border: 1px solid #eee8dd; border-radius: 12px; background: #fffdf8; }
+.statBox { min-height: 54px; display: grid; grid-template-columns: 20px 1fr; align-items: center; gap: 0 10px; padding: 10px 12px; border: 1px solid #eee8dd; border-radius: 12px; background: var(--vc-surface); }
 .statBox svg { grid-row: 1 / span 2; width: 16px; height: 16px; color: #7e766c; }
 .statBox strong { font-size: 16px; line-height: 1; }
 .statBox span { color: #7e766c; font-size: 11px; }
@@ -53,7 +53,7 @@
 .projectRow span:first-child { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: #ff3b3b; color: #fff; font-weight: 800; }
 .projectRow small { color: #776f65; }
 .viewAll { margin-top: auto; color: #625a51; text-decoration: none; font-weight: 700; font-size: 13px; }
-.storageBar { height: 8px; border-radius: 999px; background: #fbf1e4; overflow: hidden; }
+.storageBar { height: 8px; border-radius: 999px; background: var(--vc-active); overflow: hidden; }
 .storageBar span { display: block; height: 100%; background: linear-gradient(90deg, #1ed760, #c044ff); }
 .storageCard ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .storageCard li { display: flex; justify-content: space-between; color: #6f675d; font-size: 13px; }
@@ -69,7 +69,7 @@
 .metaLine { display: flex; flex-wrap: wrap; gap: 12px; color: #766f66; font-size: 13px; }
 .tabs { display: flex; gap: 6px; padding: 4px; border-radius: 12px; background: #f9f2e8; width: fit-content; }
 .tabs a,.tabs button { min-height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: #645c53; text-decoration: none; font-weight: 800; font-size: 13px; cursor: pointer; }
-.tabs .active { background: #fffdf6; color: #111; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.tabs .active { background: var(--vc-surface); color: #111; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
@@ -89,21 +89,21 @@
 .selectGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .field { display: grid; gap: 6px; }
 .field label { color: #615950; font-size: 12px; font-weight: 800; }
-.field select, .field input { width: 100%; min-height: 36px; border-radius: 10px; border: 1px solid #eee8dd; background: #fffdf8; padding: 0 10px; color: #111; }
+.field select, .field input { width: 100%; min-height: 36px; border-radius: 10px; border: 1px solid #eee8dd; background: var(--vc-surface); padding: 0 10px; color: #111; }
 .classList { display: grid; gap: 6px; max-height: 250px; overflow: auto; }
-.checkRow { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 8px; border-radius: 10px; background: #fbf6ee; cursor: pointer; }
+.checkRow { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 8px; border-radius: 10px; background: var(--vc-surface-2); cursor: pointer; }
 .checkDot { width: 10px; height: 10px; border-radius: 999px; }
 .resultList { display: grid; gap: 8px; }
-.resultItem { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; border-radius: 10px; background: #fbf6ee; font-size: 13px; }
+.resultItem { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; border-radius: 10px; background: var(--vc-surface-2); font-size: 13px; }
 .resultStatusOk { background: #12c56a; }
 .resultStatusBad { background: #ff4d5a; }
 .resultStatusWarn { background: #ffb020; }
 .cameraGrid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; }
-.listPanel { border: 1px solid #eee8dd; border-radius: 16px; background: #fffdf6; overflow: hidden; }
+.listPanel { border: 1px solid #eee8dd; border-radius: 16px; background: var(--vc-surface); overflow: hidden; }
 .listPanelHeader { padding: 14px; border-bottom: 1px solid #eee8dd; display: flex; gap: 8px; justify-content: space-between; }
 .listItems { display: grid; padding: 8px; gap: 6px; }
 .listItem { display: grid; grid-template-columns: 12px minmax(0,1fr) auto; gap: 10px; align-items: center; min-height: 46px; padding: 8px; border-radius: 12px; color: #111; text-decoration: none; }
-.listItem:hover, .listItemActive { background: #fbf1e4; }
+.listItem:hover, .listItemActive { background: var(--vc-active); }
 .statusDot { width: 9px; height: 9px; border-radius: 999px; background: #a2a2a2; }
 .statusOnline { background: #17c964; }
 .statusOffline { background: #ff4d5a; }
@@ -206,7 +206,7 @@
 .referencePreview {
   position: relative;
   aspect-ratio: 1.95;
-  background: linear-gradient(135deg, #f7f2e8, #fffdf6);
+  background: linear-gradient(135deg, #f7f2e8, var(--vc-surface));
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -307,7 +307,7 @@
   padding: 12px;
   border: 1px dashed #e4d8c7;
   border-radius: 14px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #675c50;
   font-size: 13px;
   line-height: 1.45;
@@ -420,7 +420,7 @@
   gap: 8px;
   border: 1px dashed #e1d7c8;
   border-radius: 18px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #807568;
   text-align: center;
 }
@@ -581,7 +581,7 @@
   border-color: #eee7dc;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 253, 246, 0.98)),
-    #fffdf6;
+    var(--vc-surface);
 }
 
 .homeHeroGrid,
@@ -605,7 +605,7 @@
 .emptyState {
   background:
     radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.035), transparent 42%),
-    #fffdf8;
+    var(--vc-surface);
 }
 
 .datasetHeader {
@@ -846,7 +846,7 @@
   padding: 10px;
   border: 1px solid #eee6da;
   border-radius: 14px;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
 }
 
 .inspectorMetric b {
@@ -920,7 +920,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   min-height: 38px;
   border-radius: 12px;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
 }
 
 .resultItem span:nth-child(2) {
@@ -953,7 +953,7 @@
   border-radius: 18px;
   background:
     radial-gradient(circle at 92% 6%, rgba(4, 42, 255, 0.045), transparent 35%),
-    #fffdf6;
+    var(--vc-surface);
   box-shadow: 0 14px 34px rgba(55, 42, 16, 0.04);
 }
 
@@ -980,21 +980,21 @@
   border-color: #dcf3d7;
   background:
     radial-gradient(circle at 92% 6%, rgba(38, 192, 0, 0.08), transparent 35%),
-    #fffdf6;
+    var(--vc-surface);
 }
 
 .runSummaryWarn {
   border-color: #ffe5cd;
   background:
     radial-gradient(circle at 92% 6%, rgba(255, 122, 0, 0.08), transparent 35%),
-    #fffdf6;
+    var(--vc-surface);
 }
 
 .tableLike {
   border: 1px solid #eee6da;
   border-radius: 16px;
   overflow: hidden;
-  background: #fffdf6;
+  background: var(--vc-surface);
 }
 
 .tableHead,
@@ -1006,7 +1006,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
 }
 
 .tableRow {
@@ -1089,7 +1089,7 @@
   border-radius: 18px;
   background:
     radial-gradient(circle at 94% 0%, rgba(4, 42, 255, 0.045), transparent 34%),
-    #fffdf6;
+    var(--vc-surface);
   box-shadow: 0 14px 34px rgba(55, 42, 16, 0.04);
 }
 
@@ -1154,7 +1154,7 @@
   text-decoration: none;
   border: 1px solid #eee6da;
   border-radius: 18px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   overflow: hidden;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
 }
@@ -1235,7 +1235,7 @@
   min-height: 22px;
   padding: 0 7px;
   border-radius: 999px;
-  background: #fbf1e4;
+  background: var(--vc-active);
   color: #675e54;
   font-size: 11px;
   font-weight: 850;
@@ -1268,7 +1268,7 @@
   padding: 11px;
   border: 1px solid #eee6da;
   border-radius: 15px;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
 }
 
 .workflowItem svg,
@@ -1304,7 +1304,7 @@
   border-radius: 20px;
   background:
     radial-gradient(circle at 75% 0%, rgba(4, 42, 255, 0.06), transparent 34%),
-    linear-gradient(180deg, #fffdf8, #fffaf1);
+    linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2));
   box-shadow: 0 18px 46px rgba(55, 42, 16, 0.055);
   overflow: hidden;
 }
@@ -1399,7 +1399,7 @@
   padding: 14px;
   border: 1px solid #eee6da;
   border-radius: 18px;
-  background: #fffdf6;
+  background: var(--vc-surface);
 }
 
 .qualityCard > svg {
@@ -1455,7 +1455,7 @@
   padding: 10px;
   border: 1px solid #eee6da;
   border-radius: 17px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   text-align: left;
   cursor: pointer;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
@@ -1530,7 +1530,7 @@
 .datasetWorkspaceCard {
   border: 1px solid #eee6da;
   border-radius: 20px;
-  background: #fffdf6;
+  background: var(--vc-surface);
   box-shadow: 0 16px 40px rgba(55, 42, 16, 0.045);
   overflow: hidden;
 }
@@ -1544,7 +1544,7 @@
   border-bottom: 1px solid #eee6da;
   background:
     radial-gradient(circle at 82% 0%, rgba(4, 42, 255, 0.045), transparent 32%),
-    #fffdf8;
+    var(--vc-surface);
 }
 
 .standardTitleBlock h3 {
@@ -1574,7 +1574,7 @@
   padding: 9px 10px;
   border: 1px solid #eee6da;
   border-radius: 14px;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
 }
 
 .miniHealth svg {
@@ -1602,7 +1602,7 @@
   gap: 6px;
   padding: 10px 18px;
   border-bottom: 1px solid #eee6da;
-  background: #fffaf1;
+  background: var(--vc-surface-2);
   overflow-x: auto;
 }
 
@@ -1632,7 +1632,7 @@
 
 .standardTabBar button:hover,
 .standardTabBar .active {
-  background: #fffdf6;
+  background: var(--vc-surface);
   color: #111;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
@@ -1694,7 +1694,7 @@
   padding: 0 12px;
   border: 1px solid #eee6da;
   border-radius: 12px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .classSearchBox svg {
@@ -1716,7 +1716,7 @@
   border: 1px solid #eee6da;
   border-radius: 16px;
   overflow: hidden;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .classTableHead,
@@ -1732,7 +1732,7 @@
 }
 
 .classTableHead {
-  background: #fffaf1;
+  background: var(--vc-surface-2);
   color: #5d564e;
   font-weight: 950;
 }
@@ -1774,7 +1774,7 @@
   border-radius: 18px;
   background:
     radial-gradient(circle at 92% 4%, rgba(4, 42, 255, 0.055), transparent 36%),
-    #fffaf1;
+    var(--vc-surface-2);
 }
 
 .overviewCard > span {
@@ -1855,7 +1855,7 @@
   border-radius: 18px;
   background:
     radial-gradient(circle at 0% 0%, rgba(4, 42, 255, 0.08), transparent 34%),
-    linear-gradient(180deg, #fffdf9, #fff7ef);
+    linear-gradient(180deg, var(--vc-surface), #fff7ef);
 }
 
 .modalHeroCard strong {
@@ -1952,7 +1952,7 @@
   padding: 12px;
   border: 1px solid #efe3d2;
   border-radius: 15px;
-  background: #fffdf9;
+  background: var(--vc-surface);
 }
 
 .uploadSummaryCard svg {
@@ -2107,7 +2107,7 @@
   border-radius: 22px;
   color: inherit;
   text-decoration: none;
-  background: linear-gradient(180deg, #ffffff, #fffaf1);
+  background: linear-gradient(180deg, #ffffff, var(--vc-surface-2));
   box-shadow: 0 16px 34px rgba(55, 42, 16, 0.045);
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
@@ -2436,7 +2436,7 @@
   padding: 14px;
   border: 1px solid #eee5da;
   border-radius: 18px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .readinessCardReady {
@@ -2491,7 +2491,7 @@
   padding: 14px;
   border: 1px solid #eee5da;
   border-radius: 20px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .emptyFocusCard {
@@ -2576,7 +2576,7 @@
   padding: 16px;
   border: 1px solid #eee5da;
   border-radius: 24px;
-  background: linear-gradient(180deg, #ffffff, #fffaf2);
+  background: linear-gradient(180deg, #ffffff, var(--vc-surface-2));
   box-shadow: 0 16px 34px rgba(55, 42, 16, 0.04);
 }
 
@@ -2656,7 +2656,7 @@
   padding: 36px;
   border: 1px dashed #dfd4c8;
   border-radius: 28px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   text-align: center;
 }
 
@@ -2721,7 +2721,7 @@
   padding: 16px;
   border: 1px solid #eee5da;
   border-radius: 28px;
-  background: linear-gradient(180deg, #ffffff, #fffaf2);
+  background: linear-gradient(180deg, #ffffff, var(--vc-surface-2));
   box-shadow: 0 18px 38px rgba(55, 42, 16, 0.05);
 }
 
@@ -2814,7 +2814,7 @@
   padding: 16px;
   border: 1px solid #eee5da;
   border-radius: 22px;
-  background: linear-gradient(180deg, #fff, #fffaf2);
+  background: linear-gradient(180deg, #fff, var(--vc-surface-2));
   box-shadow: 0 15px 32px rgba(55, 42, 16, 0.045);
 }
 
@@ -3010,7 +3010,7 @@
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid #eee5da;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .tableRow,
@@ -3090,7 +3090,7 @@
 .sourceEmptyHero {
   background:
     radial-gradient(circle at 50% 0%, rgba(4, 42, 255, .055), transparent 34%),
-    linear-gradient(180deg, #fff, #fff8ef);
+    linear-gradient(180deg, #fff, var(--vc-surface-2));
   border-style: solid;
 }
 
@@ -4437,7 +4437,7 @@
   padding: 0 12px;
   border: 1px solid #eadfce;
   border-radius: 13px;
-  background: #fffdf7;
+  background: var(--vc-surface);
   color: #17120f;
   font-weight: 750;
   outline: none;
@@ -4453,7 +4453,7 @@
   padding: 10px 12px;
   border: 1px solid #eadfce;
   border-radius: 15px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .inspectClassSummaryV17 b {
@@ -4624,7 +4624,7 @@
   border-radius: 18px;
   background:
     radial-gradient(circle at 92% 0%, rgba(225,255,37,0.2), transparent 38%),
-    #fffaf0;
+    var(--vc-surface-2);
   border: 1px solid #eee2d1;
 }
 
@@ -4668,7 +4668,7 @@
   padding: 10px;
   border: 1px solid #eee2d1;
   border-radius: 14px;
-  background: #fffdf7;
+  background: var(--vc-surface);
 }
 
 .inspectorMetricV17 b {
@@ -4780,7 +4780,7 @@
   border: 1px dashed #e2d4bf;
   border-radius: 14px;
   color: #8b8074;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
   font-size: 12px;
   font-weight: 750;
   line-height: 1.45;
@@ -5249,7 +5249,7 @@
   padding: 8px 10px;
   border-radius: 14px;
   border: 1px solid rgba(229, 218, 198, 0.72);
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #15120d;
   text-decoration: none;
   font-size: 12px;
@@ -5373,7 +5373,7 @@
 .projectQueueItemV19:hover {
   transform: translateY(-1px);
   border-color: rgba(10, 44, 255, 0.24);
-  background: #fffdf6;
+  background: var(--vc-surface);
   box-shadow: 0 18px 45px rgba(36, 24, 6, 0.07);
 }
 
@@ -6236,7 +6236,7 @@
   padding: 10px;
   border: 1px solid rgba(238,228,210,.9);
   border-radius: 16px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
   color: #1d1710;
   text-decoration: none;
 }
@@ -6446,7 +6446,7 @@
   padding: 13px;
   border: 1px solid rgba(239, 231, 216, 0.95);
   border-radius: 18px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetKpiV21 svg,
@@ -6486,7 +6486,7 @@
   border-radius: 22px;
   background:
     radial-gradient(circle at 90% 0%, rgba(225, 255, 37, 0.45), transparent 46%),
-    #fffaf0;
+    var(--vc-surface-2);
 }
 
 .nextActionCardV21 > svg {
@@ -6590,7 +6590,7 @@
   padding: 9px;
   border: 1px solid rgba(239, 230, 214, 0.95);
   border-radius: 16px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
   text-decoration: none;
 }
 
@@ -6684,7 +6684,7 @@
   padding: 10px;
   border: 1px solid rgba(239, 230, 214, 0.95);
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetReadinessV21 > svg {
@@ -6749,7 +6749,7 @@
   padding: 13px;
   border: 1px solid rgba(238, 228, 210, 0.95);
   border-radius: 20px;
-  background: #fffdf6;
+  background: var(--vc-surface);
   text-decoration: none;
   transition: border-color 140ms ease, transform 140ms ease;
 }
@@ -6800,7 +6800,7 @@
   padding: 0 12px;
   border: 1px solid rgba(238, 228, 210, 0.95);
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .referenceToolbarV21 label svg,
@@ -6842,7 +6842,7 @@
   gap: 0;
   border: 1px solid rgba(238, 228, 210, 0.95);
   border-radius: 22px;
-  background: #fffdf6;
+  background: var(--vc-surface);
   box-shadow: 0 16px 38px rgba(35, 24, 8, 0.04);
   text-decoration: none;
   transition: border-color 140ms ease, transform 140ms ease;
@@ -6919,7 +6919,7 @@
   padding: 8px 10px;
   border: 1px solid rgba(239, 230, 214, 0.95);
   border-radius: 13px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .classRowV21 i {
@@ -7030,7 +7030,7 @@
   padding: 0;
   border: 1px solid rgba(238, 228, 210, 0.95);
   border-radius: 18px;
-  background: #fffdf6;
+  background: var(--vc-surface);
   text-align: left;
   cursor: pointer;
   transition: border-color 140ms ease, transform 140ms ease;
@@ -7275,7 +7275,7 @@
   padding: 0 12px;
   border: 1px solid #eee4d5;
   border-radius: 12px;
-  background: #fffdf7;
+  background: var(--vc-surface);
   color: #8b8377;
 }
 
@@ -7301,7 +7301,7 @@
   padding: 4px;
   border: 1px solid #eee4d5;
   border-radius: 12px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetFilterTabsV22 button {
@@ -7337,7 +7337,7 @@
   padding: 10px;
   border: 1px solid #eee4d5;
   border-radius: 18px;
-  background: #fffdf7;
+  background: var(--vc-surface);
   color: inherit;
   text-decoration: none;
   transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
@@ -7503,7 +7503,7 @@
   padding: 14px;
   border: 1px solid #eee4d5;
   border-radius: 18px;
-  background: #fffdf7;
+  background: var(--vc-surface);
 }
 
 .classGroupHeaderV22 {
@@ -7548,7 +7548,7 @@
   padding: 7px 9px;
   border: 1px solid rgba(238, 228, 213, .72);
   border-radius: 12px;
-  background: linear-gradient(90deg, hsla(var(--class-hue), 82%, 56%, .10), transparent 44%), #fffaf2;
+  background: linear-gradient(90deg, hsla(var(--class-hue), 82%, 56%, .10), transparent 44%), var(--vc-surface-2);
 }
 
 .classDotV22 {
@@ -7731,7 +7731,7 @@
   padding: 12px;
   border: 1px solid #f0e7d9;
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetChecklistCompactV23 svg {
@@ -7764,7 +7764,7 @@
   padding: 18px;
   background:
     radial-gradient(circle at 92% 10%, rgba(225, 255, 37, 0.35), transparent 38%),
-    #fffdf6;
+    var(--vc-surface);
 }
 
 .assetNextActionPanelV23 > svg {
@@ -7900,7 +7900,7 @@
   border-radius: 14px;
   color: inherit;
   text-decoration: none;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetReferenceRowsV23 a:hover {
@@ -8040,7 +8040,7 @@
   padding: 0 12px;
   border: 1px solid #eee4d5;
   border-radius: 14px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .assetsSearchV23 svg {
@@ -8079,7 +8079,7 @@
 
 .assetFilterTabsV23 button.active,
 .assetFilterTabsV23 button:hover {
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #111;
   box-shadow: 0 6px 14px rgba(40, 28, 8, 0.06);
 }
@@ -8094,7 +8094,7 @@
   overflow: hidden;
   border: 1px solid #eee7dc;
   border-radius: 18px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: inherit;
   text-decoration: none;
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
@@ -8195,7 +8195,7 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .assetGuidanceV23 > svg {
@@ -8282,7 +8282,7 @@
   padding: 12px;
   border: 1px solid #f0e7d9;
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 
 .classResponsibilityListV23 strong {
@@ -8381,7 +8381,7 @@
   padding: 0 13px;
   border: 1px solid #eadfce;
   border-radius: 12px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #17130f;
   font-size: 13px;
   font-weight: 900;
@@ -9967,7 +9967,7 @@
   padding: 12px;
   border: 1px solid rgba(238, 228, 210, .9);
   border-radius: 16px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
 }
 .trainReadinessItemV27 { grid-template-columns: 28px minmax(0, 1fr); }
 .trainReadinessItemV27 > svg { width: 20px; height: 20px; color: #a16300; }
@@ -10004,10 +10004,10 @@
 .trainSpecV27 svg { width: 17px; height: 17px; color: #042aff; }
 
 .trainClassCloudV27 { display: flex; flex-wrap: wrap; gap: 8px; }
-.trainClassCloudV27 span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid rgba(238, 228, 210, .9); border-radius: 999px; background: #fffaf0; color: #4b3f31; font-size: 12px; font-weight: 850; }
+.trainClassCloudV27 span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid rgba(238, 228, 210, .9); border-radius: 999px; background: var(--vc-surface-2); color: #4b3f31; font-size: 12px; font-weight: 850; }
 
 .trainTaskActionsV27 { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.trainTaskActionsV27 button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px; border: 1px solid rgba(238, 228, 210, .95); border-radius: 11px; background: #fffaf0; color: #17120d; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; }
+.trainTaskActionsV27 button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px; border: 1px solid rgba(238, 228, 210, .95); border-radius: 11px; background: var(--vc-surface-2); color: #17120d; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer; }
 .trainTaskActionsV27 button:disabled { opacity: .55; cursor: wait; }
 .trainTaskActionsV27 svg { width: 14px; height: 14px; }
 
@@ -10193,7 +10193,7 @@
   min-height: 76px;
   border: 1px dashed rgba(225, 212, 191, .95);
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--vc-surface-2);
   color: #817361;
   font-size: 13px;
   font-weight: 850;
@@ -10513,7 +10513,7 @@
   padding: 0 12px;
   border: 1px solid #eadfce;
   border-radius: 14px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .modelSearchV30 svg {
@@ -10539,7 +10539,7 @@
 .modelCheckV30 {
   border: 1px solid #e9ddcb;
   border-radius: 12px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #332b20;
   font: inherit;
   font-size: 12px;
@@ -10559,7 +10559,7 @@
   padding: 12px;
   border: 1px solid #eee4d6;
   border-radius: 17px;
-  background: linear-gradient(180deg, #fffdf8, #fbf5ec);
+  background: linear-gradient(180deg, var(--vc-surface), #fbf5ec);
 }
 
 .modelRailTitleV30 {
@@ -10727,7 +10727,7 @@
   padding: 14px;
   border: 1px dashed #d9cbb8;
   border-radius: 18px;
-  background: radial-gradient(circle at 50% 0%, rgba(4, 42, 255, .045), transparent 45%), #fffdf8;
+  background: radial-gradient(circle at 50% 0%, rgba(4, 42, 255, .045), transparent 45%), var(--vc-surface);
   color: #7e7367;
   text-align: center;
 }
@@ -10782,7 +10782,7 @@
   padding: 0 11px;
   border: 1px solid #e9ddcb;
   border-radius: 13px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #7f7468;
   font-size: 12px;
   font-weight: 900;
@@ -10801,7 +10801,7 @@
   padding: 16px;
   border: 1px solid #eadfce;
   border-radius: 18px;
-  background: linear-gradient(180deg, #fffdf8, #fbf6ee);
+  background: linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2));
 }
 
 .metricCompareCardV30 header {
@@ -10918,7 +10918,7 @@
   padding: 13px;
   border: 1px solid #eee4d6;
   border-radius: 16px;
-  background: #fbf6ee;
+  background: var(--vc-surface-2);
 }
 
 .modelLifecycleV30 span,
@@ -11064,7 +11064,7 @@
   padding: 0 12px;
   border: 1px solid #eadfce;
   border-radius: 14px;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .modelSearchV31 svg {
@@ -11091,7 +11091,7 @@
 .modelCheckV31 {
   border: 1px solid #e9ddcb;
   border-radius: 12px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #332b20;
   font: inherit;
   font-size: 12px;
@@ -11111,7 +11111,7 @@
   padding: 12px;
   border: 1px solid #eee4d6;
   border-radius: 17px;
-  background: linear-gradient(180deg, #fffdf8, #fbf5ec);
+  background: linear-gradient(180deg, var(--vc-surface), #fbf5ec);
 }
 
 .modelRailTitleV31 {
@@ -11292,7 +11292,7 @@
   padding: 12px;
   border: 1px dashed #d9cbb8;
   border-radius: 18px;
-  background: radial-gradient(circle at 50% 0%, rgba(4, 42, 255, .045), transparent 45%), #fffdf8;
+  background: radial-gradient(circle at 50% 0%, rgba(4, 42, 255, .045), transparent 45%), var(--vc-surface);
   color: #7e7367;
   text-align: center;
 }
@@ -11344,7 +11344,7 @@
   padding: 0 11px;
   border: 1px solid #e9ddcb;
   border-radius: 13px;
-  background: #fffdf8;
+  background: var(--vc-surface);
   color: #7f7468;
   font-size: 12px;
   font-weight: 900;
@@ -11472,7 +11472,7 @@
   padding: 14px;
   border: 1px solid #eee4d6;
   border-radius: 18px;
-  background: linear-gradient(180deg, #fffdf8, #fbf6ee);
+  background: linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2));
 }
 
 .curveCardV31 header {
@@ -11520,7 +11520,7 @@
   background:
     linear-gradient(#efe5d8 1px, transparent 1px),
     linear-gradient(90deg, #efe5d8 1px, transparent 1px),
-    #fffdf8;
+    var(--vc-surface);
   background-size: 100% 50%, 33% 100%, auto;
 }
 
@@ -11617,7 +11617,7 @@
   padding: 16px;
   border: 1px solid #eee4d6;
   border-radius: 18px;
-  background: linear-gradient(180deg, #fffdf8, #fbf6ee);
+  background: linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2));
 }
 
 .modelSummaryCardV31,
@@ -12175,7 +12175,7 @@
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background: #fffdf7;
+  background: var(--vc-surface);
 }
 
 .inspectPanelInnerV32 {
@@ -12343,7 +12343,7 @@
   overflow: auto;
   background:
     radial-gradient(circle at 18% 0%, rgba(239, 246, 255, 0.64), transparent 30%),
-    #fffdf7;
+    var(--vc-surface);
 }
 
 .inspectBlockedPanelV33 > svg {
@@ -12776,7 +12776,7 @@
   color: var(--vc-text);
 }
 
-/* Dark-mode hardening for old hard-coded #fff/#fffdf6 cards. */
+/* Dark-mode hardening for old hard-coded #fff/var(--vc-surface) cards. */
 :global(html[data-theme="dark"]) .page {
   background: var(--vc-app-bg);
   color: var(--vc-text);
@@ -12901,5 +12901,699 @@
     height: auto;
     max-height: none;
     overflow: visible;
+  }
+}
+
+/* v37 strict platform page primitives pass */
+.page {
+  min-width: 0;
+  min-height: 0;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+/* Any working page should be bounded by default. Lists scroll inside cards, not by stretching the whole shell. */
+.page :where(
+  [class*="Shell"],
+  [class*="Workspace"],
+  [class*="Layout"],
+  [class*="Grid"],
+  [class*="Board"]
+) {
+  min-width: 0;
+  min-height: 0;
+}
+
+.page :where(
+  [class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Rail"],
+  [class*="Hero"],
+  [class*="Toolbar"],
+  [class*="Inspector"],
+  [class*="Meta"],
+  [class*="Summary"],
+  [class*="Block"]
+) {
+  border-color: var(--vc-border) !important;
+  background: var(--vc-surface) !important;
+  color: var(--vc-text) !important;
+  box-shadow: var(--vc-shadow-xs) !important;
+}
+
+.page :where(
+  [class*="Row"],
+  [class*="Item"],
+  [class*="Chip"],
+  [class*="Badge"],
+  [class*="Pill"],
+  [class*="Stat"],
+  [class*="Cell"],
+  [class*="Option"]
+) {
+  border-color: var(--vc-border-soft) !important;
+}
+
+.page :where(
+  [class*="Row"],
+  [class*="Item"],
+  [class*="Option"],
+  [class*="Cell"]
+) {
+  background: var(--vc-surface-2) !important;
+  color: var(--vc-text) !important;
+}
+
+.page :where(input, select, textarea) {
+  background: var(--vc-surface) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+  box-shadow: none !important;
+}
+
+.page :where(button) {
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+}
+
+.page :where(h1, h2, h3, h4, strong, b, label) {
+  color: var(--vc-text);
+}
+
+.page :where(p, small, dd, dt, li) {
+  color: var(--vc-text-muted);
+}
+
+.page :where(a) {
+  color: inherit;
+}
+
+.page :where([class*="Primary"], [class*="primary"], [class*="Accent"], [class*="accent"]) {
+  border-color: var(--vc-accent-border);
+}
+
+/* Home hotfix: prevent metric cards and quick actions from floating over lists. */
+.homeCompactV18 {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.homeCockpitV18,
+.homeMainGridV18 {
+  min-height: 0;
+}
+
+.homePanelV18 {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.homeProjectListV18,
+.homeRunListV18,
+.homeChecklistV18 {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.homeQuickLinksV18 {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--vc-border-soft);
+  background: transparent !important;
+}
+
+.homeRunSummaryV18 {
+  position: static;
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+}
+
+.homeProjectRowV18,
+.homeRunRowV18,
+.homeCheckItemV18,
+.homeQuickLinksV18 a {
+  min-width: 0;
+}
+
+/* Known workspace pages: make their long lists bounded even before full component migration. */
+.referencesGridV25,
+.referenceImagesGridV25,
+.classesGroupsV24,
+.trainModelRailListV30,
+.modelGraphScrollV31,
+.runsListV29,
+.inspectProjectGridV32,
+.inspectReferenceGridV32 {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.classesWorkspaceV24,
+.modelLabShellV31,
+.trainModelsShellV30,
+.inspectionStationShellV34,
+.inspectStationShellV32,
+.referenceDetailWorkspaceV25,
+.referencesWorkspaceV25 {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Dark theme: no white/cream cards from older prototype CSS. */
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg) !important;
+  color: var(--vc-text) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  [class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Rail"],
+  [class*="Hero"],
+  [class*="Toolbar"],
+  [class*="Inspector"],
+  [class*="Meta"],
+  [class*="Summary"],
+  [class*="Block"],
+  [class*="Shell"]
+) {
+  background: var(--vc-surface) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+  box-shadow: none !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  [class*="Row"],
+  [class*="Item"],
+  [class*="Option"],
+  [class*="Cell"],
+  [class*="Input"],
+  [class*="Select"]
+) {
+  background: var(--vc-surface-2) !important;
+  border-color: var(--vc-border-soft) !important;
+  color: var(--vc-text) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  [class*="Ghost"],
+  [class*="Secondary"],
+  [class*="Muted"],
+  [class*="Subtle"]
+) {
+  color: var(--vc-text-muted) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(input, select, textarea, button) {
+  background-color: var(--vc-surface-2) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(svg) {
+  color: currentColor;
+}
+
+@media (max-width: 1280px) {
+  .homeCompactV18 {
+    overflow: visible;
+  }
+
+  .homeProjectListV18,
+  .homeRunListV18,
+  .homeChecklistV18 {
+    overflow: visible;
+  }
+}
+
+/* v38 strict page module pass */
+.page {
+  min-width: 0;
+  min-height: 0;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+.workspaceHeroV19,
+.homeHeroV18,
+.homeHeroV19,
+.trainHeaderV27,
+.assetsHeroV23,
+.referenceHeroV25,
+.inspectStationHeroV32 {
+  background: var(--vc-surface) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+  box-shadow: var(--vc-shadow-xs) !important;
+}
+
+.surfacePanelV16,
+.homePanelV18,
+.homePanelV19,
+.assetsPanelV23,
+.referencePanelV25,
+.classesWorkspaceV24,
+.trainPanelV27,
+.modelLabPanelV30,
+.inspectPanelV32,
+.inspectClassesPanelV34 {
+  background: var(--vc-surface) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+  box-shadow: var(--vc-shadow-xs) !important;
+}
+
+.projectMetricGridV19,
+.homeMetricGridV18,
+.homeMetricGridV19,
+.trainMetricGridV27,
+.assetsMetricGridV23,
+.referenceMetricGridV25,
+.inspectMetricGridV32 {
+  align-items: stretch;
+}
+
+.metricTileV16,
+.projectMetricV19,
+.homeMetricV18,
+.homeMetricV19,
+.trainMetricV27,
+.assetsMetricV23,
+.referenceMetricV25,
+.inspectMetricV32 {
+  background: var(--vc-surface) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+  box-shadow: var(--vc-shadow-xs) !important;
+}
+
+.projectQueueItemV19,
+.inspectionRunItemV19,
+.nextActionItemV19,
+.referenceCardV25,
+.assetReferenceCardV26,
+.modelListItemV30,
+.runItemV29,
+.classRowV24,
+.classGroupV24 {
+  background: var(--vc-surface-2) !important;
+  border-color: var(--vc-border) !important;
+  color: var(--vc-text) !important;
+}
+
+.projectQueueItemV19:hover,
+.referenceCardV25:hover,
+.assetReferenceCardV26:hover,
+.modelListItemV30:hover,
+.runItemV29:hover,
+.classRowV24:hover {
+  border-color: var(--vc-border-strong) !important;
+  background: var(--vc-surface-3) !important;
+}
+
+.panelHeadV16,
+.homePanelHeadV18,
+.homePanelHeadV19,
+.assetsPanelHeadV23,
+.referencePanelHeadV25,
+.trainPanelHeadV27,
+.modelLabHeadV30,
+.inspectPanelHeadV32 {
+  color: var(--vc-text);
+  border-color: var(--vc-border);
+}
+
+.eyebrow,
+.projectQueueMetaV19,
+.referenceMetaV25,
+.assetMetaV26,
+.modelMetaV30,
+.runMetaV29,
+.classMetaV24,
+.inspectMetaV32 {
+  color: var(--vc-text-muted) !important;
+}
+
+.progressTrackV16,
+.progressTrackV19,
+.metricTrackV19,
+.readinessTrackV23 {
+  background: var(--vc-surface-3) !important;
+}
+
+.homeGridV19,
+.homeGridV18,
+.projectsLayoutV19,
+.assetsLayoutV23,
+.referencesLayoutV25,
+.trainOverviewLayoutV27,
+.modelLabLayoutV30,
+.inspectStationLayoutV32 {
+  min-width: 0;
+  align-items: stretch;
+}
+
+.homeGridV19 > *,
+.homeGridV18 > *,
+.projectsLayoutV19 > *,
+.assetsLayoutV23 > *,
+.referencesLayoutV25 > *,
+.trainOverviewLayoutV27 > *,
+.modelLabLayoutV30 > *,
+.inspectStationLayoutV32 > * {
+  min-width: 0;
+}
+
+.projectQueueV19,
+.homeProjectListV19,
+.homeRunsListV19,
+.homeActionsListV19,
+.referenceGridV25,
+.assetReferenceGridV26,
+.classesGroupsV24,
+.modelListV30,
+.modelChartStackV31,
+.runsListV29,
+.inspectProjectGridV32,
+.inspectReferenceGridV32 {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.homeProjectListV19,
+.homeRunsListV19,
+.homeActionsListV19,
+.projectQueueV19 {
+  max-height: min(52svh, 460px);
+}
+
+.referenceGridV25,
+.assetReferenceGridV26,
+.inspectProjectGridV32,
+.inspectReferenceGridV32 {
+  max-height: min(64svh, 620px);
+}
+
+.classesGroupsV24,
+.modelListV30,
+.runsListV29 {
+  max-height: min(68svh, 680px);
+}
+
+.modelChartStackV31 {
+  max-height: min(72svh, 760px);
+}
+
+.headerActions,
+.panelActionsV16,
+.homeQuickActionsV19,
+.nextActionButtonsV19,
+.referenceActionsV25,
+.modelActionsV30,
+.inspectActionsV32 {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.headerActions > *,
+.panelActionsV16 > *,
+.homeQuickActionsV19 > *,
+.nextActionButtonsV19 > *,
+.referenceActionsV25 > *,
+.modelActionsV30 > *,
+.inspectActionsV32 > * {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .homeProjectListV19,
+  .homeRunsListV19,
+  .homeActionsListV19,
+  .projectQueueV19,
+  .referenceGridV25,
+  .assetReferenceGridV26,
+  .classesGroupsV24,
+  .modelListV30,
+  .modelChartStackV31,
+  .runsListV29,
+  .inspectProjectGridV32,
+  .inspectReferenceGridV32 {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+
+/* v39 strict Home/page primitive migration */
+.page {
+  min-height: 0;
+  background: var(--vc-bg) !important;
+  color: var(--vc-text) !important;
+}
+
+.homeCompactV18 {
+  height: 100%;
+  min-height: 0;
+  padding: var(--vc-page-pad);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.homeCockpitV18 {
+  min-height: auto;
+  padding: clamp(18px, 2vw, 24px);
+  display: grid;
+  grid-template-columns: minmax(320px, 1.15fr) minmax(220px, 0.48fr) minmax(360px, 0.95fr);
+  align-items: stretch;
+  gap: 14px;
+  overflow: hidden;
+  border: 1px solid var(--vc-line) !important;
+  border-radius: var(--vc-radius-xl);
+  background: var(--vc-surface) !important;
+  box-shadow: var(--vc-shadow-soft) !important;
+}
+
+.homeWelcomeV18 {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.homeWelcomeV18 h1 {
+  margin: 0;
+  color: var(--vc-text) !important;
+  font-size: clamp(42px, 5vw, 68px);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.homeWelcomeV18 p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--vc-muted) !important;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.eyebrow {
+  color: var(--vc-muted) !important;
+}
+
+.homeActionRowV18 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.homeScoreCardV18,
+.homeStatV18,
+.homePanelV18,
+.homeProjectRowV18,
+.homeRunRowV18,
+.homeCheckItemV18,
+.homeQuickLinksV18 a,
+.homeEmptyActionV18 {
+  border: 1px solid var(--vc-line) !important;
+  background: var(--vc-surface-2) !important;
+  color: var(--vc-text) !important;
+  box-shadow: none !important;
+}
+
+.homeScoreCardV18 {
+  min-width: 0;
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  border-radius: var(--vc-radius-lg);
+}
+
+.homeScoreCardV18 span,
+.homeScoreCardV18 p,
+.homeStatV18 span,
+.homeProjectRowV18 small,
+.homeRunRowV18 small,
+.homeCheckItemV18 small {
+  color: var(--vc-muted) !important;
+}
+
+.homeScoreCardV18 strong {
+  color: var(--vc-text) !important;
+}
+
+.homeScoreRingV18 {
+  background: linear-gradient(90deg, var(--vc-accent) var(--value), var(--vc-line) var(--value)) !important;
+}
+
+.homeKpiGridV18 {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.homeStatV18 {
+  min-width: 0;
+  min-height: 88px;
+  border-radius: var(--vc-radius-lg);
+}
+
+.homeStatV18 svg,
+.homeProjectAvatarV18,
+.homeRunOkV18,
+.homeRunBadV18 {
+  color: var(--vc-accent) !important;
+}
+
+.homeMainGridV18 {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(300px, 0.95fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.homePanelV18 {
+  min-height: 0;
+  height: min(48vh, 520px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--vc-radius-xl);
+  padding: 18px;
+}
+
+.homePanelHeadV18 {
+  flex: 0 0 auto;
+  min-height: 0;
+  margin-bottom: 12px;
+}
+
+.homePanelHeadV18 h2 {
+  color: var(--vc-text) !important;
+}
+
+.homePanelHeadV18 a {
+  color: var(--vc-accent) !important;
+}
+
+.homeProjectListV18,
+.homeRunListV18,
+.homeChecklistV18 {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.homeProjectRowV18,
+.homeRunRowV18,
+.homeCheckItemV18 {
+  min-height: 56px;
+  border-radius: var(--vc-radius);
+}
+
+.homeProjectRowV18 b,
+.homeCheckDoneV18 span {
+  color: var(--vc-accent-contrast) !important;
+  background: var(--vc-accent) !important;
+}
+
+.homeRunSummaryV18 {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.homeRunSummaryV18 div {
+  border-color: var(--vc-line) !important;
+  background: var(--vc-surface-2) !important;
+  color: var(--vc-text) !important;
+}
+
+.homeQuickLinksV18 {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.homeQuickLinksV18 a {
+  min-height: 42px;
+  border-radius: var(--vc-radius);
+  color: var(--vc-text) !important;
+}
+
+.homeQuickLinksV18 a:hover,
+.homeProjectRowV18:hover,
+.homeRunRowV18:hover,
+.homeEmptyActionV18:hover {
+  border-color: color-mix(in srgb, var(--vc-accent) 40%, var(--vc-line)) !important;
+  background: var(--vc-accent-soft) !important;
+}
+
+@media (max-width: 1240px) {
+  .homeCockpitV18,
+  .homeMainGridV18 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .homePanelV18 {
+    height: auto;
+    max-height: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .homeCompactV18 {
+    padding: 12px;
+  }
+
+  .homeKpiGridV18,
+  .homeRunSummaryV18,
+  .homeQuickLinksV18 {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

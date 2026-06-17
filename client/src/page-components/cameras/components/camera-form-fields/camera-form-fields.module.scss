@@ -1,27 +1,33 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: var(--vc-space-3, 12px);
+  min-width: 0;
 }
 
 .formSection {
-  padding: 12px 14px;
   gap: 10px;
+  padding: 12px 14px;
+  border-color: var(--vc-border, #dfe3e8);
+  background: var(--vc-surface, #fff);
 }
 
 .gridTwo {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-3;
+  gap: 10px;
+  min-width: 0;
 }
 
 .hostPortRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 18px 132px;
-  gap: $space-2;
+  gap: 8px;
   align-items: end;
+  min-width: 0;
 }
 
 .separator {
@@ -30,24 +36,21 @@
   align-items: center;
   justify-content: center;
   height: 40px;
-  color: $text-hint;
-  font-size: $text-body;
+  color: var(--vc-text-soft, #7a8493);
+  font-size: 13px;
   line-height: 1;
 }
 
 .metaNote {
-  font-size: $text-small;
-  color: $text-sub;
+  color: var(--vc-text-muted, #667085);
+  font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
   line-height: 1.45;
-  font-family: $font-mono;
   overflow-wrap: anywhere;
 }
 
 @media (max-width: 767px) {
-  .gridTwo {
-    grid-template-columns: 1fr;
-  }
-
+  .gridTwo,
   .hostPortRow {
     grid-template-columns: 1fr;
   }
@@ -55,4 +58,34 @@
   .separator {
     display: none;
   }
+}
+
+/* v49 real regression hardfix */
+:global(html[data-theme="dark"]) .page,
+:global(html[data-theme="dark"]) .root,
+:global(html[data-theme="dark"]) .layout,
+:global(html[data-theme="dark"]) .workspace,
+:global(.theme-dark) .page,
+:global(.theme-dark) .root,
+:global(.theme-dark) .layout,
+:global(.theme-dark) .workspace {
+  background: var(--vc-bg, #080a0b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}
+
+:global(html[data-theme="dark"]) .hero,
+:global(html[data-theme="dark"]) .panel,
+:global(html[data-theme="dark"]) .card,
+:global(html[data-theme="dark"]) .rail,
+:global(html[data-theme="dark"]) .detail,
+:global(html[data-theme="dark"]) .tile,
+:global(.theme-dark) .hero,
+:global(.theme-dark) .panel,
+:global(.theme-dark) .card,
+:global(.theme-dark) .rail,
+:global(.theme-dark) .detail,
+:global(.theme-dark) .tile {
+  background: var(--vc-surface, #0f1314) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
+  color: var(--vc-text, #f4f7f8) !important;
 }

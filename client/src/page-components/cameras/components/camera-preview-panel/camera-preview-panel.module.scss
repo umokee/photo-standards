@@ -1,19 +1,22 @@
+
 @use "@/styles/variables" as *;
 
 .panel {
   display: grid;
-  overflow: hidden;
+  gap: 12px;
   min-width: 0;
-  gap: $space-3;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .previewViewport {
   position: relative;
-  height: clamp(320px, 42vh, 440px);
+  height: clamp(320px, 48vh, 560px);
+  min-height: 0;
   overflow: hidden;
-  border: 1px solid hsl(0, 0%, 13%);
-  border-radius: $radius;
-  background: hsl(0, 0%, 8%);
+  border: 1px solid var(--vc-border, #24272c);
+  border-radius: var(--vc-radius-lg, 18px);
+  background: #090a0b;
 }
 
 .previewAction {
@@ -23,7 +26,7 @@
   display: grid;
   width: 100%;
   height: 100%;
-  padding: $space-4;
+  padding: 18px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -35,7 +38,8 @@
   }
 
   &:focus-visible {
-    outline: none;
+    outline: 2px solid var(--vc-focus, var(--vc-accent, #2563eb));
+    outline-offset: -4px;
   }
 }
 
@@ -47,56 +51,57 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 210px);
-  min-height: 48px;
-  padding: $space-2 $space-4;
-  border: 1px solid $line;
-  border-radius: $radius;
-  background: $surface;
-  color: $text;
-  font-size: $text-body;
-  font-weight: $fw-semibold;
+  width: min(100%, 220px);
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--vc-radius-md, 14px);
+  background: rgba(16, 18, 20, 0.82);
+  color: #f4f6f8;
+  font-size: 13px;
+  font-weight: 820;
   line-height: 1.2;
   text-align: center;
+  backdrop-filter: blur(12px);
 }
 
 .previewVideo {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: $radius;
+  border-radius: inherit;
   object-fit: contain;
 }
 
 .statusPanel {
   display: grid;
-  gap: $space-2;
-  padding: $space-3;
-  border: 1px solid $danger-bd;
-  border-radius: $radius;
-  background: $danger-bg;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--vc-danger, #ef4444) 36%, transparent);
+  border-radius: var(--vc-radius-md, 14px);
+  background: color-mix(in srgb, var(--vc-danger, #ef4444) 10%, transparent);
 }
 
 .statusHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: $space-3;
+  gap: 12px;
 }
 
 .statusTitle {
-  color: $text;
-  font-size: $text-body;
-  font-weight: $fw-semibold;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 850;
   line-height: 1.4;
 }
 
 .statusMessage {
-  color: $text-sub;
-  font-size: $text-small;
+  color: var(--vc-text-muted, #667085);
+  font-size: 12px;
   line-height: 1.5;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 767px) {
@@ -109,12 +114,42 @@
   }
 
   .previewActionLabel {
-    width: min(100%, 150px);
+    width: min(100%, 160px);
     min-height: 44px;
-    font-size: $text-small;
+    font-size: 12px;
   }
 
   .statusHeader {
     flex-direction: column;
   }
+}
+
+/* v49 real regression hardfix */
+:global(html[data-theme="dark"]) .page,
+:global(html[data-theme="dark"]) .root,
+:global(html[data-theme="dark"]) .layout,
+:global(html[data-theme="dark"]) .workspace,
+:global(.theme-dark) .page,
+:global(.theme-dark) .root,
+:global(.theme-dark) .layout,
+:global(.theme-dark) .workspace {
+  background: var(--vc-bg, #080a0b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}
+
+:global(html[data-theme="dark"]) .hero,
+:global(html[data-theme="dark"]) .panel,
+:global(html[data-theme="dark"]) .card,
+:global(html[data-theme="dark"]) .rail,
+:global(html[data-theme="dark"]) .detail,
+:global(html[data-theme="dark"]) .tile,
+:global(.theme-dark) .hero,
+:global(.theme-dark) .panel,
+:global(.theme-dark) .card,
+:global(.theme-dark) .rail,
+:global(.theme-dark) .detail,
+:global(.theme-dark) .tile {
+  background: var(--vc-surface, #0f1314) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
+  color: var(--vc-text, #f4f7f8) !important;
 }

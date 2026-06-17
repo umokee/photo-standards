@@ -1,0 +1,140 @@
+/* v50 global legacy color cleanup. Keep this last until old modules are deleted. */
+html,
+body,
+#root {
+  background: var(--vc-page) !important;
+  color: var(--vc-text);
+}
+
+:where(a, button, input, select, textarea) {
+  font: inherit;
+}
+
+:where(input, select, textarea) {
+  color: var(--vc-text);
+  background: var(--vc-field);
+  border-color: var(--vc-line);
+}
+
+:root[data-theme="dark"] :where(
+  [class*="page"], [class*="Page"],
+  [class*="workspace"], [class*="Workspace"],
+  [class*="shell"], [class*="Shell"],
+  [class*="layout"], [class*="Layout"]
+) {
+  background-color: var(--vc-page) !important;
+  color: var(--vc-text);
+}
+
+:root[data-theme="dark"] :where(
+  [class*="hero"], [class*="Hero"],
+  [class*="card"], [class*="Card"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="rail"], [class*="Rail"],
+  [class*="tile"], [class*="Tile"],
+  [class*="metric"], [class*="Metric"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"],
+  [class*="row"], [class*="Row"],
+  [class*="item"], [class*="Item"],
+  [class*="section"], [class*="Section"],
+  [class*="toolbar"], [class*="Toolbar"],
+  [class*="form"], [class*="Form"]
+) {
+  border-color: var(--vc-line) !important;
+}
+
+:root[data-theme="dark"] :where(
+  [class*="hero"], [class*="Hero"],
+  [class*="card"], [class*="Card"],
+  [class*="panel"], [class*="Panel"],
+  [class*="pane"], [class*="Pane"],
+  [class*="rail"], [class*="Rail"],
+  [class*="tile"], [class*="Tile"],
+  [class*="metric"], [class*="Metric"],
+  [class*="modal"], [class*="Modal"],
+  [class*="dialog"], [class*="Dialog"],
+  [class*="section"], [class*="Section"],
+  [class*="toolbar"], [class*="Toolbar"]
+) {
+  background-color: var(--vc-surface) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] :where(
+  h1, h2, h3, h4, h5, h6, strong, label,
+  [class*="title"], [class*="Title"],
+  [class*="name"], [class*="Name"]
+) {
+  color: var(--vc-text) !important;
+}
+
+:root[data-theme="dark"] :where(
+  p, small, span,
+  [class*="text"], [class*="Text"],
+  [class*="hint"], [class*="Hint"],
+  [class*="meta"], [class*="Meta"],
+  [class*="label"], [class*="Label"]
+) {
+  border-color: var(--vc-line);
+}
+
+:root[data-theme="dark"] :where(input, select, textarea, [class*="input"], [class*="Input"], [class*="field"], [class*="Field"], [class*="drop"], [class*="Drop"]) {
+  background: var(--vc-field) !important;
+  color: var(--vc-text) !important;
+  border-color: var(--vc-line) !important;
+}
+
+:root[data-theme="dark"] :where(button) {
+  border-color: var(--vc-line);
+}
+
+:root[data-theme="dark"] :where([class*="error"], [class*="Error"]) {
+  background-color: color-mix(in srgb, var(--vc-danger-bg) 65%, var(--vc-surface)) !important;
+  border-color: color-mix(in srgb, var(--vc-danger) 38%, var(--vc-line)) !important;
+}
+
+:root[data-theme="dark"] :where([class*="success"], [class*="Success"], [class*="ok"], [class*="Ok"]) {
+  color: var(--vc-success);
+}
+
+/* Camera / monitoring pages had large white route wrappers. */
+:root[data-theme="dark"] :where(
+  [class*="cameras"], [class*="Cameras"],
+  [class*="camera"], [class*="Camera"],
+  [class*="monitor"], [class*="Monitor"],
+  [class*="settings"], [class*="Settings"]
+) {
+  background-color: var(--vc-surface) !important;
+  color: var(--vc-text);
+}
+
+/* Project portal is glass in both themes, not a solid black slab. */
+[class*="projectMenuPortalV50"] {
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+:root[data-theme="dark"] [class*="projectMenuPortalV50"] {
+  background: rgba(15, 19, 21, 0.58) !important;
+}
+
+/* Continue arrow should not create a separate square. */
+[class*="assetPrimaryLink"] svg,
+[class*="primaryLink"] svg,
+[class*="primaryButton"] svg {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Viewer/canvas zones are allowed to stay truly dark. */
+:root[data-theme="dark"] :where([class*="viewer"], [class*="Viewer"], [class*="canvas"], [class*="Canvas"], [class*="imageStage"], [class*="ImageStage"]) {
+  background-color: #050708 !important;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --vc-page-pad-x: 12px;
+    --vc-page-pad-y: 12px;
+  }
+}

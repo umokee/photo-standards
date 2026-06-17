@@ -1,8 +1,10 @@
+
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetSystemStats } from "@/page-components/settings/api/get-system-stats";
 import { useSystemStatsLive } from "@/page-components/settings/lib/use-system-stats-live";
+import type { LucideIcon } from "lucide-react";
 import { Activity, Cpu, Gauge, HardDrive, MemoryStick, Server, ShieldCheck, Thermometer, Timer, Zap } from "lucide-react";
-import p from "../platform-pages.module.scss";
+import s from "./_settings-strict.module.scss";
 
 const numberFormatter = new Intl.NumberFormat("ru-RU");
 
@@ -64,26 +66,26 @@ export function Component() {
 
   return (
     <QueryState isLoading={isLoading} isError={isError} size="page">
-      <section className={p.systemCommandCenterHero}>
+      <section className={s.hero}>
         <div>
-          <span className={p.eyebrow}><Server /> System command center</span>
+          <span className={s.eyebrow}><Server /> System command center</span>
           <h1>Monitoring</h1>
           <p>Живое состояние backend, ресурсов, диска, GPU и файлов проекта.</p>
         </div>
-        <div className={p.healthScoreCard}>
+        <div className={s.healthCard}>
           <span>Health score</span>
           <strong>{healthScore}</strong>
           <small>Updated {formatTime(data.updated_at)}</small>
         </div>
       </section>
 
-      <div className={p.systemCommandGrid}>
-        <section className={p.telemetryPanel}>
-          <div className={p.cardTitleRow}>
+      <div className={s.grid}>
+        <section className={s.telemetryPanel}>
+          <div className={s.cardHead}>
             <div><h3>Live telemetry</h3><p>CPU, RAM, disk and GPU load.</p></div>
-            <span className={p.softBadge}>live</span>
+            <span className={s.softBadge}>live</span>
           </div>
-          <div className={p.systemMetricGridDense}>
+          <div className={s.metricGrid}>
             <ResourceCard icon={Cpu} label="CPU" value={`${Math.round(cpuPercent)}%`} hint={`${formatCount(data.resources.cpu_count_logical)} logical threads`} percent={cpuPercent} />
             <ResourceCard icon={MemoryStick} label="RAM" value={`${formatBytes(data.resources.memory_used_bytes)} / ${formatBytes(data.resources.memory_total_bytes)}`} hint={`${ramPercent}% used`} percent={ramPercent} />
             <ResourceCard icon={HardDrive} label="Disk" value={`${formatBytes(data.resources.disk_used_bytes)} / ${formatBytes(data.resources.disk_total_bytes)}`} hint={`${diskPercent}% used`} percent={diskPercent} />
@@ -91,8 +93,8 @@ export function Component() {
           </div>
         </section>
 
-        <aside className={p.hostStatusPanel}>
-          <div className={p.cardTitleRow}>
+        <aside className={s.hostPanel}>
+          <div className={s.cardHead}>
             <div><h3>Host</h3><p>Machine and process state.</p></div>
           </div>
           <HostInfo icon={Server} label="Hostname" value={data.system.hostname} />
@@ -102,15 +104,15 @@ export function Component() {
         </aside>
       </div>
 
-      <section className={p.storageCommandPanel}>
-        <div className={p.cardTitleRow}>
+      <section className={s.storagePanel}>
+        <div className={s.cardHead}>
           <div>
             <h3>Storage usage</h3>
             <p>Эталоны, результаты проверок, веса моделей и логи.</p>
           </div>
-          <span className={p.softBadge}>{formatBytes(data.storage.used_bytes)}</span>
+          <span className={s.softBadge}>{formatBytes(data.storage.used_bytes)}</span>
         </div>
-        <div className={p.storageCategoryGrid}>
+        <div className={s.storageGrid}>
           <StorageTile icon={ShieldCheck} label="Standards" value={data.storage.categories.standards_bytes} total={data.storage.used_bytes} />
           <StorageTile icon={Activity} label="Inspections" value={data.storage.categories.inspections_bytes} total={data.storage.used_bytes} />
           <StorageTile icon={Zap} label="Models" value={data.storage.categories.models_bytes} total={data.storage.used_bytes} />
@@ -122,33 +124,33 @@ export function Component() {
   );
 }
 
-function ResourceCard({ icon: Icon, label, value, hint, percent, muted }: { icon: typeof Cpu; label: string; value: string; hint: string; percent: number; muted?: boolean }) {
+function ResourceCard({ icon: Icon, label, value, hint, percent, muted }: { icon: LucideIcon; label: string; value: string; hint: string; percent: number; muted?: boolean }) {
   return (
-    <div className={p.resourceCard} data-muted={muted ? "true" : undefined}>
+    <div className={s.resourceCard} data-muted={muted ? "true" : undefined}>
       <div><Icon /><span>{label}</span></div>
       <strong>{value}</strong>
       <small>{hint}</small>
-      <div className={p.resourceTrack}><span style={{ width: `${Math.max(0, Math.min(100, Math.round(percent)))}%` }} /></div>
+      <div className={s.track}><span style={{ width: `${Math.max(0, Math.min(100, Math.round(percent)))}%` }} /></div>
     </div>
   );
 }
 
-function StorageTile({ icon: Icon, label, value, total }: { icon: typeof Cpu; label: string; value: number; total: number }) {
+function StorageTile({ icon: Icon, label, value, total }: { icon: LucideIcon; label: string; value: number; total: number }) {
   const percent = getPercent(value, total || 1);
   return (
-    <div className={p.storageTile}>
+    <div className={s.storageTile}>
       <Icon />
       <span>{label}</span>
       <strong>{formatBytes(value)}</strong>
-      <div className={p.resourceTrack}><span style={{ width: `${percent}%` }} /></div>
+      <div className={s.track}><span style={{ width: `${percent}%` }} /></div>
       <small>{percent}% of project storage</small>
     </div>
   );
 }
 
-function HostInfo({ icon: Icon, label, value }: { icon: typeof Cpu; label: string; value: string }) {
+function HostInfo({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className={p.hostInfoCard}>
+    <div className={s.hostInfo}>
       <Icon />
       <span>{label}</span>
       <strong>{value}</strong>

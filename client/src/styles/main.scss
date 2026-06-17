@@ -1,10 +1,19 @@
 @use "sass:map";
+@use "theme-runtime";
 @use "variables" as *;
 @use "theme-variables";
 @use "reset";
+@use "platform-primitives";
 
 @use "shared/card";
 @use "shared/badge";
 @use "shared/table";
 @use "shared/scrollbar";
 @use "pages/page";
+@use "platform-hardening";
+@use "theme-strict-v39";
+@use "platform-legacy-bridge-v39";
+@use "ui-components-strict";
+@use "v47-regression-hotfix";
+@use "v49-regression-hardfix";
+@use "legacy-color-cleanup";

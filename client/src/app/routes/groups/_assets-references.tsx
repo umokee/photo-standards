@@ -5,11 +5,11 @@ import { DeleteStandard } from "@/page-components/standards/components/delete-st
 import { UpdateStandard } from "@/page-components/standards/components/update-standard";
 import { UploadImages } from "@/page-components/standards/components/upload-images";
 import { formatDate } from "@/utils/formatDate";
-import { CheckCircle2, CircleDashed, Image, Images, ListChecks, Search, SlidersHorizontal, Upload } from "lucide-react";
+import { CheckCircle2, CircleDashed, Image, Images, ListChecks, Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useGroupDetailOutletContext } from "./_group-detail";
-import p from "../platform-pages.module.scss";
+import s from "./_project-assets-strict.module.scss";
 
 type FilterKey = "all" | "active" | "draft" | "empty" | "labeled" | "needs-label";
 
@@ -57,94 +57,93 @@ export function Component() {
   const needsLabelCount = group.standards.filter((reference) => reference.images_count > reference.annotated_images_count).length;
 
   return (
-    <div className={p.assetPageV26}>
-      <section className={p.assetHeaderV26}>
+    <div className={s.page}>
+      <header className={`${s.header} ${s.headerCompact}`}>
         <div>
-          <span className={p.assetEyebrowV26}><Images /> Assets / References</span>
+          <span className={s.eyebrow}><Images /> Assets / References</span>
           <h2>Reference library</h2>
           <p>Эталонные виды изделия. Здесь создаются references, загружаются изображения и открывается очередь разметки.</p>
         </div>
-        <CreateStandard groupId={group.id} />
+        <div className={s.headerActions}><CreateStandard groupId={group.id} /></div>
+      </header>
+
+      <section className={s.summaryGrid}>
+        <Metric value={group.stats.standards_count} label="References" hint="total" />
+        <Metric value={group.stats.images_count} label="Images" hint="uploaded" />
+        <Metric value={readyCount} label="Ready" hint="100% labeled" />
+        <Metric value={needsLabelCount} label="Needs label" hint="annotation queue" />
       </section>
 
-      <section className={p.referenceSummaryV26}>
-        <div><strong>{group.stats.standards_count}</strong><span>references</span></div>
-        <div><strong>{group.stats.images_count}</strong><span>images</span></div>
-        <div><strong>{readyCount}</strong><span>ready</span></div>
-        <div><strong>{needsLabelCount}</strong><span>needs label</span></div>
-      </section>
-
-      <section className={p.referenceToolbarV26}>
-        <label>
-          <Search />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search references..." />
-        </label>
-        <div className={p.referenceFiltersV26}>
-          {FILTERS.map((item) => (
-            <button className={filter === item.key ? p.activeFilterV26 : undefined} key={item.key} type="button" onClick={() => setFilter(item.key)}>
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <span><SlidersHorizontal /> {filtered.length} shown</span>
-      </section>
-
-      <QueryState
-        isEmpty={!group.standards.length}
-        size="page"
-        emptyTitle="References not created"
-        emptyDescription="Создай первый эталонный вид, загрузи фотографии и начни разметку."
-      >
-        <div className={p.referenceLibraryGridV26}>
-          {filtered.map((reference) => {
-            const labeled = percent(reference.annotated_images_count, reference.images_count);
-            const ready = reference.images_count > 0 && labeled === 100;
-
-            return (
-              <article className={p.referenceCardV26} key={reference.id}>
-                <Link className={p.referenceCardMediaV26} to={paths.standardDetail(group.id, reference.id)}>
-                  {reference.reference_path ? <img src={`/storage/${reference.reference_path}`} alt="" /> : <Image />}
-                  <b>{reference.is_active ? "active" : "draft"}</b>
-                </Link>
-
-                <div className={p.referenceCardBodyV26}>
-                  <div>
-                    <span className={p.assetEyebrowV26}>{reference.angle || "view"}</span>
-                    <h3>{reference.name}</h3>
-                    <p>{reference.images_count} images · {reference.annotated_images_count} labeled · created {formatDate(reference.created_at)}</p>
-                  </div>
-
-                  <div className={p.referenceProgressV26}>
-                    <i style={{ width: `${labeled}%` }} />
-                    <span>{labeled}% labeled</span>
-                  </div>
-
-                  <div className={p.referenceStatusLineV26}>
-                    {ready ? <CheckCircle2 /> : <CircleDashed />}
-                    <span>{ready ? "Ready for Train/Inspect" : reference.images_count ? "Continue labeling" : "Upload images first"}</span>
-                  </div>
-                </div>
-
-                <div className={p.referenceCardActionsV26}>
-                  <Link to={paths.standardDetail(group.id, reference.id)}>Open</Link>
-                  <UploadImages groupId={group.id} standardId={reference.id} />
-                  <Link to={paths.inspectionStandard("photo", group.id, reference.id)}><ListChecks /> Inspect</Link>
-                  <UpdateStandard standard={reference} />
-                  <DeleteStandard groupId={group.id} id={reference.id} name={reference.name} />
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        {group.standards.length > 0 && filtered.length === 0 ? (
-          <div className={p.assetEmptyInlineV26}>
+      <section className={s.panel}>
+        <div className={s.toolbar}>
+          <label className={s.searchBox}>
             <Search />
-            <strong>No references match filters</strong>
-            <span>Попробуй изменить поиск или фильтр.</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search references..." />
+          </label>
+          <div className={s.filterBar}>
+            {FILTERS.map((item) => (
+              <button className={filter === item.key ? s.isActive : undefined} key={item.key} type="button" onClick={() => setFilter(item.key)}>{item.label}</button>
+            ))}
           </div>
-        ) : null}
-      </QueryState>
+          <span className={s.statusPill}><SlidersHorizontal /> {filtered.length} shown</span>
+        </div>
+
+        <div className={s.panelBody}>
+          <QueryState isEmpty={!group.standards.length} size="page" emptyTitle="References not created" emptyDescription="Создай первый эталонный вид, загрузи фотографии и начни разметку.">
+            <div className={s.referenceGrid}>
+              {filtered.map((reference) => {
+                const labeled = percent(reference.annotated_images_count, reference.images_count);
+                const ready = reference.images_count > 0 && labeled === 100;
+
+                return (
+                  <article className={s.referenceCard} key={reference.id}>
+                    <Link className={s.mediaLink} to={paths.standardDetail(group.id, reference.id)}>
+                      {reference.reference_path ? <img src={`/storage/${reference.reference_path}`} alt="" /> : <Image />}
+                      <b className={reference.is_active ? s.activePill : s.draftPill}>{reference.is_active ? "active" : "draft"}</b>
+                    </Link>
+
+                    <div className={s.referenceBody}>
+                      <div className={s.cardTitle}>
+                        <span className={s.eyebrow}>{reference.angle || "view"}</span>
+                        <strong>{reference.name}</strong>
+                        <p>{reference.images_count} images · {reference.annotated_images_count} labeled · created {formatDate(reference.created_at)}</p>
+                      </div>
+
+                      <div className={s.progressTrack}><i style={{ width: `${labeled}%` }} /></div>
+
+                      <div className={ready ? s.donePill : s.openPill}>
+                        {ready ? <CheckCircle2 /> : <CircleDashed />}
+                        <span>{ready ? "Ready" : reference.images_count ? "Needs label" : "Upload first"}</span>
+                      </div>
+                    </div>
+
+                    <div className={s.referenceActions}>
+                      <Link to={paths.standardDetail(group.id, reference.id)}>Open</Link>
+                      <UploadImages groupId={group.id} standardId={reference.id} />
+                      <Link to={paths.inspectionStandard("photo", group.id, reference.id)}><ListChecks /> Inspect</Link>
+                      <UpdateStandard standard={reference} />
+                      <DeleteStandard groupId={group.id} id={reference.id} name={reference.name} />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {group.standards.length > 0 && filtered.length === 0 ? (
+              <div className={s.emptyInline}><Search /><strong>No references match filters</strong><span>Попробуй изменить поиск или фильтр.</span></div>
+            ) : null}
+          </QueryState>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Metric({ value, label, hint }: { value: number; label: string; hint: string }) {
+  return (
+    <div className={s.metricCard}>
+      <Images />
+      <div><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>
     </div>
   );
 }

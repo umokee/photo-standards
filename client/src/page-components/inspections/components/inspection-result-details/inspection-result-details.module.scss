@@ -287,3 +287,55 @@
     justify-content: space-between;
   }
 }
+
+/* v44 inspection history strict theme bridge */
+.root,
+.rootHistory,
+.reportList,
+.reportEmpty,
+.rootHistory .list,
+.componentGroupBody {
+  color: var(--vc-text, #111318);
+}
+
+.reportList,
+.reportEmpty,
+.rootHistory .list {
+  border-color: var(--vc-border-soft, #ebeff5);
+  background: var(--vc-surface, #fff);
+}
+
+.reportDisclosure {
+  border-top-color: var(--vc-border-soft, #ebeff5);
+}
+
+.reportHead,
+.name {
+  color: var(--vc-text, #111318);
+}
+
+.reportCount,
+.confidence,
+.rowText,
+.rowMeta,
+.empty {
+  color: var(--vc-text-subtle, #7a8497);
+}
+
+.row,
+.rootHistory .row,
+.rowHistory {
+  border-bottom-color: var(--vc-border-soft, #ebeff5);
+  background: transparent;
+  color: var(--vc-text, #111318);
+}
+
+.rowInteractive:hover,
+.rootHistory .row:hover,
+.rowHistory:hover,
+.rowActive,
+.rootHistory .rowActive,
+.rowHistory.rowActive {
+  background: var(--vc-surface-2, #f9fafc);
+}
+

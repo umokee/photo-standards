@@ -57,3 +57,33 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* v49 real regression hardfix */
+:global(html[data-theme="dark"]) .page,
+:global(html[data-theme="dark"]) .root,
+:global(html[data-theme="dark"]) .layout,
+:global(html[data-theme="dark"]) .workspace,
+:global(.theme-dark) .page,
+:global(.theme-dark) .root,
+:global(.theme-dark) .layout,
+:global(.theme-dark) .workspace {
+  background: var(--vc-bg, #080a0b) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}
+
+:global(html[data-theme="dark"]) .hero,
+:global(html[data-theme="dark"]) .panel,
+:global(html[data-theme="dark"]) .card,
+:global(html[data-theme="dark"]) .rail,
+:global(html[data-theme="dark"]) .detail,
+:global(html[data-theme="dark"]) .tile,
+:global(.theme-dark) .hero,
+:global(.theme-dark) .panel,
+:global(.theme-dark) .card,
+:global(.theme-dark) .rail,
+:global(.theme-dark) .detail,
+:global(.theme-dark) .tile {
+  background: var(--vc-surface, #0f1314) !important;
+  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
+  color: var(--vc-text, #f4f7f8) !important;
+}

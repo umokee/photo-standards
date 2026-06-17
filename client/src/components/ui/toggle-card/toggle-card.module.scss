@@ -1,37 +1,37 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: $space-3;
-  padding: $space-3;
-  border: 1px solid $line-soft;
-  border-radius: $radius;
-  background: $surface2;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  border-radius: var(--vc-radius, 14px);
+  background: var(--vc-surface-2, #f8fafc);
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: 4px;
   min-width: 0;
 }
 
 .title {
-  color: $text;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .hint {
-  color: $text-sub;
-  font-size: $text-small;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 12px;
   line-height: 1.45;
 }
 
 @media (max-width: 900px) {
-  .root {
-    align-items: flex-start;
-  }
+  .root { align-items: flex-start; }
 }

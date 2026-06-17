@@ -1,0 +1,61 @@
+
+/* v47 regression hotfix: global token aliases and final layout guards */
+:root,
+html[data-theme="light"] {
+  --vc-app-bg: var(--vc-bg, #f5f6f8);
+  --vc-border: var(--vc-line, #dfe4ea);
+  --vc-border-soft: var(--vc-line-soft, #ebeff4);
+  --vc-border-strong: var(--vc-line-strong, #c9d1db);
+  --vc-text-muted: var(--vc-muted, #68717b);
+  --vc-text-subtle: var(--vc-faint, #929aa4);
+  --vc-danger-border: color-mix(in srgb, var(--vc-danger, #d92d3d) 28%, transparent);
+  --vc-danger-line: color-mix(in srgb, var(--vc-danger, #d92d3d) 28%, transparent);
+  --vc-danger-text: var(--vc-danger, #d92d3d);
+}
+
+html[data-theme="dark"] {
+  --vc-app-bg: var(--vc-bg, #080a0b);
+  --vc-border: var(--vc-line, #283035);
+  --vc-border-soft: var(--vc-line-soft, #20272b);
+  --vc-border-strong: var(--vc-line-strong, #3a454b);
+  --vc-text-muted: var(--vc-muted, #9ca5a8);
+  --vc-text-subtle: var(--vc-faint, #6f797d);
+  --vc-danger-border: color-mix(in srgb, var(--vc-danger, #ff5b66) 28%, transparent);
+  --vc-danger-line: color-mix(in srgb, var(--vc-danger, #ff5b66) 28%, transparent);
+  --vc-danger-text: var(--vc-danger, #ff5b66);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--vc-bg);
+  color: var(--vc-text);
+}
+
+/* Reduce page gutters after shell migration. */
+[class*="assetsRouteShell"],
+[class*="workspacePage"],
+[class*="_trainingModels"],
+[class*="_trainingRuns"],
+[class*="_inspectionHistory"],
+[class*="_inspect"] {
+  box-sizing: border-box;
+}
+
+/* Final dark-mode bridge for common hard-coded white islands. */
+html[data-theme="dark"] :where(.vc-card, .vc-panel, .vc-toolbar, .vc-rail, .vc-inspector),
+html[data-theme="dark"] :where([class*="Card"], [class*="Panel"], [class*="Toolbar"], [class*="Pane"], [class*="Rail"]):not([class*="canvas"]):not([class*="Canvas"]) {
+  border-color: var(--vc-line) !important;
+}
+
+html[data-theme="dark"] :where(input, select, textarea) {
+  color: var(--vc-text) !important;
+  background: var(--vc-surface-2) !important;
+  border-color: var(--vc-line) !important;
+}

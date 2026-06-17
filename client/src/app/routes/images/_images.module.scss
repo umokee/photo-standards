@@ -239,7 +239,7 @@
 .floatingToolstrip button:hover,
 .floatingToolstrip .toolActive {
   background: rgba(255, 255, 255, 0.1);
-  color: #fffdf6;
+  color: var(--vc-surface);
 }
 
 .floatingToolstrip .toolActive {
@@ -442,7 +442,7 @@
   height: 20px;
   padding: 0 6px;
   background: rgba(255, 255, 255, 0.12);
-  color: #fffdf6;
+  color: var(--vc-surface);
   font-size: 10px;
   font-weight: 900;
 }
@@ -569,7 +569,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: #fffdf6;
+  color: var(--vc-surface);
   font-size: 12px;
   font-weight: 920;
   letter-spacing: -0.02em;
@@ -673,7 +673,7 @@
 .bottomNavigator button:hover:not(:disabled) {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.12);
-  color: #fffdf6;
+  color: var(--vc-surface);
 }
 
 .bottomNavigator button:disabled {
@@ -929,7 +929,7 @@
 }
 
 .reviewCard strong {
-  color: #fffdf6;
+  color: var(--vc-surface);
   font-size: 17px;
   line-height: 1.05;
   letter-spacing: -0.035em;

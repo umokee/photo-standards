@@ -217,3 +217,50 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
+
+/* v43 inspect strict panel */
+.root {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--vc-surface, #ffffff);
+  color: var(--vc-text, #101114);
+}
+
+.header {
+  border-bottom-color: var(--vc-line, rgba(127, 127, 127, 0.18));
+  background: var(--vc-surface, #ffffff);
+}
+
+.eyebrow,
+.groupToggle {
+  color: var(--vc-muted, #6f737b);
+}
+
+.title,
+.groupName,
+.itemName {
+  color: var(--vc-text, #101114);
+}
+
+.body {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: var(--vc-surface, #ffffff);
+}
+
+.group + .group,
+.groupBranch,
+.groupLeaf::before {
+  border-color: var(--vc-line, rgba(127, 127, 127, 0.18));
+}
+
+.groupLeaf {
+  border-radius: 10px;
+}
+
+.groupLeaf:hover {
+  background: var(--vc-surface-2, #f6f7f8);
+}

@@ -1,25 +1,28 @@
+
 @use "@/styles/variables" as *;
 
 .root {
-  margin-bottom: $space-3;
+  min-width: 0;
+  margin-bottom: 12px;
 
-  &.noMargin {
-    margin-bottom: 0;
-  }
+  &.noMargin { margin-bottom: 0; }
 }
 
 .label {
   display: block;
-  font-size: $text-micro;
-  font-weight: $fw-semibold;
+  margin-bottom: 6px;
+  color: var(--vc-text-muted, #6b7280);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.2;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: $text-hint;
-  margin-bottom: $space-1;
+  letter-spacing: 0.06em;
 }
 
 .errorMsg {
-  font-size: $text-micro;
-  color: $danger-text;
-  margin-top: $space-1;
+  margin-top: 6px;
+  color: var(--vc-danger-text, #b91c1c);
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.35;
 }

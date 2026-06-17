@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle2,
+  FileImage,
   Image,
   ListChecks,
   ShieldCheck,
@@ -14,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_inspect-strict.module.scss";
 
 function normalizeMode(value: string | undefined): InspectionModePath {
   return inspectionModePaths.includes(value as InspectionModePath)
@@ -25,17 +26,17 @@ function normalizeMode(value: string | undefined): InspectionModePath {
 const modeMeta: Record<InspectionModePath, { title: string; hint: string; icon: LucideIcon }> = {
   photo: {
     title: "Photo check",
-    hint: "Загрузка одного изображения и запуск проверки по выбранному reference.",
+    hint: "Один файл изображения, проверка по выбранному reference и сохранение результата.",
     icon: UploadCloud,
   },
   snapshot: {
     title: "Camera snapshot",
-    hint: "Один кадр с камеры, затем обычная проверка и сохранение результата.",
+    hint: "Один кадр с выбранной камеры, затем обычная проверка изделия.",
     icon: Camera,
   },
   realtime: {
     title: "Realtime station",
-    hint: "Поток с камеры и живой статус без ручной загрузки файлов.",
+    hint: "Live-поток с камеры и обновление результата без ручной загрузки файлов.",
     icon: Video,
   },
 };
@@ -50,24 +51,24 @@ export function Component() {
   const readyGroups = groups.filter(isReadyForInspect).length;
 
   return (
-    <div className={p.inspectStationPageV32}>
-      <section className={p.inspectHeroV32}>
-        <div>
-          <span className={p.eyebrowV27}>Inspect station</span>
+    <div className={s.page} data-page="index">
+      <section className={s.hero}>
+        <div className={s.heroMain}>
+          <span className={s.eyebrow}><ShieldCheck /> Inspect station</span>
           <h1>Проверка изделия</h1>
           <p>
-            Отдельная рабочая зона для запуска контроля: выбери режим, изделие, reference,
-            источник изображения и классы деталей.
+            Сначала выбирается режим и изделие, затем reference. На station-экране остаётся только source,
+            классы и запуск проверки.
           </p>
         </div>
-        <div className={p.inspectHeroStatsV32}>
+        <div className={s.heroStats}>
           <Metric icon={ShieldCheck} value={readyGroups} label="ready projects" />
           <Metric icon={Image} value={totalReferences} label="references" />
           <Metric icon={ListChecks} value={totalRuns} label="runs" />
         </div>
       </section>
 
-      <section className={p.inspectModeGridV32}>
+      <section className={s.modeGrid} aria-label="Inspection modes">
         {inspectionModePaths.map((modeItem) => {
           const meta = modeMeta[modeItem];
           const Icon = meta.icon;
@@ -75,7 +76,8 @@ export function Component() {
             <Link
               key={modeItem}
               to={paths.inspectionMode(modeItem)}
-              className={modeItem === currentMode ? p.inspectModeCardActiveV32 : p.inspectModeCardV32}
+              className={s.modeCard}
+              data-active={modeItem === currentMode}
             >
               <Icon />
               <strong>{meta.title}</strong>
@@ -85,13 +87,13 @@ export function Component() {
         })}
       </section>
 
-      <section className={p.inspectQueueShellV32}>
-        <div className={p.sectionHeaderV27}>
+      <section className={s.queueShell}>
+        <div className={s.sectionHeader}>
           <div>
-            <span className={p.eyebrowV27}>Projects</span>
-            <h2>Выбери изделие для проверки</h2>
+            <span className={s.eyebrow}><FileImage /> Projects</span>
+            <h2>Выбери изделие</h2>
           </div>
-          <span>{groups.length} projects</span>
+          <span className={s.sectionCount}>{groups.length} projects</span>
         </div>
 
         <QueryState
@@ -104,7 +106,7 @@ export function Component() {
           emptyTitle="Нет проектов"
           emptyDescription="Сначала создай изделие и добавь reference в Assets."
         >
-          <div className={p.inspectProjectQueueV32}>
+          <div className={s.projectGrid}>
             {groups.map((group) => (
               <ProjectCard key={group.id} group={group} mode={currentMode} />
             ))}
@@ -134,20 +136,22 @@ function ProjectCard({ group, mode }: { group: GroupListItem; mode: InspectionMo
   const ready = isReadyForInspect(group);
 
   return (
-    <Link className={p.inspectProjectCardV32} to={paths.inspectionGroup(mode, group.id)}>
-      <div className={p.inspectProjectAvatarV32}>{group.name.slice(0, 1).toUpperCase()}</div>
-      <div className={p.inspectProjectMainV32}>
-        <div className={p.inspectProjectTitleV32}>
+    <Link className={s.projectCard} to={paths.inspectionGroup(mode, group.id)}>
+      <div className={s.projectTop}>
+        <div className={s.projectAvatar}>{group.name.slice(0, 1).toUpperCase()}</div>
+        <div className={s.projectTitle}>
           <strong>{group.name}</strong>
-          <span data-ready={ready}>{ready ? <CheckCircle2 /> : <AlertTriangle />} {readinessLabel(group)}</span>
+          <span className={ready ? s.statusPillGood : s.statusPillBad}>
+            {ready ? <CheckCircle2 /> : <AlertTriangle />} {readinessLabel(group)}
+          </span>
         </div>
-        <p>{group.description || "Project inspection scope"}</p>
-        <div className={p.inspectProjectMetaV32}>
-          <span>{group.stats.standards_count} references</span>
-          <span>{group.stats.segment_classes_count} classes</span>
-          <span>{group.stats.polygons_count} polygons</span>
-          <span>{group.stats.inspections_count} runs</span>
-        </div>
+      </div>
+      <p>{group.description || "Inspection scope for this product."}</p>
+      <div className={s.cardMeta}>
+        <span>{group.stats.standards_count} references</span>
+        <span>{group.stats.segment_classes_count} classes</span>
+        <span>{group.stats.polygons_count} polygons</span>
+        <span>{group.stats.inspections_count} runs</span>
       </div>
     </Link>
   );
@@ -155,7 +159,7 @@ function ProjectCard({ group, mode }: { group: GroupListItem; mode: InspectionMo
 
 function Metric({ icon: Icon, value, label }: { icon: LucideIcon; value: number; label: string }) {
   return (
-    <div className={p.inspectHeroMetricV32}>
+    <div className={s.metric}>
       <Icon />
       <b>{value}</b>
       <span>{label}</span>

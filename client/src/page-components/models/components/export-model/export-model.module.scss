@@ -1,25 +1,22 @@
+
 @use "@/styles/variables" as *;
 
-.summaryCard {
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
-}
-
+.summaryCard,
 .sectionBlock {
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: 10px;
+  min-width: 0;
 }
 
 .sectionTitle {
-  color: $text-sub;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
+  color: var(--vc-text-muted, #667085);
+  font-size: 12px;
+  font-weight: 820;
 }
 
 .classList {
   display: flex;
   flex-wrap: wrap;
-  gap: $space-1;
+  gap: 7px;
 }

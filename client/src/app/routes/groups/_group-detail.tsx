@@ -1,7 +1,7 @@
 import { useGetGroup } from "@/page-components/groups/api/get-group";
 import type { GroupDetail } from "@/types/contracts";
 import { Outlet, useLoaderData, useOutletContext } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_project-assets-strict.module.scss";
 
 type GroupDetailOutletContext = { group: GroupDetail };
 
@@ -12,7 +12,7 @@ export function Component() {
   const { data: group } = useGetGroup(groupId);
 
   return (
-    <div className={`${p.page} ${p.assetsWorkspaceV24}`}>
+    <div className={s.assetsRouteShell}>
       <Outlet context={{ group }} />
     </div>
   );

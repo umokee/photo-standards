@@ -1,33 +1,51 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   width: 100%;
-  height: 40px;
+  min-width: 0;
+  height: var(--vc-control-height-lg, 40px);
   padding: 0 12px;
+  border: 1px solid var(--vc-control-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
+  border-radius: var(--vc-radius-control, 10px);
+  background: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
+  color: var(--vc-text, #111827);
+  font: inherit;
   font-size: 13px;
-  color: #191510;
-  background: #fffdf9;
-  border: 1px solid #e8ddce;
-  border-radius: 11px;
+  line-height: 1;
   outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  box-shadow: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
 
-  &::placeholder { color: #a39788; }
+  &::placeholder { color: var(--vc-text-faint, #9ca3af); }
 
-  &:hover { border-color: #d9c8b3; }
+  &:hover {
+    border-color: var(--vc-control-border-hover, var(--vc-line-strong, rgba(15, 23, 42, 0.2)));
+  }
 
-  &:focus {
-    border-color: #8ea2ff;
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(4, 42, 255, 0.11);
+  &:focus,
+  &:focus-visible {
+    border-color: var(--vc-accent, #2563eb);
+    background: var(--vc-control-bg-focus, var(--vc-surface, #ffffff));
+    box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.16));
+  }
+
+  &:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
   }
 }
 
 .fieldError {
-  border-color: #f5a29a;
+  border-color: var(--vc-danger, #dc2626);
 
-  &:focus {
-    border-color: #d92d20;
-    box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.11);
+  &:focus,
+  &:focus-visible {
+    border-color: var(--vc-danger, #dc2626);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
   }
 }

@@ -73,7 +73,7 @@ html[data-theme="dark"] {
   --vc-border-soft: rgba(255, 255, 255, 0.075);
   --vc-border-strong: rgba(255, 255, 255, 0.16);
 
-  --vc-text: #fffdf6;
+  --vc-text: var(--vc-surface);
   --vc-text-muted: rgba(255, 253, 246, 0.72);
   --vc-text-subtle: rgba(255, 253, 246, 0.52);
   --vc-text-disabled: rgba(255, 253, 246, 0.34);
@@ -105,4 +105,32 @@ html[data-theme="dark"] {
 
   --vc-scroll-thumb: rgba(255, 255, 255, 0.18);
   --vc-grid-line: rgba(255, 255, 255, 0.055);
+}
+
+/* v37 strict primitive token additions */
+:root,
+html[data-theme="light"] {
+  --vc-space-1: 4px;
+  --vc-space-2: 8px;
+  --vc-space-3: 12px;
+  --vc-space-4: 16px;
+  --vc-space-5: 20px;
+  --vc-control-h: 38px;
+  --vc-topbar-h: 54px;
+  --vc-sidebar-w: 244px;
+  --vc-font-ui: "Inter", "Geist", "Segoe UI", system-ui, sans-serif;
+  --vc-font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+}
+
+html[data-theme="dark"] {
+  --vc-space-1: 4px;
+  --vc-space-2: 8px;
+  --vc-space-3: 12px;
+  --vc-space-4: 16px;
+  --vc-space-5: 20px;
+  --vc-control-h: 38px;
+  --vc-topbar-h: 54px;
+  --vc-sidebar-w: 244px;
+  --vc-font-ui: "Inter", "Geist", "Segoe UI", system-ui, sans-serif;
+  --vc-font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 }

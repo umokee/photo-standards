@@ -7,10 +7,10 @@ import { UpdateStandard } from "@/page-components/standards/components/update-st
 import { UploadImages } from "@/page-components/standards/components/upload-images";
 import { StandardDetail } from "@/types/contracts";
 import { formatDate } from "@/utils/formatDate";
-import { ArrowRight, CheckCircle2, CircleDashed, Image, Images, ListChecks, MousePointer2, Tags, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleDashed, Image, Images, ListChecks, MousePointer2, Tags } from "lucide-react";
 import { Link, useLoaderData, useNavigate } from "react-router-dom";
 import { useGroupDetailOutletContext } from "./_group-detail";
-import p from "../platform-pages.module.scss";
+import s from "./_project-assets-strict.module.scss";
 
 function percent(part: number, total: number) {
   if (!total) return 0;
@@ -25,7 +25,7 @@ function collectClasses(standard: StandardDetail) {
 
 function ReadinessRow({ done, title, value }: { done: boolean; title: string; value: string | number }) {
   return (
-    <div className={done ? p.readinessDoneV26 : p.readinessOpenV26}>
+    <div className={`${s.readinessRow} ${done ? s.readinessRowDone : ""}`}>
       {done ? <CheckCircle2 /> : <CircleDashed />}
       <span>{title}</span>
       <strong>{value}</strong>
@@ -44,18 +44,18 @@ export function Component() {
   const openEditor = (imageId: string) => navigate(paths.standardImage(group.id, standard.id, imageId));
 
   return (
-    <div className={p.referenceDetailPageV26}>
-      <section className={p.referenceHeaderV26}>
-        <div className={p.referenceHeaderPreviewV26}>
+    <div className={s.detailPage}>
+      <section className={s.referenceHeader}>
+        <div className={s.previewMedia}>
           {standard.stats.reference_path ? <img src={`/storage/${standard.stats.reference_path}`} alt="" /> : <Image />}
-          <span>{standard.is_active ? "active" : "draft"}</span>
+          <span className={standard.is_active ? s.activePill : s.draftPill}>{standard.is_active ? "active" : "draft"}</span>
         </div>
 
-        <div className={p.referenceHeaderMainV26}>
-          <span className={p.assetEyebrowV26}>Reference / {standard.angle || "view"}</span>
+        <div className={s.headerMain}>
+          <span className={s.eyebrow}>Reference / {standard.angle || "view"}</span>
           <h2>{standard.name}</h2>
           <p>Очередь изображений для разметки. Клик по изображению открывает editor.</p>
-          <div className={p.referenceMetaLineV26}>
+          <div className={s.metaLine}>
             <span><Images /> {standard.stats.images_count} images</span>
             <span><CheckCircle2 /> {standard.stats.annotated_images_count} labeled</span>
             <span><Tags /> {classes.length} classes used</span>
@@ -63,37 +63,29 @@ export function Component() {
           </div>
         </div>
 
-        <div className={p.referenceHeaderActionsV26}>
+        <div className={s.headerActions}>
           <UploadImages groupId={group.id} standardId={standard.id} />
-          <Link to={paths.inspectionStandard("photo", group.id, standard.id)}><ListChecks /> Use in Inspect</Link>
+          <Link to={paths.inspectionStandard("photo", group.id, standard.id)}><ListChecks /> Inspect</Link>
           <UpdateStandard standard={standard} />
           <DeleteStandard groupId={group.id} id={standard.id} name={standard.name} />
         </div>
       </section>
 
-      <section className={p.referenceDetailGridV26}>
-        <main className={p.assetPanelV26}>
-          <div className={p.assetPanelHeadV26}>
-            <div>
-              <span>Images</span>
-              <h3>Annotation queue</h3>
-            </div>
-            <b>{labeled}% labeled</b>
+      <section className={s.detailGrid}>
+        <main className={s.panel}>
+          <div className={s.panelHead}>
+            <div><span>Images</span><h3>Annotation queue</h3></div>
+            <b className={labeled === 100 ? s.donePill : s.openPill}>{labeled}% labeled</b>
           </div>
 
-          <QueryState
-            isEmpty={!standard.images.length}
-            size="block"
-            emptyTitle="No images uploaded"
-            emptyDescription="Загрузи фотографии reference, чтобы начать разметку."
-          >
-            <div className={p.annotationQueueGridV26}>
+          <QueryState isEmpty={!standard.images.length} size="block" emptyTitle="No images uploaded" emptyDescription="Загрузи фотографии reference, чтобы начать разметку.">
+            <div className={s.annotationGrid}>
               {standard.images.map((image, index) => {
                 const done = image.annotation_count > 0;
 
                 return (
-                  <button className={done ? p.annotationQueueDoneV26 : p.annotationQueueOpenV26} key={image.id} type="button" onClick={() => openEditor(image.id)}>
-                    <div className={p.annotationQueueImageV26}>
+                  <button className={`${s.annotationCard} ${done ? s.annotationCardDone : s.annotationCardOpen}`} key={image.id} type="button" onClick={() => openEditor(image.id)}>
+                    <div className={s.annotationMedia}>
                       <ImageWithFallback src={`/storage/${image.image_path}`} />
                       <span>{String(index + 1).padStart(2, "0")}</span>
                       <b>{done ? "labeled" : "empty"}</b>
@@ -110,36 +102,34 @@ export function Component() {
           </QueryState>
         </main>
 
-        <aside className={p.referenceRailV26}>
-          <div className={p.assetPanelV26}>
-            <div className={p.assetPanelHeadV26}>
-              <div>
-                <span>Readiness</span>
-                <h3>Reference status</h3>
+        <aside className={s.rail}>
+          <div className={s.railScroll}>
+            <section className={s.panel}>
+              <div className={s.panelHead}>
+                <div><span>Readiness</span><h3>Reference status</h3></div>
+                <CheckCircle2 />
               </div>
-              <CheckCircle2 />
-            </div>
-            <ReadinessRow done={standard.stats.images_count > 0} title="Images uploaded" value={standard.stats.images_count} />
-            <ReadinessRow done={classes.length > 0} title="Classes used" value={classes.length} />
-            <ReadinessRow done={standard.stats.annotated_images_count > 0} title="Images labeled" value={`${labeled}%`} />
-            <div className={p.assetProgressTrackV26}><i style={{ width: `${labeled}%` }} /></div>
+              <div className={s.readinessRows}>
+                <ReadinessRow done={standard.stats.images_count > 0} title="Images uploaded" value={standard.stats.images_count} />
+                <ReadinessRow done={classes.length > 0} title="Classes used" value={classes.length} />
+                <ReadinessRow done={standard.stats.annotated_images_count > 0} title="Images labeled" value={`${labeled}%`} />
+                <div className={s.progressTrack}><i style={{ width: `${labeled}%` }} /></div>
+              </div>
+            </section>
+
+            <section className={s.panel}>
+              <div className={s.panelHead}>
+                <div><span>Classes</span><h3>Used in this reference</h3></div>
+                <Link to={paths.assetClasses(group.id)}>Edit</Link>
+              </div>
+              <div className={s.tokenCloud}>
+                {classes.slice(0, 28).map((item) => <span key={item.id} style={{ ["--hue" as string]: item.hue }}>{item.name}</span>)}
+                {!classes.length ? <small>Классы появятся после настройки или разметки.</small> : null}
+              </div>
+            </section>
           </div>
 
-          <div className={p.assetPanelV26}>
-            <div className={p.assetPanelHeadV26}>
-              <div>
-                <span>Classes</span>
-                <h3>Used in this reference</h3>
-              </div>
-              <Link to={paths.assetClasses(group.id)}>Edit</Link>
-            </div>
-            <div className={p.classTokenCloudV26}>
-              {classes.slice(0, 24).map((item) => <span key={item.id} style={{ ["--hue" as string]: item.hue }}>{item.name}</span>)}
-              {!classes.length ? <small>Классы появятся после настройки или разметки.</small> : null}
-            </div>
-          </div>
-
-          <Link className={p.assetPrimaryLinkV26} to={paths.assetReferences(group.id)}>Back to references <ArrowRight /></Link>
+          <Link className={s.secondaryAction} to={paths.assetReferences(group.id)}>Back to references <ArrowRight /></Link>
         </aside>
       </section>
     </div>

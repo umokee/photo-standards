@@ -1,62 +1,66 @@
+
 @use "@/styles/variables" as *;
 
 .root {
   display: flex;
   flex-direction: column;
-  gap: $space-3;
+  gap: var(--vc-space-3, 12px);
+  min-width: 0;
   min-height: 0;
 }
 
-.compactGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-2;
-}
-
+.compactGrid,
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-2;
+  gap: 10px;
+  min-width: 0;
 }
 
 .summaryItem {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--vc-border, #dfe3e8);
+  border-radius: var(--vc-radius-md, 14px);
+  background: var(--vc-surface-2, #f7f8fa);
 }
 
 .summaryLabel {
-  color: $text-hint;
-  font-size: $text-micro;
-  font-weight: $fw-semibold;
+  color: var(--vc-text-soft, #7a8493);
+  font-size: 10px;
+  font-weight: 820;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.065em;
 }
 
 .summaryValue {
-  color: $text;
-  font-size: $text-small;
-  font-weight: $fw-semibold;
+  color: var(--vc-text, #111827);
+  font-size: 13px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.messageBox,
+.errorBox {
+  padding: 11px 12px;
+  border-radius: var(--vc-radius-md, 14px);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .messageBox {
-  padding: $space-2 $space-3;
-  border: 1px solid $line-soft;
-  border-radius: calc($radius + 2px);
-  color: $text-sub;
-  background: transparent;
-  font-size: $text-small;
-  line-height: 1.5;
+  border: 1px solid var(--vc-border, #dfe3e8);
+  color: var(--vc-text-muted, #667085);
+  background: var(--vc-surface-2, #f7f8fa);
 }
 
 .errorBox {
-  padding: $space-2 $space-3;
-  border: 1px solid rgba(184, 70, 70, 0.28);
-  border-radius: calc($radius + 2px);
-  color: $danger-text;
-  background: $danger-bg;
-  font-size: $text-small;
-  line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--vc-danger, #ef4444) 34%, transparent);
+  color: var(--vc-danger-text, #b91c1c);
+  background: color-mix(in srgb, var(--vc-danger, #ef4444) 10%, transparent);
 }
 
 @media (max-width: 900px) {

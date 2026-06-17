@@ -39,12 +39,12 @@ export function Component() {
     <div className={`${p.page} ${p.homeCompactV18}`}>
       <section className={p.homeCockpitV18}>
         <div className={p.homeWelcomeV18}>
-          <span className={p.eyebrow}><FolderKanban /> Product workspace</span>
+          <span className={p.eyebrow}><FolderKanban /> Рабочее пространство</span>
           <h1>Home</h1>
-          <p>Проект = изделие. Внутри проекта лежат эталоны, классы, разметка, модели, камеры и проверки. Это ближе к Roboflow-структуре, но в светлой платформенной стилистике Ultralytics.</p>
+          <p>Единый контур контроля: эталоны, классы, разметка, модели, камеры и проверки собраны вокруг конкретного изделия.</p>
           <div className={p.homeActionRowV18}>
-            <Link to={paths.groups()}><Button icon={FolderKanban}>Open projects</Button></Link>
-            <Link to={paths.inspection()}><Button variant="ghost" icon={ListChecks}>Run inspect</Button></Link>
+            <Link to={paths.groups()}><Button icon={FolderKanban}>Открыть проекты</Button></Link>
+            <Link to={paths.inspection()}><Button variant="ghost" icon={ListChecks}>Запустить проверку</Button></Link>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ export function Component() {
               <span className={p.eyebrow}><FolderKanban /> Projects</span>
               <h2>Изделия и эталоны</h2>
             </div>
-            <Link to={paths.groups()}>View all →</Link>
+            <Link to={paths.groups()}>Все проекты →</Link>
           </div>
           <div className={p.homeProjectListV18}>
             {topProjects.length ? topProjects.map((group) => {
@@ -89,7 +89,7 @@ export function Component() {
                 </Link>
               );
             }) : (
-              <Link className={p.homeEmptyActionV18} to={paths.groups()}><FolderKanban /> Open projects</Link>
+              <Link className={p.homeEmptyActionV18} to={paths.groups()}><FolderKanban /> Открыть проекты</Link>
             )}
           </div>
         </div>
@@ -97,7 +97,7 @@ export function Component() {
         <div className={p.homePanelV18}>
           <div className={p.homePanelHeadV18}>
             <div>
-              <span className={p.eyebrow}><ListChecks /> Inspect</span>
+              <span className={p.eyebrow}><ListChecks /> Проверка</span>
               <h2>Последние проверки</h2>
             </div>
             <Link to={paths.inspectionHistory()}>Runs →</Link>
@@ -111,11 +111,11 @@ export function Component() {
             {recentRuns.length ? recentRuns.map((run) => (
               <Link className={p.homeRunRowV18} key={run.id} to={run.group_id ? paths.inspectionHistoryDetail(run.group_id, run.id) : paths.inspectionHistory()}>
                 <span className={run.status === "passed" ? p.homeRunOkV18 : p.homeRunBadV18} />
-                <strong>{run.standard_name ?? "Inspection"}</strong>
+                <strong>{run.standard_name ?? "Проверкаion"}</strong>
                 <small>{run.mode} · {formatDate(run.inspected_at)}</small>
               </Link>
             )) : (
-              <Link className={p.homeEmptyActionV18} to={nextProject ? paths.inspectionGroup("photo", nextProject.id) : paths.inspection()}><ListChecks /> Run first check</Link>
+              <Link className={p.homeEmptyActionV18} to={nextProject ? paths.inspectionGroup("photo", nextProject.id) : paths.inspection()}><ListChecks /> Запустить первую проверку</Link>
             )}
           </div>
         </div>
@@ -128,17 +128,17 @@ export function Component() {
             </div>
           </div>
           <div className={p.homeChecklistV18}>
-            <ChecklistItem done={groups.length > 0} title="Project created" text={`${groups.length} изделий`} />
-            <ChecklistItem done={totals.references > 0} title="References added" text={`${totals.references} эталонов`} />
-            <ChecklistItem done={totals.classes > 0} title="Classes configured" text={`${totals.classes} классов`} />
-            <ChecklistItem done={labelingPercent >= 80} title="Images labeled" text={`${labelingPercent}% готово`} />
-            <ChecklistItem done={totals.models > 0} title="Model ready" text={`${totals.models} моделей`} />
+            <ChecklistItem done={groups.length > 0} title="Проект создан" text={`${groups.length} изделий`} />
+            <ChecklistItem done={totals.references > 0} title="Эталоны добавлены" text={`${totals.references} эталонов`} />
+            <ChecklistItem done={totals.classes > 0} title="Классы настроены" text={`${totals.classes} классов`} />
+            <ChecklistItem done={labelingPercent >= 80} title="Изображения размечены" text={`${labelingPercent}% готово`} />
+            <ChecklistItem done={totals.models > 0} title="Модель готова" text={`${totals.models} моделей`} />
           </div>
           <div className={p.homeQuickLinksV18}>
-            <Link to={nextProject ? paths.groupDetail(nextProject.id) : paths.groups()}><Database /> Assets</Link>
-            <Link to={nextProject ? paths.trainingGroup(nextProject.id) : paths.training()}><Sparkles /> Train</Link>
-            <Link to={nextProject ? paths.inspectionGroup("photo", nextProject.id) : paths.inspection()}><ListChecks /> Inspect</Link>
-            <Link to={paths.cameras()}><Camera /> Cameras</Link>
+            <Link to={nextProject ? paths.groupDetail(nextProject.id) : paths.groups()}><Database /> Активы</Link>
+            <Link to={nextProject ? paths.trainingGroup(nextProject.id) : paths.training()}><Sparkles /> Обучение</Link>
+            <Link to={nextProject ? paths.inspectionGroup("photo", nextProject.id) : paths.inspection()}><ListChecks /> Проверка</Link>
+            <Link to={paths.cameras()}><Camera /> Камеры</Link>
           </div>
         </aside>
       </section>

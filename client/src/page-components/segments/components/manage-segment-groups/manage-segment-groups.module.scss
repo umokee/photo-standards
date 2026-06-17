@@ -233,7 +233,7 @@
   border-color: #eee8dd;
   border-radius: 14px;
   overflow: hidden;
-  background: #fffdf8;
+  background: var(--vc-surface);
 }
 
 .workspace .groupRow {

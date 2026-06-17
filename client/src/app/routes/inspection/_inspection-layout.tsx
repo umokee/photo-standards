@@ -17,8 +17,9 @@ import {
   MousePointer2,
   ShieldCheck,
 } from "lucide-react";
+import { type ReactNode } from "react";
 import { Link, Outlet, useLoaderData, useNavigate, useParams } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_inspect-strict.module.scss";
 
 const modeLabel: Record<InspectionModePath, string> = {
   photo: "Photo",
@@ -81,10 +82,10 @@ export function Component() {
 
     if (!groupId) {
       return (
-        <div className={p.inspectBlockedPanelV33}>
+        <div className={s.blockedPanel}>
           <MousePointer2 />
-          <h3>Сначала выбери изделие</h3>
-          <p>На этом шаге справа не должно быть классов или эталонов: выбор проекта происходит в основной области.</p>
+          <h3>Выбери изделие</h3>
+          <p>На первом шаге справа нет классов или эталонов. Выбор проекта находится в основной области.</p>
         </div>
       );
     }
@@ -110,14 +111,11 @@ export function Component() {
       }
 
       return (
-        <div className={p.inspectBlockedPanelV33}>
+        <div className={s.blockedPanel}>
           <Layers3 />
-          <h3>Теперь выбери reference</h3>
-          <p>
-            Классы и запуск проверки появятся после выбора эталонного вида. Так station не дублирует
-            выбор project/reference в верхней панели.
-          </p>
-          <div className={p.inspectBlockedStatsV33}>
+          <h3>Выбери reference</h3>
+          <p>Классы и запуск проверки появятся после выбора эталонного вида.</p>
+          <div className={s.blockedStats}>
             <span><Image /> {inspection.group.standards.length} references</span>
             <span><ShieldCheck /> {inspection.group.stats.segment_classes_count} classes</span>
             <span><ListChecks /> {inspection.group.stats.polygons_count} polygons</span>
@@ -160,8 +158,8 @@ export function Component() {
     }
 
     return (
-      <div className={p.inspectPanelInnerV32}>
-        <div className={p.inspectPanelHeadV32}>
+      <div className={s.panelInner}>
+        <div className={s.panelHead}>
           <span>Classes</span>
           <small>Выбери детали, которые нужно проверить в этом запуске.</small>
         </div>
@@ -212,14 +210,14 @@ export function Component() {
         </SplitLayout.Topbar>
 
         <SplitLayout.Body bare>
-          <div className={p.inspectBodyV32}>
+          <div className={s.stationBody}>
             <Outlet context={inspection.outletContext} />
           </div>
         </SplitLayout.Body>
       </SplitLayout.Content>
 
       <SplitLayout.Panel>
-        <div className={p.inspectSidePanelV32}>{renderPanel()}</div>
+        <div className={s.sidePanel}>{renderPanel()}</div>
       </SplitLayout.Panel>
     </SplitLayout>
   );
@@ -239,15 +237,15 @@ function SelectionTopbar({
   onModeChange: (mode: InspectionModePath) => void;
 }) {
   return (
-    <div className={p.inspectSelectionTopbarV33}>
-      <div className={p.inspectSelectionStatusV33}>
+    <div className={s.selectionTopbar}>
+      <div className={s.selectionStatus}>
         <span><Activity /> Inspect station</span>
         <b><CircleDot /> Setup</b>
-        {groupName ? <em>{groupName}</em> : <em>Выбор изделия</em>}
+        <em>{groupName || "Выбор изделия"}</em>
         {isLocked ? <strong><ListChecks /> {taskStage || "Running"}</strong> : null}
       </div>
 
-      <div className={p.inspectModePillsV33}>
+      <div className={s.modePills}>
         {inspectionModePaths.map((mode) => (
           <button
             key={mode}
@@ -284,32 +282,34 @@ function StationTopbar({
   isLocked: boolean;
   taskStage: string | null;
   selectedClassesCount: number;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div className={p.inspectStationTopbarV34}>
-      <div className={p.inspectStationContextV34}>
-        <div className={p.inspectStationStatusV34}>
+    <div className={s.stationTopbar}>
+      <div className={s.stationContext}>
+        <div className={s.stationStatus}>
           <span><Activity /> Inspect station</span>
-          <b data-ready={stationReady}>{stationReady ? <CheckCircle2 /> : <AlertTriangle />} {stationReady ? "Ready" : "Setup"}</b>
+          <b data-state={stationReady ? "ready" : "setup"}>
+            {stationReady ? <CheckCircle2 /> : <AlertTriangle />} {stationReady ? "Ready" : "Setup"}
+          </b>
           {isLocked ? <em><ListChecks /> {taskStage || "Running"}</em> : null}
         </div>
 
-        <div className={p.inspectStationCrumbsV34}>
+        <div className={s.stationCrumbs}>
           <strong>{modeLabel[currentMode]}</strong>
           <span>{groupName || "Project"}</span>
           <span>{standardName || "Reference"}</span>
         </div>
 
-        <div className={p.inspectStationHintsV34}>
-          <span data-ready={sourceReady}><FileImage /> {modeSourceLabel[currentMode]}</span>
-          <span data-ready={selectedClassesCount > 0}><ShieldCheck /> {selectedClassesCount} classes</span>
+        <div className={s.stationHints}>
+          <span data-state={sourceReady ? "ready" : "setup"}><FileImage /> {modeSourceLabel[currentMode]}</span>
+          <span data-state={selectedClassesCount > 0 ? "ready" : "setup"}><ShieldCheck /> {selectedClassesCount} classes</span>
           {groupId ? <Link to={paths.inspectionGroup(currentMode, groupId)}>Сменить reference</Link> : null}
           <Link to={paths.inspectionMode(currentMode)}>Сменить изделие</Link>
         </div>
       </div>
 
-      <div className={p.inspectStationSourceV34}>{children}</div>
+      <div className={s.sourceSlot}>{children}</div>
     </div>
   );
 }

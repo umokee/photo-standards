@@ -118,3 +118,29 @@
     display: none;
   }
 }
+
+/* v47 thumbnail dark/readability hotfix */
+.thumb {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: #0c0f10;
+  box-shadow: none;
+}
+
+.overlay {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 11, 0.82);
+  color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.svg,
+.svgFallback {
+  background: #0c0f10;
+}
+
+.lightboxStage,
+.closeBtn {
+  border-color: var(--vc-line, rgba(255, 255, 255, 0.12));
+  background: var(--vc-surface, #101315);
+  color: var(--vc-text, #f3f6f7);
+}

@@ -1,70 +1,123 @@
+
 import { paths } from "@/app/paths";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
-import { AlertTriangle, CheckCircle2, Database, History, Image, ListChecks, Search, type LucideIcon } from "lucide-react";
+import type { GroupListItem } from "@/types/contracts";
+import {
+  ArrowRight,
+  CheckCircle2,
+  CircleDot,
+  Database,
+  History,
+  Image,
+  ListChecks,
+  PlayCircle,
+  Search,
+  type LucideIcon,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import s from "./_inspection-history-strict.module.scss";
 
 export function Component() {
   const { data: groups } = useGetGroups();
   const totalRuns = groups.reduce((sum, group) => sum + group.stats.inspections_count, 0);
-  const datasetsWithRuns = groups.filter((group) => group.stats.inspections_count > 0).length;
+  const scopesWithRuns = groups.filter((group) => group.stats.inspections_count > 0).length;
+  const totalReferences = groups.reduce((sum, group) => sum + group.stats.standards_count, 0);
   const totalImages = groups.reduce((sum, group) => sum + group.stats.images_count, 0);
+  const sortedGroups = [...groups].sort((a, b) => b.stats.inspections_count - a.stats.inspections_count || a.name.localeCompare(b.name, "ru"));
 
   return (
-    <div className={p.page}>
-      <header className={p.workspaceHeaderV16}>
-        <div>
-          <span className={p.eyebrow}><History /> Run history</span>
-          <h1>Runs</h1>
-          <p>Сохранённые проверки: фото, snapshot и realtime. Здесь должен открываться отчёт, а не техническая таблица.</p>
+    <main className={s.page}>
+      <section className={s.heroPanel}>
+        <div className={s.heroContent}>
+          <span className={s.eyebrow}><History /> Inspection history</span>
+          <div className={s.titleRow}>
+            <div>
+              <h1>Runs</h1>
+              <p>Сохранённые проверки по изделиям: результат, исходное фото, эталон, режим запуска и детализация по компонентам.</p>
+            </div>
+            <Link className={s.primaryAction} to={paths.inspectionMode("photo")}>
+              <PlayCircle /> Новая проверка
+            </Link>
+          </div>
         </div>
-      </header>
-
-      <section className={p.commandMetricGridV16}>
-        <Metric icon={ListChecks} value={totalRuns} label="Total runs" hint="saved checks" />
-        <Metric icon={Database} value={datasetsWithRuns} label="Datasets" hint="with history" />
-        <Metric icon={Image} value={totalImages} label="Images" hint="reference base" />
-        <Metric icon={Search} value={groups.length} label="Scopes" hint="available datasets" />
       </section>
 
-      <QueryState isEmpty={!groups.length} size="page" emptyTitle="No datasets" emptyDescription="Проверки появятся после создания dataset и запуска Inspect.">
-        <div className={p.runsHubGridV16}>
-          <section className={p.surfacePanelV16}>
-            <div className={p.panelHeadV16}>
-              <div><h3>Inspection scopes</h3><p>Выбери dataset, чтобы открыть timeline и детальный отчёт.</p></div>
-              <span>{totalRuns} runs</span>
+      <section className={s.metricGrid}>
+        <Metric icon={ListChecks} value={totalRuns} label="Total runs" hint="saved reports" />
+        <Metric icon={Database} value={scopesWithRuns} label="Изделия" hint="with history" />
+        <Metric icon={Image} value={totalImages} label="Images" hint="source/reference" />
+        <Metric icon={Search} value={totalReferences} label="References" hint="available views" />
+      </section>
+
+      <QueryState
+        isEmpty={!groups.length}
+        size="page"
+        emptyTitle="Нет изделий"
+        emptyDescription="История появится после создания изделия и запуска первой проверки."
+      >
+        <section className={s.scopeShell}>
+          <aside className={s.scopeIntro}>
+            <span className={s.sideLabel}>Registry</span>
+            <h2>История по изделиям</h2>
+            <p>Открой изделие, чтобы посмотреть timeline запусков и полный отчёт выбранной проверки.</p>
+            <div className={s.sideFacts}>
+              <span><CircleDot /> {groups.length} scopes</span>
+              <span><CheckCircle2 /> {scopesWithRuns} active</span>
+              <span><ListChecks /> {totalRuns} reports</span>
             </div>
-            <div className={p.runScopeGridV16}>
-              {groups.map((group) => {
-                const hasRuns = group.stats.inspections_count > 0;
-                return (
-                  <Link className={p.runScopeCardV16} key={group.id} to={paths.inspectionHistoryGroup(group.id)}>
-                    <div className={p.queueAvatarV16}>{group.name.slice(0, 1).toUpperCase()}</div>
-                    <div className={p.queueMainV16}>
-                      <div className={p.queueTitleV16}>
-                        <strong>{group.name}</strong>
-                        <span>{hasRuns ? "has runs" : "empty"}</span>
-                      </div>
-                      <p>{group.stats.inspections_count} checks · {group.stats.standards_count} references · {group.stats.segment_classes_count} classes</p>
-                      <div className={p.queueMetaV16}>
-                        <span><ListChecks /> {group.stats.inspections_count} runs</span>
-                        <span><Image /> {group.stats.images_count} images</span>
-                        <span>{hasRuns ? <CheckCircle2 /> : <AlertTriangle />} {hasRuns ? "open report" : "run Inspect first"}</span>
-                      </div>
-                    </div>
-                    <b className={p.scopeCountV16}>{group.stats.inspections_count}</b>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        </div>
+          </aside>
+
+          <div className={s.scopeGrid}>
+            {sortedGroups.map((group) => <ScopeCard key={group.id} group={group} />)}
+          </div>
+        </section>
       </QueryState>
-    </div>
+    </main>
   );
 }
 
 function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: number; label: string; hint: string }) {
-  return <div className={p.metricCardV16}><Icon /><b>{value}</b><span>{label}</span><small>{hint}</small></div>;
+  return (
+    <div className={s.metricCard}>
+      <Icon />
+      <b>{value}</b>
+      <span>{label}</span>
+      <small>{hint}</small>
+    </div>
+  );
+}
+
+function ScopeCard({ group }: { group: GroupListItem }) {
+  const hasRuns = group.stats.inspections_count > 0;
+  const readiness = getReadiness(group);
+
+  return (
+    <Link className={s.scopeCard} to={paths.inspectionHistoryGroup(group.id)}>
+      <div className={s.scopeAvatar}>{group.name.slice(0, 1).toUpperCase()}</div>
+      <div className={s.scopeBody}>
+        <div className={s.scopeTopline}>
+          <strong>{group.name}</strong>
+          <span className={hasRuns ? s.statusReady : s.statusEmpty}>{hasRuns ? "has runs" : "empty"}</span>
+        </div>
+        <p>{group.description || `${group.stats.standards_count} эталонов · ${group.stats.segment_classes_count} классов · ${group.stats.models_count} моделей`}</p>
+        <div className={s.scopeMeta}>
+          <span><ListChecks /> {group.stats.inspections_count} runs</span>
+          <span><Image /> {group.stats.images_count} images</span>
+          <span><Database /> {readiness}</span>
+        </div>
+      </div>
+      <div className={s.scopeOpen}>
+        <b>{group.stats.inspections_count}</b>
+        <ArrowRight />
+      </div>
+    </Link>
+  );
+}
+
+function getReadiness(group: GroupListItem) {
+  if (!group.stats.standards_count) return "no references";
+  if (!group.stats.segment_classes_count) return "no classes";
+  if (!group.stats.models_count) return "no model";
+  return "ready";
 }

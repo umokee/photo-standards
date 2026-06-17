@@ -37,3 +37,24 @@ button:disabled,
   cursor: not-allowed;
 }
 
+/* v38 theme-safe page defaults */
+html,
+body,
+#root {
+  background: var(--vc-app-bg) !important;
+  color: var(--vc-text) !important;
+}
+
+body {
+  color-scheme: light dark;
+}
+
+::selection {
+  color: var(--vc-accent-contrast);
+  background: color-mix(in srgb, var(--vc-accent) 72%, transparent);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vc-accent) 18%, transparent);
+}
