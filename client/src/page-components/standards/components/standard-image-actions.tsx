@@ -1,3 +1,4 @@
+
 import Button from "@/components/ui/button/button";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import { Check, Trash2, X } from "lucide-react";
@@ -11,6 +12,8 @@ type SetReferenceImageProps = {
   standardId: string;
   imageId: string;
   isReference: boolean;
+  buttonClassName?: string;
+  showLabel?: boolean;
 };
 
 type DeleteStandardImageProps = SetReferenceImageProps;
@@ -20,45 +23,48 @@ export const SetReferenceImage = ({
   standardId,
   imageId,
   isReference,
-}: SetReferenceImageProps) => (
-  <ActionTrigger
-    trigger={
-      <button
-        type="button"
-        aria-label={
-          isReference
-            ? "Убрать фото из проверки"
-            : "Использовать фото в проверке"
-        }
-        title={
-          isReference
-            ? "Убрать фото из проверки"
-            : "Использовать фото в проверке"
-        }
-      >
-        {isReference ? <X size={12} /> : <Check size={12} />}
-      </button>
-    }
-  >
-    <SetReferenceImageModal
-      groupId={groupId}
-      standardId={standardId}
-      imageId={imageId}
-      isReference={isReference}
-    />
-  </ActionTrigger>
-);
+  buttonClassName,
+  showLabel = false,
+}: SetReferenceImageProps) => {
+  const label = isReference ? "Убрать из проверки" : "Использовать в проверке";
+
+  return (
+    <ActionTrigger
+      trigger={
+        <button
+          type="button"
+          className={buttonClassName}
+          aria-label={label}
+          title={label}
+        >
+          {isReference ? <X size={showLabel ? 14 : 12} /> : <Check size={showLabel ? 14 : 12} />}
+          {showLabel ? <span>{label}</span> : null}
+        </button>
+      }
+    >
+      <SetReferenceImageModal
+        groupId={groupId}
+        standardId={standardId}
+        imageId={imageId}
+        isReference={isReference}
+      />
+    </ActionTrigger>
+  );
+};
 
 export const DeleteStandardImage = ({
   groupId,
   standardId,
   imageId,
   isReference,
+  buttonClassName,
+  showLabel = false,
 }: DeleteStandardImageProps) => (
   <ActionTrigger
     trigger={
-      <button type="button" aria-label="Удалить фото эталона">
-        <Trash2 size={12} />
+      <button type="button" className={buttonClassName} aria-label="Удалить фото эталона" title="Удалить фото эталона">
+        <Trash2 size={showLabel ? 14 : 12} />
+        {showLabel ? <span>Удалить</span> : null}
       </button>
     }
   >
@@ -91,11 +97,11 @@ const SetReferenceImageModal = ({
       title={isReference ? "Убрать фото из проверки" : "Использовать фото в проверке"}
       description={
         isReference
-          ? "Это фото больше не будет участвовать в автоматическом выборе ракурса при проверке."
-          : "Это фото будет добавлено в пул ракурсов, из которых система выбирает лучший при проверке."
+          ? "Фото будет снято с reference pool и больше не будет участвовать в автоматическом выборе ракурса при проверке. Сам файл и разметка останутся."
+          : "Фото будет добавлено в reference pool. Если features ещё не готовы, сервер сначала посчитает их и затем включит фото в проверку."
       }
-      confirmLabel={isReference ? "Убрать" : "Использовать"}
-      pendingLabel={isReference ? "Убираем..." : "Добавляем..."}
+      confirmLabel={isReference ? "Убрать из проверки" : "Использовать в проверке"}
+      pendingLabel={isReference ? "Убираем..." : "Подготавливаем..."}
       isPending={mutation.isPending}
       onConfirm={() => mutation.mutate(imageId)}
     />
@@ -122,8 +128,8 @@ const DeleteStandardImageModal = ({
       title="Удалить фото эталона"
       description={
         isReference
-          ? "Это фото участвует в проверке. Вы уверены, что хотите удалить его?"
-          : "Вы уверены, что хотите удалить это фото?"
+          ? "Это фото участвует в проверке. Если удалить его, оно исчезнет из reference pool вместе с разметкой и features."
+          : "Фото, разметка и рассчитанные features будут удалены."
       }
       confirmLabel="Удалить"
       pendingLabel="Удаляем..."

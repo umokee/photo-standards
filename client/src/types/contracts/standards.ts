@@ -17,6 +17,8 @@ export interface StandardImage {
   image_path: string;
   is_reference: boolean;
   annotation_count: number;
+  features_keypoint_count: number | null;
+  features_computed_at: string | null;
   created_at: string;
 }
 

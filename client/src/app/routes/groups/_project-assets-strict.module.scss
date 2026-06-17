@@ -880,3 +880,295 @@
   .toolbarActions,
   .actionRow { justify-content: flex-start; }
 }
+
+/* v51 reference pool manager */
+.referencePoolNotice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--asset-line);
+  background: color-mix(in srgb, var(--asset-accent) 8%, var(--asset-surface));
+  color: var(--asset-muted);
+}
+
+.referencePoolNotice > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--asset-accent);
+  margin-top: 1px;
+}
+
+.referencePoolNotice strong {
+  display: block;
+  color: var(--asset-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.referencePoolNotice span {
+  display: block;
+  margin-top: 3px;
+  color: var(--asset-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.annotationCard {
+  cursor: default;
+  align-content: start;
+}
+
+.annotationCardReference {
+  border-color: color-mix(in srgb, var(--asset-accent) 54%, var(--asset-line));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--asset-accent) 25%, transparent);
+}
+
+.annotationCardMain {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.annotationCardMain:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--asset-accent) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+.annotationMedia em {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  min-height: 23px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, .58);
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.annotationMedia b.poolMediaBadge {
+  background: color-mix(in srgb, var(--asset-accent) 86%, #000);
+  color: var(--vc-accent-contrast, #fff);
+}
+
+.featureReadyPill {
+  border: 1px solid color-mix(in srgb, var(--asset-success) 42%, transparent);
+}
+
+.featureMissingPill {
+  border: 1px solid color-mix(in srgb, var(--asset-warning) 46%, transparent);
+}
+
+.annotationCardActions {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.poolAction,
+.removePoolAction,
+.imageEditorAction,
+.deleteImageAction {
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--asset-line);
+  background: var(--asset-surface);
+  color: var(--asset-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.poolAction span,
+.removePoolAction span,
+.imageEditorAction span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poolAction {
+  border-color: color-mix(in srgb, var(--asset-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--asset-accent) 12%, var(--asset-surface));
+  color: var(--asset-accent);
+}
+
+.removePoolAction {
+  border-color: color-mix(in srgb, var(--asset-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--asset-danger) 9%, var(--asset-surface));
+  color: var(--asset-danger);
+}
+
+.imageEditorAction {
+  padding-inline: 9px;
+}
+
+.deleteImageAction {
+  width: 32px;
+  padding: 0;
+  color: var(--asset-muted);
+}
+
+.poolAction:hover,
+.removePoolAction:hover,
+.imageEditorAction:hover,
+.deleteImageAction:hover {
+  border-color: color-mix(in srgb, var(--asset-accent) 42%, var(--asset-line));
+  background: var(--asset-surface-2);
+}
+
+.poolSummary {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--asset-line);
+  color: var(--asset-muted);
+}
+
+.poolSummary p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.poolSummary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--asset-surface-2);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.poolSummary strong {
+  color: var(--asset-text);
+}
+
+.poolRailList {
+  min-height: 0;
+  max-height: 280px;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+}
+
+.poolRailItem {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--asset-line);
+  border-radius: 14px;
+  background: var(--asset-surface-2);
+  color: var(--asset-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.poolRailItem:hover {
+  border-color: color-mix(in srgb, var(--asset-accent) 40%, var(--asset-line));
+}
+
+.poolRailItem img {
+  width: 58px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--asset-surface-3);
+}
+
+.poolRailItem span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.poolRailItem strong,
+.poolRailItem small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poolRailItem strong {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--asset-text);
+}
+
+.poolRailItem small {
+  font-size: 11px;
+  color: var(--asset-muted);
+}
+
+.poolEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 18px 12px;
+  border: 1px dashed var(--asset-line-strong);
+  border-radius: 16px;
+  background: var(--asset-surface-2);
+  color: var(--asset-muted);
+  text-align: center;
+}
+
+.poolEmpty svg {
+  width: 26px;
+  height: 26px;
+  color: var(--asset-accent);
+}
+
+.poolEmpty strong {
+  color: var(--asset-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.poolEmpty span {
+  max-width: 230px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .annotationCardActions {
+    grid-template-columns: 1fr;
+  }
+
+  .imageEditorAction,
+  .deleteImageAction {
+    width: 100%;
+  }
+}

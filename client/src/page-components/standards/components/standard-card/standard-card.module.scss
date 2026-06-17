@@ -394,3 +394,25 @@
     opacity: 1;
   }
 }
+
+/* v51 reference pool badges */
+.imageCardRef {
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--vc-accent, #0b46ff);
+  color: var(--vc-accent-contrast, #fff);
+}
+
+.imageCardOverlay button {
+  background: color-mix(in srgb, var(--vc-surface, #fff) 92%, transparent);
+  color: var(--vc-text, #111827);
+  border: 1px solid var(--vc-line, rgba(15,23,42,.14));
+  box-shadow: var(--vc-shadow-sm, 0 10px 24px rgba(15,23,42,.14));
+}
+
+:global([data-theme="dark"]) .imageCardOverlay button {
+  background: color-mix(in srgb, var(--vc-surface-2, #151717) 92%, transparent);
+  color: var(--vc-text, #f7f7f2);
+}

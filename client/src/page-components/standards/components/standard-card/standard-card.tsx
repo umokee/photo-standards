@@ -151,7 +151,7 @@ const StandardCardDetail = ({
                   <ImageWithFallback src={`/storage/${image.image_path}`} iconSize={20} />
                 </div>
 
-                {image.is_reference && <span className={s.imageCardRef}>ПРОВ</span>}
+                {image.is_reference && <span className={s.imageCardRef}>В проверке</span>}
 
                 <div className={s.imageCardOverlay}>
                   <SetReferenceImage
