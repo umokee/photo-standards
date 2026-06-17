@@ -1,7 +1,7 @@
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetSystemStats } from "@/page-components/settings/api/get-system-stats";
 import { useSystemStatsLive } from "@/page-components/settings/lib/use-system-stats-live";
-import { Cpu, Gauge, HardDrive, MemoryStick, Server, Thermometer, Timer, Zap } from "lucide-react";
+import { Activity, Cpu, Gauge, HardDrive, MemoryStick, Server, ShieldCheck, Thermometer, Timer, Zap } from "lucide-react";
 import p from "../platform-pages.module.scss";
 
 const numberFormatter = new Intl.NumberFormat("ru-RU");
@@ -60,58 +60,64 @@ export function Component() {
   const diskPercent = getPercent(data.resources.disk_used_bytes, data.resources.disk_total_bytes);
   const gpuPercent = data.gpu.utilization_percent ?? 0;
   const gpuMemoryPercent = data.gpu.memory_used_mb != null && data.gpu.memory_total_mb != null ? getPercent(data.gpu.memory_used_mb, data.gpu.memory_total_mb) : null;
+  const healthScore = Math.max(0, Math.min(100, Math.round(100 - Math.max(cpuPercent, ramPercent, diskPercent, gpuPercent) * 0.55)));
 
   return (
     <QueryState isLoading={isLoading} isError={isError} size="page">
-      <section className={p.systemHero}>
+      <section className={p.systemCommandCenterHero}>
         <div>
-          <span className={p.eyebrow}><Server /> System</span>
-          <h1>Runtime status</h1>
-          <p>Backend resources, storage usage and live hardware state.</p>
+          <span className={p.eyebrow}><Server /> System command center</span>
+          <h1>Monitoring</h1>
+          <p>Живое состояние backend, ресурсов, диска, GPU и файлов проекта.</p>
         </div>
-        <div className={p.systemUpdated}>Updated {formatTime(data.updated_at)}</div>
+        <div className={p.healthScoreCard}>
+          <span>Health score</span>
+          <strong>{healthScore}</strong>
+          <small>Updated {formatTime(data.updated_at)}</small>
+        </div>
       </section>
 
-      <div className={p.systemMetricGrid}>
-        <ResourceCard icon={Cpu} label="CPU" value={`${Math.round(cpuPercent)}%`} hint={`${formatCount(data.resources.cpu_count_logical)} logical threads`} percent={cpuPercent} />
-        <ResourceCard icon={MemoryStick} label="RAM" value={`${formatBytes(data.resources.memory_used_bytes)} / ${formatBytes(data.resources.memory_total_bytes)}`} hint={`${ramPercent}% used`} percent={ramPercent} />
-        <ResourceCard icon={HardDrive} label="Disk" value={`${formatBytes(data.resources.disk_used_bytes)} / ${formatBytes(data.resources.disk_total_bytes)}`} hint={`${diskPercent}% used`} percent={diskPercent} />
-        <ResourceCard icon={Zap} label="GPU" value={data.gpu.name ?? "Unavailable"} hint={data.gpu.available ? `${gpuPercent}% · ${data.gpu.temperature_c ?? "—"}°C` : "Server does not expose GPU"} percent={gpuPercent} muted={!data.gpu.available} />
-      </div>
-
-      <div className={p.grid2}>
-        <section className={p.panelCard}>
+      <div className={p.systemCommandGrid}>
+        <section className={p.telemetryPanel}>
           <div className={p.cardTitleRow}>
-            <div>
-              <h3>Storage</h3>
-              <p>Total application artifacts: references, inspections, models and logs.</p>
-            </div>
-            <span className={p.softBadge}>{formatBytes(data.storage.used_bytes)}</span>
+            <div><h3>Live telemetry</h3><p>CPU, RAM, disk and GPU load.</p></div>
+            <span className={p.softBadge}>live</span>
           </div>
-          <div className={p.storageBars}>
-            <StorageBar label="Standards" value={data.storage.categories.standards_bytes} total={data.storage.used_bytes} />
-            <StorageBar label="Inspections" value={data.storage.categories.inspections_bytes} total={data.storage.used_bytes} />
-            <StorageBar label="Models" value={data.storage.categories.models_bytes} total={data.storage.used_bytes} />
-            <StorageBar label="Logs" value={data.storage.categories.logs_bytes} total={data.storage.used_bytes} />
-            <StorageBar label="Other" value={data.storage.categories.other_bytes} total={data.storage.used_bytes} />
+          <div className={p.systemMetricGridDense}>
+            <ResourceCard icon={Cpu} label="CPU" value={`${Math.round(cpuPercent)}%`} hint={`${formatCount(data.resources.cpu_count_logical)} logical threads`} percent={cpuPercent} />
+            <ResourceCard icon={MemoryStick} label="RAM" value={`${formatBytes(data.resources.memory_used_bytes)} / ${formatBytes(data.resources.memory_total_bytes)}`} hint={`${ramPercent}% used`} percent={ramPercent} />
+            <ResourceCard icon={HardDrive} label="Disk" value={`${formatBytes(data.resources.disk_used_bytes)} / ${formatBytes(data.resources.disk_total_bytes)}`} hint={`${diskPercent}% used`} percent={diskPercent} />
+            <ResourceCard icon={Zap} label="GPU" value={data.gpu.name ?? "Unavailable"} hint={data.gpu.available ? `${gpuPercent}% · ${data.gpu.temperature_c ?? "—"}°C` : "Server does not expose GPU"} percent={gpuPercent} muted={!data.gpu.available} />
           </div>
         </section>
 
-        <section className={p.panelCard}>
+        <aside className={p.hostStatusPanel}>
           <div className={p.cardTitleRow}>
-            <div>
-              <h3>Host</h3>
-              <p>Process and machine information.</p>
-            </div>
+            <div><h3>Host</h3><p>Machine and process state.</p></div>
           </div>
-          <div className={p.hostInfoGrid}>
-            <HostInfo icon={Server} label="Hostname" value={data.system.hostname} />
-            <HostInfo icon={Timer} label="Uptime" value={formatUptime(data.system.uptime_sec)} />
-            <HostInfo icon={Gauge} label="GPU memory" value={data.gpu.memory_used_mb != null && data.gpu.memory_total_mb != null ? `${formatMegabytes(data.gpu.memory_used_mb)} / ${formatMegabytes(data.gpu.memory_total_mb)} (${gpuMemoryPercent}%)` : "—"} />
-            <HostInfo icon={Thermometer} label="Temperature" value={data.gpu.temperature_c != null ? `${data.gpu.temperature_c}°C` : "—"} />
-          </div>
-        </section>
+          <HostInfo icon={Server} label="Hostname" value={data.system.hostname} />
+          <HostInfo icon={Timer} label="Uptime" value={formatUptime(data.system.uptime_sec)} />
+          <HostInfo icon={Gauge} label="GPU memory" value={data.gpu.memory_used_mb != null && data.gpu.memory_total_mb != null ? `${formatMegabytes(data.gpu.memory_used_mb)} / ${formatMegabytes(data.gpu.memory_total_mb)} (${gpuMemoryPercent}%)` : "—"} />
+          <HostInfo icon={Thermometer} label="Temperature" value={data.gpu.temperature_c != null ? `${data.gpu.temperature_c}°C` : "—"} />
+        </aside>
       </div>
+
+      <section className={p.storageCommandPanel}>
+        <div className={p.cardTitleRow}>
+          <div>
+            <h3>Storage usage</h3>
+            <p>Эталоны, результаты проверок, веса моделей и логи.</p>
+          </div>
+          <span className={p.softBadge}>{formatBytes(data.storage.used_bytes)}</span>
+        </div>
+        <div className={p.storageCategoryGrid}>
+          <StorageTile icon={ShieldCheck} label="Standards" value={data.storage.categories.standards_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Activity} label="Inspections" value={data.storage.categories.inspections_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Zap} label="Models" value={data.storage.categories.models_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Server} label="Logs" value={data.storage.categories.logs_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={HardDrive} label="Other" value={data.storage.categories.other_bytes} total={data.storage.used_bytes} />
+        </div>
+      </section>
     </QueryState>
   );
 }
@@ -127,12 +133,15 @@ function ResourceCard({ icon: Icon, label, value, hint, percent, muted }: { icon
   );
 }
 
-function StorageBar({ label, value, total }: { label: string; value: number; total: number }) {
+function StorageTile({ icon: Icon, label, value, total }: { icon: typeof Cpu; label: string; value: number; total: number }) {
   const percent = getPercent(value, total || 1);
   return (
-    <div className={p.storageBarRow}>
-      <div><span>{label}</span><b>{formatBytes(value)}</b></div>
+    <div className={p.storageTile}>
+      <Icon />
+      <span>{label}</span>
+      <strong>{formatBytes(value)}</strong>
       <div className={p.resourceTrack}><span style={{ width: `${percent}%` }} /></div>
+      <small>{percent}% of project storage</small>
     </div>
   );
 }

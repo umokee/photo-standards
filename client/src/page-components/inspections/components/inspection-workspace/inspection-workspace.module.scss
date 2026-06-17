@@ -149,4 +149,43 @@
 .metricBadge {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
 }
+/* v17 inspect station canvas polish */
+.root {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 60% 18%, rgba(4, 42, 255, 0.28), transparent 28%),
+    radial-gradient(circle at 24% 78%, rgba(225, 255, 37, 0.08), transparent 32%),
+    #050712;
+}
 
+.viewer {
+  min-height: 100%;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(255,255,255,0.08), transparent 48%),
+    #050712;
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+
+.viewer::before {
+  opacity: 0.75;
+}
+
+.emptyCard {
+  border-radius: 22px;
+  background: rgba(8, 10, 18, 0.74);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 28px 90px rgba(0,0,0,0.42);
+}
+
+.emptyTitle {
+  font-size: 24px;
+  letter-spacing: -0.055em;
+}
+
+.referenceThumbDock {
+  width: 150px;
+  border-radius: 16px;
+  overflow: hidden;
+}

@@ -290,3 +290,136 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* v14 run detail polish */
+.root {
+  gap: 14px;
+}
+
+.detailSection {
+  padding: 14px;
+  border: 1px solid rgba(224, 212, 188, 0.72);
+  border-radius: 18px;
+  background: rgba(255, 255, 250, 0.78);
+}
+
+.detailSection:last-child {
+  border-bottom: 1px solid rgba(224, 212, 188, 0.72);
+}
+
+.imagesGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.sideImages {
+  gap: 12px;
+}
+
+.imageCard {
+  border-color: rgba(224, 212, 188, 0.72);
+  border-radius: 16px;
+  background: rgba(255, 255, 250, 0.84);
+  box-shadow: 0 16px 42px rgba(72, 49, 15, 0.055);
+}
+
+.imageHead {
+  background: rgba(255, 252, 242, 0.86);
+}
+
+.imageLink {
+  min-height: 0;
+  aspect-ratio: 16 / 10;
+  background: #0a0b12;
+}
+
+.imageCardLarge .imageLink {
+  min-height: 280px;
+  max-height: 460px;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  max-height: 460px;
+  object-fit: contain;
+}
+
+.summaryItem,
+.factItem,
+.componentGroup {
+  border-color: rgba(224, 212, 188, 0.7);
+  background: rgba(255, 255, 250, 0.72);
+}
+
+@media (max-width: 1050px) {
+  .imagesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v15 report page polish */
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 14px;
+}
+
+.detailSection {
+  min-width: 0;
+}
+
+.detailSection:nth-child(1),
+.detailSection:nth-child(2) {
+  grid-column: 2;
+}
+
+.detailSection:nth-child(3) {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+}
+
+.detailSection:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
+.imagesGrid {
+  grid-template-columns: 1fr;
+}
+
+.sideImages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.imageCardLarge .imageLink {
+  min-height: 420px;
+  max-height: 620px;
+}
+
+.summaryStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.componentGroupBody {
+  max-height: 360px;
+  overflow: auto;
+}
+
+@media (max-width: 1180px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+
+  .detailSection:nth-child(n) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .sideImages {
+    grid-template-columns: 1fr;
+  }
+}
+

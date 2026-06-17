@@ -176,7 +176,7 @@
 }
 .datasetAvatar { background: linear-gradient(135deg, #042aff, #22c55e); }
 .projectAvatar { background: #ff3b3b; }
-.deployDot { width: 8px; height: 8px; border-radius: 999px; background: #1ed760; }
+.inspectDot { width: 8px; height: 8px; border-radius: 999px; background: #1ed760; }
 
 .sidebarSpacer { flex: 1; min-height: 20px; }
 .footerNav a { color: #3b3834; }
@@ -806,5 +806,60 @@
   .commandItem b {
     display: none;
   }
+}
+
+/* v14 shell naming and density polish */
+.topbarActions .darkButton,
+.darkButton {
+  letter-spacing: -0.01em;
+}
+
+.footerNav a[href*="inspection-history"] svg {
+  color: #083dff;
+}
+
+.footerNav a[href*="cameras"] svg {
+  color: #148f72;
+}
+
+.treeHeaderActive,
+.navItemActive {
+  box-shadow: 0 10px 28px rgba(75, 50, 12, 0.055), inset 0 0 0 1px rgba(255,255,255,0.82);
+}
+
+.commandDialog {
+  box-shadow: 0 28px 90px rgba(37, 27, 5, 0.2);
+}
+
+/* v15 shell polish */
+.logoText {
+  letter-spacing: -0.055em;
+}
+
+.topbar {
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.breadcrumb span:last-child {
+  color: #18140e;
+  font-weight: 800;
+}
+
+.sidebar {
+  box-shadow: 1px 0 0 rgba(224, 212, 188, 0.5), 18px 0 60px rgba(72, 49, 15, 0.035);
+}
+
+.treeChildren a,
+.footerNav a,
+.navItem,
+.searchBox {
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.treeChildren a:hover,
+.footerNav a:hover,
+.navItem:hover,
+.searchBox:hover {
+  transform: translateY(-1px);
 }
 

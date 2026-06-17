@@ -59,13 +59,13 @@ export function Component() {
       <section className={p.datasetQualityStrip}>
         <QualityCard icon={Image} label="Image labeling" value={`${labeledPercent}%`} progress={labeledPercent} text={`${group.stats.annotated_images_count}/${group.stats.images_count} images labeled`} />
         <QualityCard icon={Layers3} label="Polygon density" value={String(group.stats.polygons_count)} progress={coveragePercent} text={`${group.stats.segment_classes_count} classes configured`} />
-        <QualityCard icon={Rocket} label="Inspection runs" value={String(group.stats.inspections_count)} progress={group.stats.inspections_count ? 100 : 8} text="Deploy checks saved in history" />
+        <QualityCard icon={Rocket} label="Inspection runs" value={String(group.stats.inspections_count)} progress={group.stats.inspections_count ? 100 : 8} text="Inspection runs saved in history" />
       </section>
 
       <nav className={p.tabs} aria-label="Dataset tabs">
         <Link className={clsx(location.pathname.includes("/standards") || location.pathname.endsWith(group.id) ? p.active : undefined)} to={paths.groupDetail(group.id)}>Images</Link>
         <Link to={paths.trainingGroup(group.id)}>Models</Link>
-        <Link to={paths.inspectionGroup("photo", group.id)}>Deploy</Link>
+        <Link to={paths.inspectionGroup("photo", group.id)}>Inspect</Link>
         <Link to={paths.inspectionHistoryGroup(group.id)}>Runs</Link>
       </nav>
 

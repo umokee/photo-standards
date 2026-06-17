@@ -101,7 +101,7 @@ const CreateGroupModal = () => {
           <WorkflowStep icon={ImagePlus} title="Reference" text="Добавь эталонные ракурсы" />
           <WorkflowStep icon={Tags} title="Classes" text="Создай классы деталей" />
           <WorkflowStep icon={Layers3} title="Annotate" text="Разметь контрольные зоны" />
-          <WorkflowStep icon={Rocket} title="Deploy" text="Запускай проверки" />
+          <WorkflowStep icon={Rocket} title="Inspect" text="Запускай проверки" />
         </div>
 
         {formErrors.form ? <div className={p.modalError}>{formErrors.form}</div> : null}

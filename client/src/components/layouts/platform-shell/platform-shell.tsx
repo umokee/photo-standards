@@ -10,16 +10,13 @@ import {
   Database,
   FolderOpen,
   Grid3X3,
-  HelpCircle,
   Home,
   ListChecks,
   Menu,
   Moon,
   Plus,
-  Rocket,
   Search,
   Settings,
-  Trash2,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -51,8 +48,8 @@ const pageMeta = [
   { test: (path: string) => path.startsWith("/groups"), title: "Annotate", trail: ["Home", "Annotate"] },
   { test: (path: string) => path.startsWith("/training"), title: "Train", trail: ["Home", "Train"] },
   { test: (path: string) => path.startsWith("/inspection-history"), title: "Runs", trail: ["Home", "Runs"] },
-  { test: (path: string) => path.startsWith("/inspection"), title: "Deploy", trail: ["Home", "Deploy"] },
-  { test: (path: string) => path.startsWith("/cameras"), title: "Sources", trail: ["Home", "Sources"] },
+  { test: (path: string) => path.startsWith("/inspection"), title: "Inspect", trail: ["Home", "Inspect"] },
+  { test: (path: string) => path.startsWith("/cameras"), title: "Cameras", trail: ["Home", "Cameras"] },
   { test: (path: string) => path.startsWith("/settings"), title: "Settings", trail: ["Home", "Settings"] },
 ];
 
@@ -72,9 +69,9 @@ export const PlatformShell = ({ navigation }: Props) => {
       { to: paths.home(), icon: Home, label: "Home", hint: "Dashboard overview", group: "Navigation" },
       { to: paths.groups(), icon: Database, label: "Annotate", hint: "Datasets, references and images", group: "Navigation" },
       { to: paths.training(), icon: FolderOpen, label: "Train", hint: "Model projects and active weights", group: "Navigation" },
-      { to: paths.inspection(), icon: Rocket, label: "Deploy", hint: "Run visual inspection", group: "Navigation" },
+      { to: paths.inspection(), icon: ListChecks, label: "Inspect", hint: "Run product check", group: "Navigation" },
       { to: paths.inspectionHistory(), icon: Activity, label: "Runs", hint: "Inspection history and results", group: "Navigation" },
-      { to: paths.cameras(), icon: Camera, label: "Sources", hint: "IP cameras and image sources", group: "Navigation" },
+      { to: paths.cameras(), icon: Camera, label: "Cameras", hint: "IP/USB cameras and image cameras", group: "Navigation" },
       { to: paths.settingsSection("system"), icon: Settings, label: "System", hint: "Runtime, storage and diagnostics", group: "Navigation" },
     ];
 
@@ -95,10 +92,10 @@ export const PlatformShell = ({ navigation }: Props) => {
       },
       {
         to: paths.inspectionGroup("photo", group.id),
-        icon: Rocket,
-        label: `${group.name} / deploy`,
+        icon: ListChecks,
+        label: `${group.name} / inspect`,
         hint: `${group.stats.inspections_count} runs`,
-        group: "Deploy",
+        group: "Inspection",
       },
     ]);
 
@@ -229,8 +226,8 @@ export const PlatformShell = ({ navigation }: Props) => {
         </SidebarTree>
 
         <SidebarTree
-          icon={Rocket}
-          title="Deploy"
+          icon={ListChecks}
+          title="Inspect"
           to={paths.inspection()}
           count={groups.reduce((sum, group) => sum + group.stats.inspections_count, 0)}
           active={location.pathname.startsWith("/inspection")}
@@ -238,7 +235,7 @@ export const PlatformShell = ({ navigation }: Props) => {
         >
           {groups.slice(0, 6).map((group) => (
             <Link key={group.id} to={paths.inspectionGroup("photo", group.id)} onClick={closeMobile}>
-              <span className={s.deployDot} />
+              <span className={s.inspectDot} />
               <span title={group.name}>{group.name}</span>
               <sup>{group.stats.inspections_count}</sup>
             </Link>
@@ -249,7 +246,7 @@ export const PlatformShell = ({ navigation }: Props) => {
 
         <nav className={s.footerNav} aria-label="Служебная навигация">
           <Link to={paths.inspectionHistory()} onClick={closeMobile}>
-            <Trash2 />
+            <Activity />
             <span>Runs</span>
           </Link>
           <Link to={paths.settingsSection("system")} onClick={closeMobile}>
@@ -257,8 +254,8 @@ export const PlatformShell = ({ navigation }: Props) => {
             <span>Settings</span>
           </Link>
           <Link to={paths.cameras()} onClick={closeMobile}>
-            <HelpCircle />
-            <span>Sources</span>
+            <Camera />
+            <span>Cameras</span>
           </Link>
         </nav>
 
@@ -298,10 +295,10 @@ export const PlatformShell = ({ navigation }: Props) => {
           <div className={s.topbarActions}>
             <Link className={s.pillButton} to={paths.groups()}>
               <Plus />
-              Project
+              Dataset
             </Link>
             <Link className={s.darkButton} to={paths.inspection()}>
-              Deploy
+              Inspect
             </Link>
             <span className={s.balance}>LOCAL</span>
             <button type="button" aria-label="Приложения"><Grid3X3 /></button>
@@ -362,7 +359,7 @@ export const PlatformShell = ({ navigation }: Props) => {
                 <div className={s.commandEmpty}>
                   <Search />
                   <strong>Nothing found</strong>
-                  <span>Попробуй dataset, train, deploy, camera или название изделия.</span>
+                  <span>Попробуй dataset, train, inspect, camera или название изделия.</span>
                 </div>
               )}
             </div>

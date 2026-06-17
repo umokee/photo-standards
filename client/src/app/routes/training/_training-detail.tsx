@@ -11,7 +11,7 @@ import { isActiveTaskStatus } from "@/page-components/tasks/lib/task-helpers";
 import type { GroupDetail, MlModel, TaskResponse } from "@/types/contracts";
 import { formatDate } from "@/utils/formatDate";
 import clsx from "clsx";
-import { Activity, Brain, Clock3, Database, Image, Layers3, Rocket, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, Brain, Clock3, Database, Image, Layers3, ListChecks, ShieldCheck, Sparkles } from "lucide-react";
 import { Link, Outlet, useLoaderData, useLocation, useOutletContext } from "react-router-dom";
 import p from "../platform-pages.module.scss";
 
@@ -52,9 +52,9 @@ export function Component() {
       <section className={p.trainWorkspaceHero}>
         <div className={p.datasetAvatarLarge}>{group.name.slice(0, 1).toUpperCase()}</div>
         <div className={p.trainWorkspaceTitle}>
-          <span className={p.eyebrow}><Brain /> Training project</span>
+          <span className={p.eyebrow}><Brain /> Model workspace</span>
           <h1>{group.name}</h1>
-          <p>{group.description || "Training workspace для модели проверки изделия."}</p>
+          <p>{group.description || "Контроль готовности dataset, обучение и выбор модели для Inspect."}</p>
           <div className={p.metaLine}>
             <span><Image /> {group.stats.annotated_images_count}/{group.stats.images_count} labeled</span>
             <span><Layers3 /> {group.stats.segment_classes_count} classes</span>
@@ -121,13 +121,13 @@ export function Component() {
               <div className={p.cardTitleRow}>
                 <div>
                   <h3>Active model</h3>
-                  <p>Модель, которую стоит использовать в Deploy/Inspect.</p>
+                  <p>Модель, которую стоит использовать в Inspect.</p>
                 </div>
                 {activeModel ? <span className={p.softBadge}>ready</span> : <span className={p.softBadgeMuted}>missing</span>}
               </div>
               {activeModel ? (
                 <div className={p.activeModelCard}>
-                  <div className={p.activeModelIcon}><Rocket /></div>
+                  <div className={p.activeModelIcon}><ListChecks /></div>
                   <div>
                     <strong>{activeModel.architecture} {activeModel.version ? `v${activeModel.version}` : ""}</strong>
                     <span>{activeModel.imgsz}px · batch {activeModel.batch_size ?? "—"} · {activeModel.epochs ?? "—"} epochs</span>

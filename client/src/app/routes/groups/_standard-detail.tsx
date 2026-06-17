@@ -87,7 +87,7 @@ export function Component() {
           </div>
           <div className={p.quickHint}>
             <PenLine />
-            <span>Клик по изображению открывает editor. Для проверки используй Deploy после разметки.</span>
+            <span>Клик по изображению открывает editor. Для проверки используй Inspect после разметки.</span>
           </div>
         </aside>
       </div>
