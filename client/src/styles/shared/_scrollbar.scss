@@ -2,14 +2,14 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: $line transparent;
+  scrollbar-color: var(--vc-scroll-thumb) transparent;
 
   &::-webkit-scrollbar {
     width: 3px;
     height: 3px;
   }
   &::-webkit-scrollbar-thumb {
-    background: $line;
+    background: var(--vc-scroll-thumb);
     border-radius: 2px;
   }
   &::-webkit-scrollbar-track {

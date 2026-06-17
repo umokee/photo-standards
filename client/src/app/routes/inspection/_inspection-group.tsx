@@ -135,11 +135,12 @@ function ReferenceCard({ standard, groupId, mode }: { standard: GroupStandard; g
   const images = standard.images_count ?? 0;
   const progress = images ? Math.round((annotated / images) * 100) : 0;
   const ready = images > 0 && annotated > 0;
+  const referenceUrl = standard.reference_path ? `/storage/${standard.reference_path}` : null;
 
   return (
     <Link className={p.inspectReferenceCardV32} to={paths.inspectionStandard(mode, groupId, standard.id)}>
       <div className={p.inspectReferenceThumbV32}>
-        {standard.reference_path ? <img src={standard.reference_path} alt="" /> : <Image />}
+        {referenceUrl ? <img src={referenceUrl} alt="" /> : <Image />}
         <span data-ready={ready}>{ready ? "ready" : "draft"}</span>
       </div>
       <div className={p.inspectReferenceBodyV32}>

@@ -1,5 +1,6 @@
 import { paths } from "@/app/paths";
 import QueryState from "@/components/ui/query-state/query-state";
+import { getModelMetricsHistoryQueryOptions } from "@/page-components/models/api/get-model-metrics-history";
 import { useActivateModel } from "@/page-components/models/api/activate-model";
 import { useDeleteModel } from "@/page-components/models/api/delete-model";
 import { ExportModel } from "@/page-components/models/components/export-model/export-model";
@@ -10,11 +11,11 @@ import { useCancelTask } from "@/page-components/tasks/api/cancel-task";
 import { usePauseTask } from "@/page-components/tasks/api/pause-task";
 import { useResumeTask } from "@/page-components/tasks/api/resume-task";
 import { isActiveTaskStatus } from "@/page-components/tasks/lib/task-helpers";
-import type { MlModel } from "@/types/contracts";
+import type { MlModel, TrainingMetricsHistoryResponse } from "@/types/contracts";
 import { formatDate } from "@/utils/formatDate";
+import { useQueries } from "@tanstack/react-query";
 import {
   Activity,
-  AlertTriangle,
   BarChart3,
   Boxes,
   Brain,
@@ -37,7 +38,6 @@ import {
   SlidersHorizontal,
   Tags,
   Trash2,
-  UploadCloud,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
@@ -49,10 +49,8 @@ const metricNames = ["mAP50_95", "mAP50", "precision", "recall"] as const;
 type MetricName = typeof metricNames[number];
 type ModelFilter = "all" | "active" | "trained" | "draft" | "withTask";
 type SortMode = "created" | "score" | "name";
-type SeriesSource = "history" | "summary" | "todo";
-type FlexibleModel = MlModel & Record<string, unknown>;
 type TaskLike = NonNullable<ReturnType<typeof getModelTask>>;
-type FlexibleTask = TaskLike & Record<string, unknown>;
+type SeriesSource = TrainingMetricsHistoryResponse["source"];
 
 type ChartDefinition = {
   key: string;
@@ -143,43 +141,17 @@ function scalarMetric(model: MlModel, key: string): number | null {
   return number <= 1 ? Math.max(0, Math.min(1, number)) : Math.max(0, Math.min(1, number / 100));
 }
 
-function estimatedMetricCurve(finalValue: number) {
-  const target = Math.max(0.02, Math.min(0.99, finalValue));
-  return Array.from({ length: 30 }, (_, index) => {
-    const t = index / 29;
-    const noise = Math.sin(index * 1.7) * 0.014;
-    return Math.max(0, Math.min(1, target * (1 - Math.exp(-4.2 * t)) + noise));
-  });
-}
-
-function seriesForChart(model: MlModel, task: TaskLike | null, chart: ChartDefinition): SeriesForModel {
-  const flexibleModel = model as FlexibleModel;
-  const flexibleTask = task as FlexibleTask | null;
-  const buckets = [
-    flexibleModel.metrics_history,
-    flexibleModel.history,
-    flexibleModel.curves,
-    flexibleModel.training_history,
-    flexibleModel.training_metrics,
-    flexibleModel.results,
-    flexibleModel.train_results,
-    flexibleTask?.metrics_history,
-    flexibleTask?.history,
-    flexibleTask?.curves,
-    flexibleTask?.metrics,
-  ];
-
-  for (const bucket of buckets) {
-    const values = readSeriesBucket(bucket, chart.aliases);
-    if (values) return { model, values, source: "history" };
+function seriesForChart(
+  model: MlModel,
+  history: TrainingMetricsHistoryResponse | null | undefined,
+  chart: ChartDefinition
+): SeriesForModel {
+  const values = readSeriesBucket(history?.series, chart.aliases);
+  if (values) {
+    return { model, values, source: history?.source ?? "artifact" };
   }
 
-  if (chart.kind === "metric") {
-    const scalar = scalarMetric(model, chart.key);
-    if (scalar != null) return { model, values: estimatedMetricCurve(scalar), source: "summary" };
-  }
-
-  return { model, values: [], source: "todo" };
+  return { model, values: [], source: history?.source ?? "empty" };
 }
 
 function formatMetric(value: number | null | undefined) {
@@ -288,6 +260,27 @@ export function Component() {
     .filter((model): model is MlModel => Boolean(model));
 
   const chartModels = compareModels.length ? compareModels : filteredModels.slice(0, 3);
+  const metricsHistoryQueries = useQueries({
+    queries: chartModels.map((model) => {
+      const task = getModelTask(model, tasks);
+
+      return {
+        ...getModelMetricsHistoryQueryOptions(model.id),
+        staleTime: 0,
+        refetchInterval: task && isActiveTaskStatus(task.status) ? 2000 : false,
+      };
+    }),
+  });
+  const metricsHistoryByModelId = useMemo(
+    () =>
+      new Map(
+        chartModels.map((model, index) => [
+          model.id,
+          metricsHistoryQueries[index]?.data ?? null,
+        ])
+      ),
+    [chartModels, metricsHistoryQueries]
+  );
 
   const groupedModels = useMemo(() => {
     const result = new Map<string, MlModel[]>();
@@ -414,11 +407,6 @@ export function Component() {
                 </QueryState>
               </div>
 
-              <div className={p.modelDropZoneV31}>
-                <UploadCloud />
-                <strong>Drop .pt model files</strong>
-                <span>TODO backend: import should parse checkpoint/results artifacts and fill metrics history.</span>
-              </div>
             </>
           ) : null}
         </aside>
@@ -448,12 +436,10 @@ export function Component() {
               emptyTitle="No models yet"
               emptyDescription="Train or import a model to start comparing metrics."
             >
-              <MetricsTodoBanner />
-
               <GraphSection title="Metrics" icon={BarChart3} count={`${metricCharts.length}/${metricCharts.length}`} defaultOpen>
                 <div className={p.curveGridV31}>
                   {metricCharts.map((chart) => (
-                    <CurveCard key={chart.key} chart={chart} models={chartModels} tasks={tasks} />
+                    <CurveCard key={chart.key} chart={chart} models={chartModels} metricsHistoryByModelId={metricsHistoryByModelId} />
                   ))}
                 </div>
               </GraphSection>
@@ -461,7 +447,7 @@ export function Component() {
               <GraphSection title="Loss" icon={Activity} count={`${lossCharts.length}/${lossCharts.length}`}>
                 <div className={p.curveGridV31}>
                   {lossCharts.map((chart) => (
-                    <CurveCard key={chart.key} chart={chart} models={chartModels} tasks={tasks} />
+                    <CurveCard key={chart.key} chart={chart} models={chartModels} metricsHistoryByModelId={metricsHistoryByModelId} />
                   ))}
                 </div>
               </GraphSection>
@@ -469,7 +455,7 @@ export function Component() {
               <GraphSection title="Learning Rate" icon={RefreshCw} count={`${lrCharts.length}/${lrCharts.length}`}>
                 <div className={p.curveGridV31}>
                   {lrCharts.map((chart) => (
-                    <CurveCard key={chart.key} chart={chart} models={chartModels} tasks={tasks} />
+                    <CurveCard key={chart.key} chart={chart} models={chartModels} metricsHistoryByModelId={metricsHistoryByModelId} />
                   ))}
                 </div>
               </GraphSection>
@@ -506,20 +492,6 @@ export function Component() {
   );
 }
 
-function MetricsTodoBanner() {
-  return (
-    <article className={p.metricsTodoBannerV31}>
-      <AlertTriangle />
-      <div>
-        <strong>TODO backend: автоматическое извлечение метрик</strong>
-        <span>
-          Сейчас UI умеет читать history/curves, если backend положит их в model/task. Для поведения как у платформы нужно на import/train парсить checkpoint artifacts/results.csv и сохранять per-epoch curves в модель.
-        </span>
-      </div>
-    </article>
-  );
-}
-
 function GraphSection({ title, icon: Icon, count, defaultOpen = false, children }: { title: string; icon: LucideIcon; count: string; defaultOpen?: boolean; children: ReactNode }) {
   return (
     <details className={p.graphSectionV31} open={defaultOpen}>
@@ -532,15 +504,31 @@ function GraphSection({ title, icon: Icon, count, defaultOpen = false, children 
   );
 }
 
-function CurveCard({ chart, models, tasks }: { chart: ChartDefinition; models: MlModel[]; tasks: TaskLike[] }) {
-  const series = models.map((model) => seriesForChart(model, getModelTask(model, tasks), chart));
+function CurveCard({
+  chart,
+  models,
+  metricsHistoryByModelId,
+}: {
+  chart: ChartDefinition;
+  models: MlModel[];
+  metricsHistoryByModelId: Map<string, TrainingMetricsHistoryResponse | null>;
+}) {
+  const series = models.map((model) =>
+    seriesForChart(model, metricsHistoryByModelId.get(model.id) ?? null, chart)
+  );
   const nonEmpty = series.filter((item) => item.values.length > 1);
   const allValues = nonEmpty.flatMap((item) => item.values);
   const min = allValues.length ? Math.min(...allValues) : 0;
   const max = allValues.length ? Math.max(...allValues) : 1;
   const top = allValues.length ? allValues[allValues.length - 1] : null;
   const sources = Array.from(new Set(series.map((item) => item.source)));
-  const sourceLabel = sources.includes("history") ? "history" : sources.includes("summary") ? "summary-derived" : "todo backend";
+  const sourceLabel = sources.includes("live")
+    ? "live results.csv"
+    : sources.includes("checkpoint")
+      ? ".pt checkpoint"
+    : sources.includes("artifact")
+      ? "saved results.csv"
+      : "no metrics file";
 
   return (
     <article className={p.curveCardV31}>
@@ -573,7 +561,7 @@ function CurveCard({ chart, models, tasks }: { chart: ChartDefinition; models: M
           <div className={p.curveTodoV31}>
             <FileJson />
             <strong>No curve data</strong>
-            <span>Нужен backend parser для results.csv/checkpoint metadata.</span>
+            <span>Для этой модели пока нет доступного `results.csv`.</span>
           </div>
         )}
       </div>

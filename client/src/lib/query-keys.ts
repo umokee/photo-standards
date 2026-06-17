@@ -20,6 +20,7 @@ export const queryKeys = {
   training: {
     models: (groupId: string) => ["training", groupId, "models"] as const,
     model: (modelId: string) => ["training", "model", modelId] as const,
+    metricsHistory: (modelId: string) => ["training", "metrics-history", modelId] as const,
     tasks: (groupId: string) => ["training", groupId, "tasks"] as const,
     task: (taskId: string) => ["training", "task", taskId] as const,
   },

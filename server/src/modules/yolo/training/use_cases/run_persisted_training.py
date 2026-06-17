@@ -290,6 +290,7 @@ async def _finalize_success(
     version: int | None,
     started_at: float,
 ) -> None:
+    storage.persist_training_metrics_artifacts(paths)
     model.version = version
     model.weights_path = paths.final_weights_rel
     model.metrics = result.metrics
@@ -340,6 +341,7 @@ async def _finalize_failure(
 ) -> None:
     paths.final_checkpoint.unlink(missing_ok=True)
     paths.final_weights.unlink(missing_ok=True)
+    paths.final_results_csv.unlink(missing_ok=True)
 
     model.version = None
     model.weights_path = None

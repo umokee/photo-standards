@@ -10,6 +10,7 @@
 
 html {
   height: 100%;
+  color-scheme: light;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -17,8 +18,8 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: $page;
-  color: $text;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
   font-family: $font-sans;
   font-size: $text-body;
   line-height: 1.5;
@@ -76,3 +77,5 @@ h6 {
   font-weight: inherit;
   overflow-wrap: break-word;
 }
+
+html[data-theme="dark"] { color-scheme: dark; }

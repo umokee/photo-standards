@@ -31,6 +31,9 @@ class TrainingPaths:
     run_dir: Path
     run_dir_rel: str
 
+    run_results_csv: Path
+    run_results_csv_rel: str
+
     checkpoint: Path
     checkpoint_rel: str
 
@@ -42,6 +45,9 @@ class TrainingPaths:
 
     final_weights: Path
     final_weights_rel: str
+
+    final_results_csv: Path
+    final_results_csv_rel: str
 
     @classmethod
     def from_payload(cls, payload: dict) -> TrainingPaths:
@@ -60,13 +66,23 @@ class TrainingPaths:
         if final_weights_path.suffix.lower() != ".pt":
             final_weights_rel = str(final_weights_path.with_suffix(".pt"))
 
+        run_dir_rel = payload["run_dir"]
+        run_results_csv_rel = payload.get("run_results_csv_path") or str(
+            Path(run_dir_rel) / "results.csv"
+        )
+        final_results_csv_rel = payload.get("final_results_csv_path") or str(
+            Path(final_weights_rel).with_suffix(".results.csv")
+        )
+
         return cls(
             base_weights=resolve_storage_path(payload["base_weights_path"]),
             base_weights_rel=payload["base_weights_path"],
             dataset_root=resolve_storage_path(payload["dataset_root"]),
             dataset_root_rel=payload["dataset_root"],
-            run_dir=resolve_storage_path(payload["run_dir"]),
-            run_dir_rel=payload["run_dir"],
+            run_dir=resolve_storage_path(run_dir_rel),
+            run_dir_rel=run_dir_rel,
+            run_results_csv=resolve_storage_path(run_results_csv_rel),
+            run_results_csv_rel=run_results_csv_rel,
             checkpoint=resolve_storage_path(payload["checkpoint_path"]),
             checkpoint_rel=payload["checkpoint_path"],
             best_checkpoint=resolve_storage_path(payload["best_checkpoint_path"]),
@@ -75,6 +91,8 @@ class TrainingPaths:
             final_checkpoint_rel=final_checkpoint_rel,
             final_weights=resolve_storage_path(final_weights_rel),
             final_weights_rel=final_weights_rel,
+            final_results_csv=resolve_storage_path(final_results_csv_rel),
+            final_results_csv_rel=final_results_csv_rel,
         )
 
 
@@ -128,12 +146,16 @@ def build_training_paths(
 
     dataset_root_rel = (task_root / "dataset").as_posix()
     run_dir_rel = (task_root / "run").as_posix()
+    run_results_csv_rel = (task_root / "run" / "results.csv").as_posix()
     checkpoint_rel = (task_root / "run" / "weights" / "last.pt").as_posix()
     best_checkpoint_rel = (task_root / "run" / "weights" / "best.pt").as_posix()
     final_checkpoint_rel = (
         Path("models") / str(group_id) / f"v{version}.pt"
     ).as_posix()
     final_weights_rel = (Path("models") / str(group_id) / f"v{version}.pt").as_posix()
+    final_results_csv_rel = (
+        Path("models") / str(group_id) / f"v{version}.results.csv"
+    ).as_posix()
 
     return TrainingPaths(
         base_weights=resolve_storage_path(base_weights_path),
@@ -142,6 +164,8 @@ def build_training_paths(
         dataset_root_rel=dataset_root_rel,
         run_dir=resolve_storage_path(run_dir_rel),
         run_dir_rel=run_dir_rel,
+        run_results_csv=resolve_storage_path(run_results_csv_rel),
+        run_results_csv_rel=run_results_csv_rel,
         checkpoint=resolve_storage_path(checkpoint_rel),
         checkpoint_rel=checkpoint_rel,
         best_checkpoint=resolve_storage_path(best_checkpoint_rel),
@@ -150,6 +174,8 @@ def build_training_paths(
         final_checkpoint_rel=final_checkpoint_rel,
         final_weights=resolve_storage_path(final_weights_rel),
         final_weights_rel=final_weights_rel,
+        final_results_csv=resolve_storage_path(final_results_csv_rel),
+        final_results_csv_rel=final_results_csv_rel,
     )
 
 
@@ -179,10 +205,12 @@ def build_training_payload(
         "base_weights_path": paths.base_weights_rel,
         "dataset_root": paths.dataset_root_rel,
         "run_dir": paths.run_dir_rel,
+        "run_results_csv_path": paths.run_results_csv_rel,
         "checkpoint_path": paths.checkpoint_rel,
         "best_checkpoint_path": paths.best_checkpoint_rel,
         "final_checkpoint_path": paths.final_checkpoint_rel,
         "final_weights_path": paths.final_weights_rel,
+        "final_results_csv_path": paths.final_results_csv_rel,
     }
 
 
@@ -271,10 +299,30 @@ def cleanup_task_artifacts(
     )
 
 
+def persist_training_metrics_artifacts(paths: TrainingPaths) -> None:
+    if not paths.run_results_csv.is_file():
+        return
+
+    paths.final_results_csv.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(paths.run_results_csv, paths.final_results_csv)
+
+
 def resolve_model_weights_path(weights_path: str | None) -> Path | None:
     if not weights_path:
         return None
     return resolve_storage_path(weights_path)
+
+
+def resolve_metrics_results_path(weights_path: str | None) -> Path | None:
+    if not weights_path:
+        return None
+    return resolve_storage_path(str(Path(weights_path).with_suffix(".results.csv")))
+
+
+def resolve_run_results_path(run_dir: str | None) -> Path | None:
+    if not run_dir:
+        return None
+    return resolve_storage_path(str(Path(run_dir) / "results.csv"))
 
 
 def ensure_model_weights_ready(model) -> None:

@@ -20,6 +20,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Sun,
   Tags,
   X,
   type LucideIcon,
@@ -49,6 +50,18 @@ type CommandItem = {
 
 type SectionId = "assets" | "train" | "inspect";
 
+type ColorTheme = "light" | "dark";
+
+const THEME_STORAGE_KEY = "visionqc-theme";
+
+function getInitialTheme(): ColorTheme {
+  if (typeof window === "undefined") return "light";
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+
 const pageMeta = [
   { test: (path: string) => path === "/", title: "Home", trail: ["Home"] },
   { test: (path: string) => path.startsWith("/groups"), title: "Projects", trail: ["Home", "Projects"] },
@@ -77,6 +90,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const [commandQuery, setCommandQuery] = React.useState("");
   const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = React.useState(false);
   const [manualProjectId, setManualProjectId] = React.useState<string | null>(null);
+  const [theme, setTheme] = React.useState<ColorTheme>(() => getInitialTheme());
   const [expandedSections, setExpandedSections] = React.useState<Record<SectionId, boolean>>({
     assets: true,
     train: true,
@@ -86,6 +100,16 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const { data: groups = [] } = useQuery(getGroupsQueryOptions());
   const meta = pageMeta.find((item) => item.test(location.pathname)) ?? pageMeta[0];
   const isNavigating = routerNavigation.state !== "idle";
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // no-op: localStorage can be unavailable in private/locked contexts
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => (current === "dark" ? "light" : "dark"));
   const isEditorRoute = location.pathname.includes("/standards/") && location.pathname.includes("/images/");
   const projectIdFromPath = getProjectIdFromPath(location.pathname);
   const selectedProject =
@@ -399,8 +423,8 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
 
           <div className={s.topbarActions}>
             <Link className={s.pillButton} to={paths.groups()}>
-              <Plus />
-              Project
+              <FolderKanban />
+              Projects
             </Link>
             <Link className={s.darkButton} to={selectedProjectId ? paths.inspectionGroup("photo", selectedProjectId) : paths.inspection()}>
               Inspect
@@ -408,7 +432,9 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
             <span className={s.balance}>LOCAL</span>
             <button type="button" aria-label="Приложения"><Grid3X3 /></button>
             <button type="button" aria-label="Уведомления"><Bell /></button>
-            <button type="button" aria-label="Тема"><Moon /></button>
+            <button className={s.themeButton} type="button" aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"} title={theme === "dark" ? "Light theme" : "Dark theme"} onClick={toggleTheme}>
+              {theme === "dark" ? <Sun /> : <Moon />}
+            </button>
           </div>
         </header>
 

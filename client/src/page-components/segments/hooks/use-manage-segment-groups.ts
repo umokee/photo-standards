@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from "react";
 
-import { GroupDetail, SegmentClass, SegmentClassCategory } from "@/types/contracts";
+import { GroupDetail, SaveSegmentClassesResponse, SegmentClass, SegmentClassCategory } from "@/types/contracts";
 import { useSaveSegmentClasses } from "../api/save-segment-classes";
 
 interface ClassState {
@@ -92,6 +92,33 @@ const createInitialState = (group: GroupDetail): EditorState => ({
   deletedCategoryIds: new Set<string>(),
   deletedClassIds: new Set<string>(),
 });
+
+const createStateFromResponse = (response: SaveSegmentClassesResponse): EditorState => ({
+  categories: response.categories.map(mapCategory),
+  ungroupedClasses: response.ungrouped_classes.map(mapClass),
+  deletedCategoryIds: new Set<string>(),
+  deletedClassIds: new Set<string>(),
+});
+
+const getStateSnapshot = (state: EditorState) =>
+  JSON.stringify({
+    categories: state.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      segmentClasses: category.segmentClasses.map((segmentClass) => ({
+        id: segmentClass.id,
+        name: segmentClass.name,
+        hue: segmentClass.hue,
+      })),
+    })),
+    ungroupedClasses: state.ungroupedClasses.map((segmentClass) => ({
+      id: segmentClass.id,
+      name: segmentClass.name,
+      hue: segmentClass.hue,
+    })),
+    deletedCategoryIds: [...state.deletedCategoryIds].sort(),
+    deletedClassIds: [...state.deletedClassIds].sort(),
+  });
 
 const serializeClasses = (items: ClassState[]) =>
   items
@@ -353,7 +380,19 @@ export const useManageSegmentGroups = (
     imageId: options?.imageId,
   });
 
+  const isDirty = getStateSnapshot(state) !== getStateSnapshot(createInitialState(group));
+
+  const reset = () => {
+    dispatch({ type: "reset", payload: createInitialState(group) });
+    setActiveColorKey(null);
+    setFieldErrors({});
+  };
+
   const save = async () => {
+    if (!isDirty) {
+      return false;
+    }
+
     const nextErrors: Record<string, string> = {};
 
     for (const category of state.categories) {
@@ -381,13 +420,16 @@ export const useManageSegmentGroups = (
 
     try {
       setFieldErrors({});
-      await mutation.mutateAsync({
+      const response = await mutation.mutateAsync({
         groupId: group.id,
         categories: serializeCategories(state.categories),
         ungroupedClasses: serializeClasses(state.ungroupedClasses),
         deletedCategoryIds: [...state.deletedCategoryIds],
         deletedClassIds: [...state.deletedClassIds],
       });
+
+      dispatch({ type: "reset", payload: createStateFromResponse(response) });
+      setActiveColorKey(null);
 
       return true;
     } catch {
@@ -400,6 +442,7 @@ export const useManageSegmentGroups = (
     ungroupedClasses: state.ungroupedClasses,
     fieldErrors,
     saving: mutation.isPending,
+    isDirty,
     activeColorKey,
     toggleColorPicker: (key: string) => setActiveColorKey((prev) => (prev === key ? null : key)),
     closeColorPicker: () => setActiveColorKey(null),
@@ -460,5 +503,6 @@ export const useManageSegmentGroups = (
     },
 
     save,
+    reset,
   };
 };

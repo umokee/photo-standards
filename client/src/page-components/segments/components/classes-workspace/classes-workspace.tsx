@@ -71,9 +71,11 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
     ungroupedClasses,
     fieldErrors,
     saving,
+    isDirty,
     categoryActions,
     classActions,
     save,
+    reset,
   } = manager;
 
   const [query, setQuery] = useState("");
@@ -137,11 +139,6 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
       return;
     }
 
-    if (categories[0]) {
-      classActions.addToCategory(categories[0].key);
-      return;
-    }
-
     classActions.addUngrouped();
   };
 
@@ -191,7 +188,15 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
 
           <div className={s.listMeta}>
             <span>{visibleCount} показано · {flatClasses.length} всего</span>
-            {savedAt ? <span>Сохранено {savedAt.toLocaleTimeString()}</span> : <span>Изменения сохраняются вручную</span>}
+            {saving ? (
+              <span>Сохранение...</span>
+            ) : isDirty ? (
+              <span>Есть несохранённые изменения</span>
+            ) : savedAt ? (
+              <span>Сохранено {savedAt.toLocaleTimeString()}</span>
+            ) : (
+              <span>Изменений нет</span>
+            )}
           </div>
 
           {empty ? (
@@ -325,10 +330,10 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
           )}
 
           <div className={s.saveBar}>
-            <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
+            <Button variant="ghost" size="sm" disabled={!isDirty || saving} onClick={reset}>
               Отменить
             </Button>
-            <Button icon={Save} disabled={saving} onClick={handleSave}>
+            <Button icon={Save} disabled={saving || !isDirty} onClick={handleSave}>
               {saving ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>

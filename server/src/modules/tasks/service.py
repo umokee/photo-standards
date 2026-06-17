@@ -149,13 +149,6 @@ async def update_task_progress(
         task.message = message
     task.heartbeat_at = _now()
 
-    if metrics is not None:
-        current_result = task.result if isinstance(task.result, dict) else {}
-        task.result = {
-            **current_result,
-            "live_metrics": metrics,
-        }
-
     await TaskNotifier(db).progress(
         task_id,
         current=current,

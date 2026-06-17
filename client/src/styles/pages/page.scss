@@ -1,6 +1,6 @@
 @use "../variables" as *;
 html, body, #root { min-height: 100%; }
-body { background: $page; color: $text; }
+body { background: var(--vc-app-bg); color: var(--vc-text); }
 * { box-sizing: border-box; }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
@@ -11,16 +11,16 @@ html {
 }
 
 body {
-  background: #fffdf8;
+  background: var(--vc-app-bg);
 }
 
 ::selection {
   color: #061036;
-  background: rgba(225, 255, 37, 0.82);
+  background: var(--vc-accent-soft);
 }
 
 :focus-visible {
-  outline: 3px solid rgba(4, 42, 255, 0.16);
+  outline: 3px solid color-mix(in srgb, var(--vc-accent) 18%, transparent);
   outline-offset: 2px;
 }
 

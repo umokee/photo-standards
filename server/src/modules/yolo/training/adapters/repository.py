@@ -169,6 +169,30 @@ async def has_blocking_training_task(
     return result.scalar_one_or_none() is not None
 
 
+async def get_latest_training_task_for_model(
+    db: AsyncSession,
+    *,
+    model_id: UUID,
+    statuses: list[str] | tuple[str, ...] | set[str] | None = None,
+) -> Task | None:
+    stmt = (
+        select(Task)
+        .where(
+            Task.entity_type == "ml_model",
+            Task.entity_id == model_id,
+            Task.type == tasks_constants.types.training,
+        )
+        .order_by(desc(Task.created_at))
+        .limit(1)
+    )
+
+    if statuses is not None:
+        stmt = stmt.where(Task.status.in_(tuple(statuses)))
+
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def load_training_data(
     db: AsyncSession,
     *,

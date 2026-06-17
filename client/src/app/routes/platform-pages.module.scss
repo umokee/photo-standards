@@ -10978,14 +10978,9 @@
 
 /* v31 Train model graphs + hard bounded scroll */
 .trainModelsScreenV31 {
-  height: calc(100dvh - 84px) !important;
-  max-height: calc(100dvh - 84px) !important;
-  min-height: 620px;
   min-width: 0;
-  display: grid !important;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: grid;
   gap: 16px;
-  overflow: hidden !important;
 }
 
 .trainHeaderV31 {
@@ -11022,29 +11017,32 @@
 
 .modelLabShellV31 {
   min-height: 0;
-  height: 100%;
   display: grid;
   grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
   gap: 18px;
-  overflow: hidden !important;
+  align-items: start;
 }
 
 .modelCompareRailV31,
 .modelAnalysisPaneV31 {
   min-height: 0;
-  height: 100%;
   border: 1px solid #eee4d6;
   border-radius: 22px;
   background: rgba(255, 253, 246, .93);
   box-shadow: 0 18px 44px rgba(43, 31, 12, .055);
-  overflow: hidden !important;
 }
 
 .modelCompareRailV31 {
+  align-self: start;
+  position: sticky;
+  top: 84px;
+  height: fit-content;
+  max-height: calc(100svh - 112px);
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 14px;
+  overflow: hidden;
 }
 
 .modelCompareRailCollapsedV31 {
@@ -11360,14 +11358,9 @@
 
 .modelAnalysisScrollV31 {
   min-height: 0;
-  height: 100%;
-  overflow-y: auto !important;
-  overflow-x: hidden;
   display: grid;
   align-content: start;
   gap: 14px;
-  padding-right: 6px;
-  scrollbar-gutter: stable;
 }
 
 .metricsTodoBannerV31 {
@@ -11691,10 +11684,7 @@
 
 @media (max-width: 1180px) {
   .trainModelsScreenV31 {
-    height: auto !important;
-    max-height: none !important;
     min-height: 0;
-    overflow: visible !important;
   }
 
   .trainHeaderV31,
@@ -11711,6 +11701,7 @@
     height: auto;
     max-height: none;
     overflow: visible !important;
+    position: static;
   }
 
   .modelSummaryCardV31,
@@ -11736,10 +11727,7 @@
   gap: 18px;
   min-width: 0;
   min-height: 0;
-  height: 100%;
   padding: 22px;
-  overflow: auto;
-  overscroll-behavior: contain;
 }
 
 .inspectHeroV32,
@@ -12572,5 +12560,346 @@
   .inspectStationHintsV34,
   .inspectStationCrumbsV34 {
     flex-wrap: wrap;
+  }
+}
+
+/* v35 theme hardening: neutral surfaces + dark theme bridge.
+   This is intentionally broad because older platform pages still contain many
+   one-off cream/yellow literals from prototype passes. */
+.page {
+  color: var(--vc-text);
+}
+
+.page :where(input, select, textarea) {
+  border-color: var(--vc-border) !important;
+  background: var(--vc-surface) !important;
+  color: var(--vc-text) !important;
+}
+
+.page :where(input, select, textarea)::placeholder {
+  color: var(--vc-text-subtle) !important;
+}
+
+.page :where(button) {
+  border-color: var(--vc-border);
+}
+
+.page :where(
+  [class*="Card"],
+  [class*="Panel"],
+  [class*="Rail"],
+  [class*="Tile"],
+  [class*="Block"],
+  [class*="Section"],
+  [class*="Header"],
+  [class*="Toolbar"],
+  [class*="Workspace"],
+  [class*="Dialog"],
+  [class*="Shell"],
+  [class*="Queue"],
+  [class*="List"]
+) {
+  border-color: var(--vc-border) !important;
+}
+
+.page :where(
+  [class*="Hero"],
+  [class*="Header"],
+  [class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Block"],
+  [class*="Rail"],
+  [class*="Dialog"]
+) {
+  background-color: var(--vc-surface) !important;
+  color: var(--vc-text);
+}
+
+.page :where(
+  [class*="Hero"],
+  [class*="CompactHeader"],
+  [class*="Intro"]
+) {
+  background-image: linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2)) !important;
+  box-shadow: var(--vc-shadow-sm) !important;
+}
+
+.page :where(
+  [class*="Chip"],
+  [class*="Badge"],
+  [class*="Pill"],
+  [class*="Status"],
+  [class*="Tab"]
+) {
+  border-color: var(--vc-border) !important;
+}
+
+.page :where(h1, h2, h3, h4, strong, b) {
+  color: var(--vc-text);
+}
+
+.page :where(p, small, span) {
+  border-color: var(--vc-border-soft);
+}
+
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg);
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  [class*="Grid"],
+  [class*="Canvas"],
+  [class*="Viewer"],
+  [class*="Chart"],
+  [class*="Graph"]
+) {
+  border-color: var(--vc-border) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  [class*="Ghost"],
+  [class*="Secondary"],
+  [class*="Action"],
+  [class*="Button"]
+) {
+  color: var(--vc-text-muted);
+}
+
+/* v36 strict theme/layout hotfix: no overlapping cards + no white leaks in dark */
+.page {
+  min-width: 0;
+  color: var(--vc-text);
+}
+
+/* Home: switch panels to flex so lists and footer actions cannot overlap. */
+.homeCompactV18 {
+  min-height: 0;
+  height: min(100%, calc(100svh - 96px));
+  max-height: calc(100svh - 96px);
+}
+
+.homeCockpitV18,
+.homePanelV18 {
+  border-color: var(--vc-border);
+  background: var(--vc-surface);
+  box-shadow: var(--vc-shadow-sm);
+}
+
+.homeCockpitV18::after {
+  opacity: 0.12;
+}
+
+.homeMainGridV18 {
+  min-height: 0;
+}
+
+.homePanelV18 {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.homePanelHeadV18,
+.homeRunSummaryV18,
+.homeQuickLinksV18 {
+  flex: 0 0 auto;
+}
+
+.homeProjectListV18,
+.homeRunListV18,
+.homeChecklistV18 {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.homeRunSummaryV18 {
+  margin-bottom: 2px;
+}
+
+.homeQuickLinksV18 {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--vc-border-soft);
+}
+
+.homeProjectRowV18,
+.homeRunRowV18,
+.homeCheckItemV18,
+.homeScoreCardV18,
+.homeStatV18,
+.homeQuickLinksV18 a,
+.homeEmptyActionV18 {
+  border-color: var(--vc-border-soft);
+  background: var(--vc-surface-2);
+  color: var(--vc-text);
+  box-shadow: none;
+}
+
+.homeWelcomeV18 p,
+.homeProjectRowV18 small,
+.homeRunRowV18 small,
+.homeCheckItemV18 small,
+.homeStatV18 span,
+.homeScoreCardV18 p,
+.homeScoreCardV18 span {
+  color: var(--vc-text-muted);
+}
+
+.homePanelHeadV18 a,
+.homeQuickLinksV18 svg,
+.homeEmptyActionV18 svg {
+  color: var(--vc-accent);
+}
+
+/* Project/Assets/Train/Inspect legacy panels: keep old pages readable while they migrate to tokens. */
+.workspaceHeroV19,
+.projectHeroV19,
+.assetOverviewHeroV23,
+.assetsOverviewShellV26,
+.assetsReferenceHeroV25,
+.referencesPanelV25,
+.referenceDetailHeroV25,
+.classesWorkspaceV24,
+.trainShellV27,
+.trainPanelV27,
+.trainModelsShellV30,
+.modelLabShellV31,
+.inspectStationShellV32,
+.inspectionStationShellV34 {
+  border-color: var(--vc-border);
+  background: var(--vc-surface);
+  box-shadow: var(--vc-shadow-sm);
+  color: var(--vc-text);
+}
+
+/* Dark-mode hardening for old hard-coded #fff/#fffdf6 cards. */
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .homeCompactV18,
+:global(html[data-theme="dark"]) .projectsWorkspaceV19,
+:global(html[data-theme="dark"]) .projectDetailV19 {
+  background: var(--vc-app-bg);
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  .homeCockpitV18,
+  .homePanelV18,
+  .homeScoreCardV18,
+  .homeStatV18,
+  .homeProjectRowV18,
+  .homeRunRowV18,
+  .homeCheckItemV18,
+  .homeQuickLinksV18 a,
+  .homeEmptyActionV18,
+  .workspaceHeroV19,
+  .projectHeroV19,
+  .assetOverviewHeroV23,
+  .assetOverviewCardV23,
+  .assetOverviewPanelV23,
+  .assetsOverviewShellV26,
+  .assetsOverviewCardV26,
+  .referencesPanelV25,
+  .referenceCardV25,
+  .referenceDetailHeroV25,
+  .referenceDetailPanelV25,
+  .classesWorkspaceV24,
+  .classesGroupCardV24,
+  .classesRowV24,
+  .classesInspectorV24,
+  .trainShellV27,
+  .trainPanelV27,
+  .trainCardV27,
+  .trainModelsShellV30,
+  .modelLabShellV31,
+  .modelRailV31,
+  .modelGraphPanelV31,
+  .modelMetadataPanelV31,
+  .inspectStationShellV32,
+  .inspectStationCardV32,
+  .inspectionStationShellV34,
+  .inspectionSourcePanelV34
+) {
+  border-color: var(--vc-border) !important;
+  background: var(--vc-surface) !important;
+  color: var(--vc-text) !important;
+  box-shadow: none !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  .homeProjectRowV18,
+  .homeRunRowV18,
+  .homeCheckItemV18,
+  .homeStatV18,
+  .homeQuickLinksV18 a,
+  .homeEmptyActionV18,
+  .referenceCardV25,
+  .classesRowV24,
+  .trainCardV27,
+  .modelGraphPanelV31,
+  .modelMetadataPanelV31,
+  .inspectStationCardV32
+) {
+  background: var(--vc-surface-2) !important;
+}
+
+:global(html[data-theme="dark"]) .page :where(h1, h2, h3, h4, strong, b, label) {
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(p, small, span, dd, dt, li) {
+  color: inherit;
+}
+
+:global(html[data-theme="dark"]) .page :where(
+  .homeWelcomeV18 p,
+  .homeProjectRowV18 small,
+  .homeRunRowV18 small,
+  .homeCheckItemV18 small,
+  .homeStatV18 span,
+  .homeScoreCardV18 p,
+  .homeScoreCardV18 span,
+  .eyebrow
+) {
+  color: var(--vc-text-muted) !important;
+}
+
+:global(html[data-theme="dark"]) .homeCockpitV18::after,
+:global(html[data-theme="dark"]) .workspaceHeroV19::after,
+:global(html[data-theme="dark"]) .projectHeroV19::after {
+  opacity: 0.04;
+}
+
+:global(html[data-theme="dark"]) .page :where(input, select, textarea, button) {
+  border-color: var(--vc-border);
+  background-color: var(--vc-surface-2);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(a) {
+  color: var(--vc-accent);
+}
+
+@media (max-width: 1480px) {
+  .homeCockpitV18 {
+    grid-template-columns: minmax(0, 1fr) 190px minmax(300px, 0.88fr);
+  }
+
+  .homeMainGridV18 {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 320px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .homeCompactV18 {
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Self
+from typing import Literal, Self
 from uuid import UUID
 
 from modules.yolo.training.constants import training
@@ -104,3 +104,11 @@ class MlModelResponse(BaseModel):
     is_active: bool
     trained_at: datetime | None = None
     created_at: datetime
+
+
+class TrainingMetricsHistoryResponse(BaseModel):
+    model_id: UUID
+    task_id: UUID | None = None
+    source: Literal["live", "checkpoint", "artifact", "empty"]
+    epochs: list[int] = Field(default_factory=list)
+    series: dict[str, list[float]] = Field(default_factory=dict)

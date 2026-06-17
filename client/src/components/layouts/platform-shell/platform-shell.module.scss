@@ -1,19 +1,22 @@
 @use "@/styles/variables" as *;
 
 .root {
+  height: 100svh;
   min-height: 100svh;
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
+  align-items: stretch;
   background: #fffdf6;
   color: #0f1115;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden;
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 50;
   height: 100svh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -207,14 +210,15 @@
 
 .workspace {
   min-width: 0;
+  height: 100svh;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   background: #fffdf6;
+  overflow: hidden;
 }
 .topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 40;
   min-height: 52px;
   display: grid;
@@ -261,8 +265,11 @@
 
 .content {
   min-width: 0;
-  flex: 1;
+  min-height: 0;
+  flex: 1 1 auto;
   padding: 22px 24px 28px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .mobileBackdrop { display: none; }
 
@@ -313,7 +320,7 @@
 
 /* v4 polish: closer to platform/editor behavior */
 .root { background: #fffdf6; }
-.contentFlush { padding: 0; overflow: hidden; }
+.contentFlush { padding: 0; overflow: visible; }
 .editorMode { background: #0f1113; }
 .editorMode .sidebar {
   background: #151716;
@@ -369,6 +376,7 @@
 .contentFlush {
   padding: 0;
   min-height: calc(100svh - 48px);
+  overflow: hidden;
 }
 
 
@@ -1161,8 +1169,8 @@
   color: #0a2cff;
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(229, 218, 198, 0.9);
-  opacity: 0;
-  pointer-events: none;
+  opacity: 1;
+  pointer-events: auto;
   transition: opacity 140ms ease, transform 140ms ease, background 140ms ease;
   z-index: 2;
 }
@@ -1170,12 +1178,6 @@
 .treePlusV19 svg {
   width: 14px;
   height: 14px;
-}
-
-.treeHeaderWrapV19:hover .treePlusV19,
-.treeHeaderWrapV19:focus-within .treePlusV19 {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .treePlusV19:hover {
@@ -1256,4 +1258,361 @@
 .projectMenuV19 {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+/* v35 theme variables foundation */
+.root {
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+.sidebar {
+  border-right-color: var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-xs);
+}
+
+.logo { color: var(--vc-accent); }
+.logoMark span { background: linear-gradient(135deg, var(--vc-accent), color-mix(in srgb, var(--vc-accent) 48%, #12d6ff)); }
+.logoMark span:last-child { background: color-mix(in srgb, var(--vc-accent) 72%, #05070b); }
+
+.searchBox,
+.topbarCenter,
+.projectSwitcherV19,
+.projectMenuV19,
+.topbarActions button,
+.pillButton,
+.mobileMenu {
+  border-color: var(--vc-border);
+  background: var(--vc-elevated);
+  color: var(--vc-text-muted);
+  box-shadow: none;
+}
+
+.searchBox input,
+.topbarCenter input { color: var(--vc-text); }
+.searchBox kbd {
+  border-color: var(--vc-border-soft);
+  background: var(--vc-surface-2);
+  color: var(--vc-text-subtle);
+}
+
+.navItem,
+.footerNav a,
+.treeHeader,
+.treeChildren a,
+.workspaceLinkV19,
+.emptyTreeLinkV19 {
+  color: var(--vc-text-muted);
+}
+
+.navItem:hover,
+.footerNav a:hover,
+.treeHeader:hover,
+.treeChildren a:hover,
+.workspaceLinkV19:hover,
+.emptyTreeLinkV19:hover,
+.projectMenuV19 a:hover {
+  background: var(--vc-surface-3);
+  color: var(--vc-text);
+}
+
+.navItemActive,
+.treeHeaderActive,
+.workspaceLinkActiveV19,
+.projectMenuItemActiveV19 {
+  background: var(--vc-accent-soft);
+  color: var(--vc-accent);
+}
+
+.sidebarSectionTitle,
+.treeChildren sup,
+.projectSwitcherV19 small,
+.projectMenuV19 small,
+.profileBody small,
+.profileDots,
+.breadcrumbs,
+.balance {
+  color: var(--vc-text-subtle);
+}
+
+.treeChildren { border-left-color: var(--vc-border); }
+.treePlusV19 {
+  border-color: var(--vc-border);
+  background: var(--vc-elevated);
+  color: var(--vc-accent);
+}
+
+.profileCard {
+  background: var(--vc-surface-2);
+  border: 1px solid var(--vc-border-soft);
+}
+
+.workspace,
+.main {
+  background: var(--vc-app-bg);
+}
+
+.topbar {
+  border-bottom-color: var(--vc-border);
+  background: color-mix(in srgb, var(--vc-surface) 90%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.crumbActive { color: var(--vc-text); }
+.crumbSep { color: var(--vc-text-disabled); }
+
+.darkButton {
+  border-color: var(--vc-accent);
+  background: var(--vc-accent);
+  color: var(--vc-accent-contrast);
+}
+
+.themeButton {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+
+.themeButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.progressLine {
+  background: linear-gradient(90deg, var(--vc-accent), var(--vc-purple), var(--vc-ok));
+}
+
+.content {
+  background: var(--vc-app-bg);
+}
+
+.commandOverlay {
+  background: color-mix(in srgb, var(--vc-app-bg) 70%, transparent);
+}
+
+.commandDialog,
+.commandEmpty,
+.commandResult {
+  border-color: var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-md);
+}
+
+.commandSearchRow,
+.commandResult:hover {
+  border-color: var(--vc-border);
+  background: var(--vc-surface-2);
+}
+
+.commandSearchRow input { color: var(--vc-text); }
+.commandResult small,
+.commandGroupTitle { color: var(--vc-text-subtle); }
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) {
+  background: var(--vc-app-bg);
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .sidebar {
+  box-shadow: 18px 0 46px rgba(0, 0, 0, 0.24);
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbar {
+  background: rgba(16, 17, 18, 0.92);
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectSwitcherV19,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectMenuV19,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .searchBox,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbarCenter,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbarActions button,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .pillButton {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* v36 strict theme/layout hotfix: sidebar density + no overlay dropdowns */
+.root:not(.editorMode) {
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+.root:not(.editorMode) .sidebar {
+  gap: 6px;
+  padding: 12px 10px 10px;
+  background: var(--vc-surface);
+  border-right-color: var(--vc-border);
+  box-shadow: none;
+}
+
+.root:not(.editorMode) .logo {
+  height: 34px;
+  margin-bottom: 2px;
+}
+
+.root:not(.editorMode) .searchBox {
+  flex: 0 0 auto;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.root:not(.editorMode) .mainNav,
+.root:not(.editorMode) .footerNav {
+  gap: 2px;
+}
+
+.root:not(.editorMode) .navItem,
+.root:not(.editorMode) .footerNav a {
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 10px;
+}
+
+.root:not(.editorMode) .sidebarSectionTitle {
+  margin: 12px 8px 4px;
+  color: var(--vc-text-subtle);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.root:not(.editorMode) .projectContextV19 {
+  margin: 8px 0 6px;
+}
+
+.root:not(.editorMode) .projectSwitcherWrapV19 {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.root:not(.editorMode) .projectSwitcherV19 {
+  min-height: 46px;
+  padding: 8px 9px;
+  border-radius: 14px;
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+  box-shadow: none;
+}
+
+.root:not(.editorMode) .projectMenuV19 {
+  position: static;
+  z-index: auto;
+  display: grid;
+  gap: 4px;
+  max-height: 168px;
+  margin-top: 0;
+  padding: 5px;
+  overflow: auto;
+  border-radius: 14px;
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border);
+  box-shadow: none;
+}
+
+.root:not(.editorMode) .projectMenuV19 a {
+  min-height: 42px;
+  padding: 7px;
+  border-radius: 11px;
+}
+
+.root:not(.editorMode) .workspaceTreeV19 {
+  display: grid;
+  gap: 1px;
+  margin-bottom: 1px;
+}
+
+.root:not(.editorMode) .workspaceTreeV19 .treeHeader {
+  min-height: 34px;
+  grid-template-columns: 17px minmax(0, 1fr) auto 14px;
+  gap: 8px;
+  padding: 6px 56px 6px 8px;
+  border-radius: 10px;
+}
+
+.root:not(.editorMode) .treePlusV19 {
+  right: 26px;
+  width: 23px;
+  height: 23px;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border);
+  color: var(--vc-accent);
+}
+
+.root:not(.editorMode) .treeHeaderWrapV19:hover .treePlusV19,
+.root:not(.editorMode) .treeHeaderWrapV19:focus-within .treePlusV19 {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.root:not(.editorMode) .workspaceTreeChildrenV19 {
+  gap: 1px;
+  padding: 2px 0 5px 24px;
+}
+
+.root:not(.editorMode) .workspaceLinkV19,
+.root:not(.editorMode) .emptyTreeLinkV19 {
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.root:not(.editorMode) .profileCard {
+  min-height: 44px;
+  margin-top: auto;
+  padding: 8px;
+  background: var(--vc-surface-2);
+  border: 1px solid var(--vc-border-soft);
+  box-shadow: none;
+}
+
+.root:not(.editorMode) .workspace,
+.root:not(.editorMode) .main,
+.root:not(.editorMode) .content {
+  background: var(--vc-app-bg);
+}
+
+.root:not(.editorMode) .content {
+  scrollbar-gutter: stable;
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .sidebar,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbar,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .content,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .workspace,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .main {
+  background: var(--vc-app-bg);
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectSwitcherV19,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectMenuV19,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .profileCard,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .searchBox,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbarCenter,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .topbarActions button,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .pillButton {
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border);
+  color: var(--vc-text-muted);
+  box-shadow: none;
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectSwitcherV19 strong,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .projectMenuV19 strong,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .profileBody strong,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .navItemActive,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .workspaceLinkActiveV19,
+:global(html[data-theme="dark"]) .root:not(.editorMode) .treeHeaderActive {
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .root:not(.editorMode) .darkButton {
+  background: var(--vc-accent);
+  border-color: var(--vc-accent);
+  color: var(--vc-accent-contrast);
 }

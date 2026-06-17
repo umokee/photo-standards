@@ -55,6 +55,7 @@ export function useTaskLive({ taskId, groupId, modelId }: UseTaskLiveParams) {
       if (event.event === "heartbeat") return;
 
       qc.invalidateQueries({ queryKey: queryKeys.training.task(taskId) });
+      qc.invalidateQueries({ queryKey: ["training", "metrics-history"] });
 
       if (groupId && event.event === "status") {
         qc.invalidateQueries({ queryKey: queryKeys.training.tasks(groupId) });
@@ -91,6 +92,7 @@ export function useTasksLive({ taskIds, groupId }: UseTasksLiveParams) {
         if (event.event === "heartbeat") return;
 
         qc.invalidateQueries({ queryKey: queryKeys.training.task(taskId) });
+        qc.invalidateQueries({ queryKey: ["training", "metrics-history"] });
 
         if (groupId && event.event === "status") {
           qc.invalidateQueries({ queryKey: queryKeys.training.tasks(groupId) });

@@ -4,7 +4,7 @@ import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { getInspectionHistoryQueryOptions } from "@/page-components/inspections/api/get-inspection-history";
 import { useQuery } from "@tanstack/react-query";
 import { formatDate } from "@/utils/formatDate";
-import { Activity, Camera, CheckCircle2, CircleDot, Database, FolderKanban, Image, ListChecks, Plus, Sparkles, type LucideIcon } from "lucide-react";
+import { Activity, Camera, CheckCircle2, CircleDot, Database, FolderKanban, Image, ListChecks, Sparkles, type LucideIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import p from "./platform-pages.module.scss";
@@ -43,7 +43,7 @@ export function Component() {
           <h1>Home</h1>
           <p>Проект = изделие. Внутри проекта лежат эталоны, классы, разметка, модели, камеры и проверки. Это ближе к Roboflow-структуре, но в светлой платформенной стилистике Ultralytics.</p>
           <div className={p.homeActionRowV18}>
-            <Link to={paths.groups()}><Button icon={Plus}>New project</Button></Link>
+            <Link to={paths.groups()}><Button icon={FolderKanban}>Open projects</Button></Link>
             <Link to={paths.inspection()}><Button variant="ghost" icon={ListChecks}>Run inspect</Button></Link>
           </div>
         </div>
@@ -89,7 +89,7 @@ export function Component() {
                 </Link>
               );
             }) : (
-              <Link className={p.homeEmptyActionV18} to={paths.groups()}><Plus /> Create first project</Link>
+              <Link className={p.homeEmptyActionV18} to={paths.groups()}><FolderKanban /> Open projects</Link>
             )}
           </div>
         </div>

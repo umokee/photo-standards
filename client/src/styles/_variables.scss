@@ -1,13 +1,81 @@
+
 $font-sans: "Inter", "Geist", "Segoe UI", sans-serif;
 $font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
-$text-micro: 11px; $text-small: 12px; $text-body: 13px; $text-title: 14px; $text-page: clamp(18px,2vw,24px); $text-stat: clamp(18px,2.5vw,24px);
-$fw-regular: 400; $fw-medium: 500; $fw-semibold: 600; $fw-bold: 700; $fw-extrabold: 800;
-$space-1: 4px; $space-2: 8px; $space-3: 12px; $space-4: clamp(12px,1.5vw,16px); $space-5: clamp(14px,2vw,20px); $space-6: clamp(16px,2.5vw,24px); $space-7: clamp(22px,3vw,32px); $space-8: clamp(30px,3.5vw,40px);
-$radius: 12px; $nav-height: 52px; $sidebar-width: 256px; $panel-width: 360px; $content-max: 1280px;
-$primary: #080808; $primary-hover: #1d1d1d; $primary-active: #000; $primary-text: #042aff; $primary-bg: #edf3ff; $primary-bd: #cfe0ff;
-$ml: #9c27d8; $ml-hover: #8421ba; $ml-text: #8c22d8; $ml-bg: #f4e8ff; $ml-bd: #e8c9ff;
-$warning: #e7a300; $warning-hover: #c88800; $warning-text: #9a6400; $warning-bg: #fff6dd; $warning-bd: #f1d99c;
-$danger: #ff4d5a; $danger-hover: #df2d3a; $danger-text: #ce1f2e; $danger-bg: #fff1f1; $danger-bd: #ffd0d5;
-$page: #fffdf6; $page2: #fbf6ee; $surface: #fffdf6; $surface2: #fbf6ee; $card-hover: #fbf1e4;
-$line: #eee8dd; $line-soft: #f1e9dc; $line-strong: #ded3c3; $text: #0f1115; $text-sub: #5f584f; $text-hint: #897f73; $text-off: #b5aa9d; $text-white: #fff;
-$nav-bg: #fffdf6; $nav-border: #eee8dd; $nav-text: #5f584f; $nav-text-hover: #0f1115; $nav-active-bg: #fbf1e4; $nav-active-text: #0f1115; $nav-avatar-bg: #fbf1e4; $nav-avatar-text: #0f1115; $nav-meta: #897f73;
+
+$text-micro: 11px;
+$text-small: 12px;
+$text-body: 13px;
+$text-title: 14px;
+$text-page: clamp(18px, 2vw, 24px);
+$text-stat: clamp(18px, 2.5vw, 24px);
+
+$fw-regular: 400;
+$fw-medium: 500;
+$fw-semibold: 600;
+$fw-bold: 700;
+$fw-extrabold: 800;
+
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: clamp(12px, 1.5vw, 16px);
+$space-5: clamp(14px, 2vw, 20px);
+$space-6: clamp(16px, 2.5vw, 24px);
+$space-7: clamp(22px, 3vw, 32px);
+$space-8: clamp(30px, 3.5vw, 40px);
+
+$radius: 12px;
+$nav-height: 52px;
+$sidebar-width: 256px;
+$panel-width: 360px;
+$content-max: 1280px;
+
+$primary: #0a38ff;
+$primary-hover: #082ed1;
+$primary-active: #06229e;
+$primary-text: #0a38ff;
+$primary-bg: #eef3ff;
+$primary-bd: #cfdcff;
+
+$ml: #7c3aed;
+$ml-hover: #6d28d9;
+$ml-text: #6d28d9;
+$ml-bg: #f3edff;
+$ml-bd: #ded0ff;
+
+$warning: #d88a00;
+$warning-hover: #b87300;
+$warning-text: #8a5600;
+$warning-bg: #fff7e8;
+$warning-bd: #f0d4a0;
+
+$danger: #dc2626;
+$danger-hover: #b91c1c;
+$danger-text: #b91c1c;
+$danger-bg: #fff1f1;
+$danger-bd: #ffd0d0;
+
+// Neutral light foundation. No cream/yellow shell colors here.
+$page: #f6f7fb;
+$page2: #eef1f6;
+$surface: #ffffff;
+$surface2: #f9fafc;
+$card-hover: #f2f5fa;
+$line: #dfe5ee;
+$line-soft: #ebeff5;
+$line-strong: #cbd5e1;
+$text: #111318;
+$text-sub: #586173;
+$text-hint: #7a8497;
+$text-off: #a8b1c0;
+$text-white: #ffffff;
+
+$nav-bg: #ffffff;
+$nav-border: #dfe5ee;
+$nav-text: #586173;
+$nav-text-hover: #111318;
+$nav-active-bg: #eef3ff;
+$nav-active-text: #0a38ff;
+$nav-avatar-bg: #eef3ff;
+$nav-avatar-text: #0a38ff;
+$nav-meta: #7a8497;

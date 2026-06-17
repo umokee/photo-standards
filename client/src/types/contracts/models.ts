@@ -45,6 +45,14 @@ export interface MlModel {
   created_at: string;
 }
 
+export interface TrainingMetricsHistoryResponse {
+  model_id: string;
+  task_id: string | null;
+  source: "live" | "checkpoint" | "artifact" | "empty";
+  epochs: number[];
+  series: Record<string, number[]>;
+}
+
 export interface ImportedClassSuggestion {
   segment_class_id: string;
   segment_class_name: string;

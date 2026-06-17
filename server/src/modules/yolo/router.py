@@ -6,10 +6,11 @@ from modules.yolo.inspection.api.router import router as inspection_router
 from modules.yolo.interop.api.router import router as interop_router
 from modules.yolo.training.api.presenters import model_response
 from modules.yolo.training.api.router import router as training_router
-from modules.yolo.training.api.schemas import MlModelResponse
+from modules.yolo.training.api.schemas import MlModelResponse, TrainingMetricsHistoryResponse
 from modules.yolo.training.use_cases.activate_model import activate_model
 from modules.yolo.training.use_cases.delete_model import delete_model
 from modules.yolo.training.use_cases.get_model import get_model
+from modules.yolo.training.use_cases.get_model_metrics_history import get_model_metrics_history
 from modules.yolo.training.use_cases.list_models import list_models
 
 router = APIRouter(prefix="/yolo", tags=["yolo"])
@@ -25,6 +26,14 @@ async def get_model_route(
 ) -> MlModelResponse:
     model = await get_model(db, model_id=model_id)
     return model_response(model)
+
+
+@router.get("/{model_id}/metrics-history", response_model=TrainingMetricsHistoryResponse)
+async def get_model_metrics_history_route(
+    db: DbSession,
+    model_id: UUID,
+) -> TrainingMetricsHistoryResponse:
+    return await get_model_metrics_history(db, model_id=model_id)
 
 
 @router.get("", response_model=list[MlModelResponse])
