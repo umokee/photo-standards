@@ -241,6 +241,11 @@ export function useInspectionLayout({
   };
 
   return {
+    file,
+    setFile,
+    taskStatus: currentTaskStatus,
+    taskStage: currentTaskStage,
+    taskProgress: currentTaskProgress,
     cameraId,
     focus,
     group,

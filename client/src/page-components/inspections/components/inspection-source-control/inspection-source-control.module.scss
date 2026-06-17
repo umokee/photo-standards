@@ -1,0 +1,107 @@
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: min(560px, 100%);
+  max-width: 680px;
+}
+
+.sourceMeta {
+  display: grid;
+  gap: 3px;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.sourceMeta span,
+.sourceMeta b,
+.sourceMeta small {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sourceMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #756d61;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sourceMeta b {
+  color: #17130d;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.sourceMeta small {
+  color: #8b8377;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.sourceMeta svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #0b39ff;
+}
+
+.cameraField {
+  width: min(300px, 34vw);
+  min-width: 220px;
+}
+
+.sourceButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 132px;
+  height: 42px;
+  padding: 0 16px;
+  color: #fff;
+  border: 0;
+  border-radius: 15px;
+  background: #0b39ff;
+  box-shadow: 0 14px 32px rgba(11, 57, 255, 0.18);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.sourceButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sourceButton svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 980px) {
+  .root {
+    align-items: stretch;
+    flex-direction: column;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .cameraField,
+  .sourceButton {
+    width: 100%;
+  }
+}

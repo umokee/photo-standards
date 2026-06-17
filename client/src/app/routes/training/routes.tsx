@@ -13,7 +13,9 @@ import RouteLoadingFallback from "../route-loading-fallback";
 const TrainingLayoutRoute = () => import("./_training-layout");
 const TrainingIndexRoute = () => import("./_training-index");
 const TrainingDetailRoute = () => import("./_training-detail");
-const ModelDetailRoute = () => import("./_model-detail");
+const TrainingOverviewRoute = () => import("./_training-overview");
+const TrainingModelsRoute = () => import("./_training-models");
+const TrainingRunsRoute = () => import("./_training-runs");
 
 export const trainingRoute: RouteObject = {
   path: paths.training(),
@@ -45,22 +47,30 @@ export const trainingRoute: RouteObject = {
       children: [
         {
           index: true,
-          lazy: ModelDetailRoute,
+          lazy: TrainingOverviewRoute,
+        },
+        {
+          path: "models",
+          lazy: TrainingModelsRoute,
           loader: async () => {
             return { modelId: null };
           },
         },
         {
           path: "models/:modelId",
-          lazy: ModelDetailRoute,
+          lazy: TrainingModelsRoute,
           loader: async ({ params }) => {
             const groupId = requireParam(params.groupId, paths.training());
-            const modelId = requireParam(params.modelId, paths.trainingGroup(groupId));
+            const modelId = requireParam(params.modelId, paths.trainingModels(groupId));
 
             await queryClient.ensureQueryData(getModelQueryOptions(modelId));
 
             return { modelId };
           },
+        },
+        {
+          path: "runs",
+          lazy: TrainingRunsRoute,
         },
       ],
     },

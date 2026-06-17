@@ -189,3 +189,30 @@
   border-radius: 16px;
   overflow: hidden;
 }
+
+/* v32 inspect station scroll hardening */
+.root {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+}
+
+.viewer {
+  min-height: 0;
+  isolation: isolate;
+}
+
+.referenceThumbDock {
+  max-height: calc(100% - 24px);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .root {
+    min-height: 560px;
+  }
+}

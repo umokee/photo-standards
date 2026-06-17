@@ -264,7 +264,7 @@ function renderViewerContent({
           <span className={s.emptyTitle}>Live-проверка не запущена</span>
           <span className={s.emptyText}>
             {!cameraId
-              ? "Выберите камеру в верхней панели."
+              ? "Выбери камеру в source-панели сверху."
               : "После запуска здесь появится видеопоток с результатами контроля"}
           </span>
         </div>
@@ -281,8 +281,8 @@ function renderViewerContent({
         currentMode === "snapshot"
           ? cameraId
             ? "Ожидаем кадры с камеры."
-            : "Выберите камеру в верхней панели."
-          : "Выберите источник для проверки."
+            : "Выбери камеру в source-панели сверху."
+          : "Выбери source сверху или загрузи изображение в viewer."
       }
     />
   );

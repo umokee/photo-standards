@@ -46,6 +46,12 @@ type Action =
       categoryKey: string | null;
       classKey: string;
       value: number;
+    }
+  | {
+      type: "class/move";
+      fromCategoryKey: string | null;
+      classKey: string;
+      toCategoryKey: string | null;
     };
 
 const uid = () => crypto.randomUUID();
@@ -76,7 +82,7 @@ const mapCategory = (item: SegmentClassCategory): CategoryState => ({
   key: item.id,
   id: item.id,
   name: item.name,
-  collapsed: true,
+  collapsed: false,
   segmentClasses: item.segment_classes.map(mapClass),
 });
 
@@ -104,6 +110,22 @@ const serializeCategories = (items: CategoryState[]) =>
       name: item.name.trim(),
       segment_classes: serializeClasses(item.segmentClasses),
     }));
+
+function getClassFromSource(
+  state: EditorState,
+  categoryKey: string | null,
+  classKey: string
+): ClassState | null {
+  if (categoryKey === null) {
+    return state.ungroupedClasses.find((item) => item.key === classKey) ?? null;
+  }
+
+  return (
+    state.categories
+      .find((category) => category.key === categoryKey)
+      ?.segmentClasses.find((item) => item.key === classKey) ?? null
+  );
+}
 
 const reducer = (state: EditorState, action: Action): EditorState => {
   switch (action.type) {
@@ -263,6 +285,49 @@ const reducer = (state: EditorState, action: Action): EditorState => {
         ),
       };
 
+    case "class/move": {
+      if (action.fromCategoryKey === action.toCategoryKey) return state;
+
+      const target = getClassFromSource(state, action.fromCategoryKey, action.classKey);
+      if (!target) return state;
+
+      const withoutSource = {
+        ...state,
+        categories: state.categories.map((category) =>
+          category.key === action.fromCategoryKey
+            ? {
+                ...category,
+                segmentClasses: category.segmentClasses.filter((item) => item.key !== action.classKey),
+              }
+            : category
+        ),
+        ungroupedClasses:
+          action.fromCategoryKey === null
+            ? state.ungroupedClasses.filter((item) => item.key !== action.classKey)
+            : state.ungroupedClasses,
+      };
+
+      if (action.toCategoryKey === null) {
+        return {
+          ...withoutSource,
+          ungroupedClasses: [...withoutSource.ungroupedClasses, target],
+        };
+      }
+
+      return {
+        ...withoutSource,
+        categories: withoutSource.categories.map((category) =>
+          category.key === action.toCategoryKey
+            ? {
+                ...category,
+                collapsed: false,
+                segmentClasses: [...category.segmentClasses, target],
+              }
+            : category
+        ),
+      };
+    }
+
     default:
       return state;
   }
@@ -383,6 +448,14 @@ export const useManageSegmentGroups = (
           categoryKey,
           classKey,
           value,
+        }),
+
+      move: (fromCategoryKey: string | null, classKey: string, toCategoryKey: string | null) =>
+        dispatch({
+          type: "class/move",
+          fromCategoryKey,
+          classKey,
+          toCategoryKey,
         }),
     },
 

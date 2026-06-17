@@ -11,6 +11,9 @@ import RouteLoadingFallback from "../route-loading-fallback";
 const GroupsLayoutRoute = () => import("./_groups-layout");
 const GroupsIndexRoute = () => import("./_groups-index");
 const GroupDetailRoute = () => import("./_group-detail");
+const GroupAssetsOverviewRoute = () => import("./_assets-overview");
+const GroupReferencesRoute = () => import("./_group-references");
+const GroupClassesRoute = () => import("./_group-classes");
 const StandardDetailRoute = () => import("./_standard-detail");
 
 export const groupsRoute: RouteObject = {
@@ -39,9 +42,29 @@ export const groupsRoute: RouteObject = {
       children: [
         {
           index: true,
-          lazy: StandardDetailRoute,
-          loader: async () => {
-            return { standardId: null };
+          lazy: GroupAssetsOverviewRoute,
+          loader: async ({ params }) => {
+            const groupId = requireParam(params.groupId, paths.groups());
+            await queryClient.ensureQueryData(getGroupQueryOptions(groupId));
+            return { groupId };
+          },
+        },
+        {
+          path: "references",
+          lazy: GroupReferencesRoute,
+          loader: async ({ params }) => {
+            const groupId = requireParam(params.groupId, paths.groups());
+            await queryClient.ensureQueryData(getGroupQueryOptions(groupId));
+            return { groupId };
+          },
+        },
+        {
+          path: "classes",
+          lazy: GroupClassesRoute,
+          loader: async ({ params }) => {
+            const groupId = requireParam(params.groupId, paths.groups());
+            await queryClient.ensureQueryData(getGroupQueryOptions(groupId));
+            return { groupId };
           },
         },
         {

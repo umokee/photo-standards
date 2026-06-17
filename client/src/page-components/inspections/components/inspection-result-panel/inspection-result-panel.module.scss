@@ -255,3 +255,11 @@
 .resultStatus[data-tone="danger"] {
   color: $danger-text;
 }
+
+/* v32 inspect result panel bounded scroll */
+.root {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}

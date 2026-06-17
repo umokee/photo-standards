@@ -3,7 +3,7 @@ import { ColorPicker } from "@/components/ui/color-picker/color-picker";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import { GroupDetail } from "@/types/contracts";
 import clsx from "clsx";
-import { ChevronRight, Plus, X } from "lucide-react";
+import { ChevronRight, Plus, Save, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useManageSegmentGroups } from "../../hooks/use-manage-segment-groups";
 import s from "./manage-segment-groups.module.scss";
@@ -66,7 +66,7 @@ const ClassRow = ({
   const color = `hsl(${item.hue}, 65%, 55%)`;
 
   const handleRemove = () => {
-    if (!window.confirm(`Удалить класс "${item.name || 'без названия'}"?`)) {
+    if (!window.confirm(`Удалить класс "${item.name || "без названия"}"?`)) {
       return;
     }
 
@@ -179,7 +179,7 @@ const CategoryItem = ({
           type="button"
           className={clsx(s.iconButton, s.removeButton)}
           onClick={() => {
-            if (!window.confirm(`Удалить категорию "${category.name || 'без названия'}"?`)) {
+            if (!window.confirm(`Удалить категорию "${category.name || "без названия"}"?`)) {
               return;
             }
             categoryActions.remove(category.key);
@@ -269,11 +269,11 @@ export const ManageSegmentGroups = ({ group, compact, standardId, imageId }: Pro
       <>
         {compact ? (
           <Button variant="ghost" size="sm">
-            Классы
+            Edit classes
           </Button>
         ) : (
           <Button variant="ghost" size="sm">
-            Классы сегментации
+            Manage classes
           </Button>
         )}
       </>
@@ -284,6 +284,75 @@ export const ManageSegmentGroups = ({ group, compact, standardId, imageId }: Pro
     </Modal.Content>
   </Modal>
 );
+
+export const SegmentGroupsWorkspace = ({ group, standardId, imageId }: Props) => {
+  const {
+    categories,
+    ungroupedClasses,
+    saving,
+    activeColorKey,
+    toggleColorPicker,
+    closeColorPicker,
+    categoryActions,
+    classActions,
+    save,
+    fieldErrors,
+  } = useManageSegmentGroups(group, { standardId, imageId });
+
+  return (
+    <div className={s.workspace}>
+      <div className={s.workspaceToolbar}>
+        <div>
+          <strong>Editable class catalog</strong>
+          <span>{categories.length} categories · {ungroupedClasses.length} ungrouped classes</span>
+        </div>
+
+        <div className={s.workspaceActions}>
+          <Button variant="ghost" size="sm" icon={Plus} onClick={categoryActions.add}>
+            Category
+          </Button>
+          <Button variant="ghost" size="sm" icon={Plus} onClick={classActions.addUngrouped}>
+            Class
+          </Button>
+        </div>
+      </div>
+
+      <div className={clsx(s.content, s.workspaceContent)}>
+        <div className={clsx(s.list, s.workspaceList)}>
+          {categories.map((category) => (
+            <CategoryItem
+              key={category.key}
+              category={category}
+              error={fieldErrors[`category:${category.key}`]}
+              fieldErrors={fieldErrors}
+              activeColorKey={activeColorKey}
+              toggleColorPicker={toggleColorPicker}
+              closeColorPicker={closeColorPicker}
+              categoryActions={categoryActions}
+              classActions={classActions}
+            />
+          ))}
+
+          <UngroupedBlock
+            items={ungroupedClasses}
+            fieldErrors={fieldErrors}
+            activeColorKey={activeColorKey}
+            toggleColorPicker={toggleColorPicker}
+            closeColorPicker={closeColorPicker}
+            classActions={classActions}
+          />
+        </div>
+      </div>
+
+      <div className={s.workspaceFooter}>
+        <span>Сначала добавь категории и классы, затем нажми Save. После сохранения они появятся в editor, Train и Inspect.</span>
+        <Button disabled={saving} icon={Save} onClick={save}>
+          Save classes
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
   const close = useModalClose();
@@ -308,33 +377,33 @@ const ManageSegmentGroupsModal = ({ group, standardId, imageId }: Props) => {
 
   return (
     <>
-      <Modal.Header>Классы сегментации</Modal.Header>
+      <Modal.Header>Project classes</Modal.Header>
 
       <Modal.Body>
         <div className={s.content}>
           <div className={s.list}>
-              {categories.map((category) => (
-                <CategoryItem
-                  key={category.key}
-                  category={category}
-                  error={fieldErrors[`category:${category.key}`]}
-                  fieldErrors={fieldErrors}
-                  activeColorKey={activeColorKey}
-                  toggleColorPicker={toggleColorPicker}
-                  closeColorPicker={closeColorPicker}
-                  categoryActions={categoryActions}
-                  classActions={classActions}
-                />
-              ))}
-
-            <UngroupedBlock
-                items={ungroupedClasses}
+            {categories.map((category) => (
+              <CategoryItem
+                key={category.key}
+                category={category}
+                error={fieldErrors[`category:${category.key}`]}
                 fieldErrors={fieldErrors}
                 activeColorKey={activeColorKey}
                 toggleColorPicker={toggleColorPicker}
                 closeColorPicker={closeColorPicker}
+                categoryActions={categoryActions}
                 classActions={classActions}
               />
+            ))}
+
+            <UngroupedBlock
+              items={ungroupedClasses}
+              fieldErrors={fieldErrors}
+              activeColorKey={activeColorKey}
+              toggleColorPicker={toggleColorPicker}
+              closeColorPicker={closeColorPicker}
+              classActions={classActions}
+            />
           </div>
 
           <Button variant="ghost" size="sm" icon={Plus} onClick={categoryActions.add} full>

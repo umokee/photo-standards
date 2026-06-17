@@ -174,3 +174,97 @@
     max-height: min(420px, calc(92dvh - 220px));
   }
 }
+
+/* v23: inline class editor for Assets / Classes */
+.workspace {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.workspaceToolbar,
+.workspaceFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workspaceToolbar {
+  padding: 10px 12px;
+  border: 1px solid rgba(238, 232, 221, 0.9);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 253, 246, 0.96), rgba(255, 250, 235, 0.72));
+}
+
+.workspaceToolbar strong {
+  display: block;
+  color: #17130f;
+  font-weight: 900;
+}
+
+.workspaceToolbar span,
+.workspaceFooter span {
+  display: block;
+  margin-top: 2px;
+  color: #80776c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workspaceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workspaceContent {
+  padding: 0;
+}
+
+.workspaceList {
+  max-height: none;
+  min-height: 320px;
+  padding-right: 0;
+  gap: 8px;
+}
+
+.workspace .group {
+  border-color: #eee8dd;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fffdf8;
+}
+
+.workspace .groupRow {
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.workspace .segmentRow {
+  min-height: 40px;
+  padding: 8px 10px 8px 42px;
+  background: rgba(251, 246, 236, 0.72);
+}
+
+.workspaceFooter {
+  position: sticky;
+  bottom: 0;
+  padding: 12px;
+  border: 1px solid #eee8dd;
+  border-radius: 14px;
+  background: rgba(255, 253, 246, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 820px) {
+  .workspaceToolbar,
+  .workspaceFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workspaceActions {
+    width: 100%;
+  }
+}

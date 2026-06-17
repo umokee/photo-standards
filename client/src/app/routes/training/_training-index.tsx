@@ -2,16 +2,16 @@ import { paths } from "@/app/paths";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import type { GroupListItem } from "@/types/contracts";
-import { Activity, Brain, CheckCircle2, Database, Image, Layers3, ListChecks, Play, ShieldCheck, Tags, type LucideIcon } from "lucide-react";
+import { Brain, CheckCircle2, Database, Image, ListChecks, Tags, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import p from "../platform-pages.module.scss";
 
 function getReadiness(group: GroupListItem) {
   const checks = [
-    group.stats.images_count > 0,
-    group.stats.annotated_images_count > 0,
-    group.stats.segment_classes_count > 0,
     group.stats.standards_count > 0,
+    group.stats.images_count > 0,
+    group.stats.segment_classes_count > 0,
+    group.stats.annotated_images_count > 0,
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
@@ -22,102 +22,86 @@ function percent(part: number, total: number) {
 }
 
 export function Component() {
-  const { data: groups } = useGetGroups();
+  const groupsQuery = useGetGroups();
+  const groups = groupsQuery.data ?? [];
   const totalModels = groups.reduce((sum, group) => sum + group.stats.models_count, 0);
   const totalImages = groups.reduce((sum, group) => sum + group.stats.images_count, 0);
   const totalLabeled = groups.reduce((sum, group) => sum + group.stats.annotated_images_count, 0);
-  const readyProjects = groups.filter((group) => getReadiness(group) >= 75).length;
-  const trainingReady = groups.filter((group) => group.stats.images_count > 0 && group.stats.annotated_images_count > 0 && group.stats.segment_classes_count > 0).length;
+  const trainingReady = groups.filter((group) => getReadiness(group) >= 75).length;
 
   return (
-    <div className={p.page}>
-      <header className={p.workspaceHeaderV16}>
+    <div className={`${p.page} ${p.trainPageV27}`}>
+      <header className={p.trainHeaderV27}>
+        <div className={p.trainHeaderIconV27}><Brain /></div>
         <div>
-          <span className={p.eyebrow}><Brain /> Train workspace</span>
-          <h1>Models</h1>
-          <p>Очередь проектов для обучения: готовность данных, классы, активные веса и связь с Inspect.</p>
+          <span className={p.eyebrow}><Brain /> Train</span>
+          <h1>Model workspace</h1>
+          <p>Обучение привязано к изделию: сначала Assets готовят references/classes/annotations, затем Train управляет моделями и training jobs.</p>
         </div>
       </header>
 
-      <section className={p.commandMetricGridV16}>
+      <section className={p.trainMetricGridV27}>
         <Metric icon={Database} value={groups.length} label="Projects" hint={`${trainingReady} train-ready`} />
         <Metric icon={Image} value={totalImages} label="Images" hint={`${percent(totalLabeled, totalImages)}% labeled`} />
+        <Metric icon={Tags} value={groups.reduce((sum, group) => sum + group.stats.segment_classes_count, 0)} label="Classes" hint="segment labels" />
         <Metric icon={Brain} value={totalModels} label="Models" hint="weights" />
-        <Metric icon={CheckCircle2} value={readyProjects} label="Ready" hint="quality gate" />
       </section>
 
-      <div className={p.trainCommandGridV16}>
-        <section className={p.surfacePanelV16}>
-          <div className={p.panelHeadV16}>
-            <div><h3>Training queue</h3><p>Проекты отсортированы как карточки готовности к обучению.</p></div>
-            <span>{totalModels} models</span>
+      <QueryState
+        size="block"
+        isLoading={groupsQuery.isLoading}
+        isError={groupsQuery.isError}
+        isEmpty={!groups.length}
+        emptyTitle="No projects"
+        emptyDescription="Создай project, добавь references/classes в Assets и вернись к Train."
+      >
+        <details className={p.collapsiblePanelV28} open>
+          <summary><span><Brain /> Project queue</span><b>{groups.length}</b></summary>
+          <div className={`${p.trainProjectQueueV27} ${p.scrollListV28}`}>
+          {groups.map((group) => {
+            const readiness = getReadiness(group);
+            const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
+            const nextAction =
+              group.stats.standards_count === 0 ? "Create reference" :
+              group.stats.segment_classes_count === 0 ? "Create classes" :
+              group.stats.annotated_images_count === 0 ? "Annotate images" :
+              group.stats.models_count === 0 ? "Train first model" :
+              "Open model lab";
+
+            return (
+              <Link key={group.id} to={paths.trainingOverview(group.id)} className={p.trainProjectCardV27}>
+                <div className={p.trainProjectAvatarV27}>{group.name.slice(0, 1).toUpperCase()}</div>
+                <div>
+                  <strong>{group.name}</strong>
+                  <span>{group.description || "Quality-control project"}</span>
+                </div>
+                <div className={p.trainProjectMetaV27}>
+                  <small><Image /> {group.stats.images_count} images</small>
+                  <small><Tags /> {group.stats.segment_classes_count} classes</small>
+                  <small><Brain /> {group.stats.models_count} models</small>
+                  <small><ListChecks /> {labeled}% labeled</small>
+                </div>
+                <div className={p.trainProjectProgressV27}>
+                  <span style={{ width: `${readiness}%` }} />
+                </div>
+                <b>{nextAction}</b>
+              </Link>
+            );
+          })}
           </div>
-
-          <QueryState isEmpty={!groups.length} size="block" emptyTitle="No training projects" emptyDescription="Сначала создай dataset в Annotate.">
-            <div className={p.trainingQueueV16}>
-              {groups.map((group) => {
-                const readiness = getReadiness(group);
-                const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
-                const canTrain = group.stats.images_count > 0 && group.stats.annotated_images_count > 0 && group.stats.segment_classes_count > 0;
-
-                return (
-                  <Link className={p.trainingQueueItemV16} key={group.id} to={paths.trainingGroup(group.id)}>
-                    <div className={p.queueAvatarV16}>{group.name.slice(0, 1).toUpperCase()}</div>
-                    <div className={p.queueMainV16}>
-                      <div className={p.queueTitleV16}>
-                        <strong>{group.name}</strong>
-                        <span>{canTrain ? "ready" : "needs data"}</span>
-                      </div>
-                      <div className={p.progressTrackV16}><span style={{ width: `${readiness}%` }} /></div>
-                      <div className={p.queueMetaV16}>
-                        <span><Image /> {group.stats.images_count} images</span>
-                        <span><Tags /> {group.stats.segment_classes_count} classes</span>
-                        <span><Layers3 /> {labeled}% labeled</span>
-                        <span><Brain /> {group.stats.models_count} models</span>
-                      </div>
-                    </div>
-                    <div className={p.trainingLaunchV16}>
-                      <Play />
-                      <b>{readiness}%</b>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </QueryState>
-        </section>
-
-        <aside className={p.commandRailV16}>
-          <section className={p.surfacePanelV16}>
-            <div className={p.panelHeadV16}><div><h3>Quality gates</h3><p>Не запускай обучение вслепую.</p></div></div>
-            <div className={p.workflowStepsV16}>
-              <Step icon={Database} title="Dataset" text="Есть reference views и изображения." />
-              <Step icon={Tags} title="Classes" text="Классы сегментации настроены." />
-              <Step icon={ShieldCheck} title="Annotations" text="Есть полигоны на кадрах." />
-              <Step icon={Brain} title="Model" text="После обучения модель попадёт в Inspect." />
-            </div>
-          </section>
-
-          <section className={p.surfacePanelV16}>
-            <div className={p.panelHeadV16}><div><h3>Lifecycle</h3><p>Что должно происходить после обучения.</p></div></div>
-            <div className={p.actionHintV16}>
-              <Activity />
-              <div>
-                <strong>Train → activate → inspect</strong>
-                <span>Модель имеет смысл только как проверка эталонных зон, поэтому активную версию держим рядом с проектом.</span>
-              </div>
-            </div>
-          </section>
-        </aside>
-      </div>
+        </details>
+      </QueryState>
     </div>
   );
 }
 
-function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: number; label: string; hint: string }) {
-  return <div className={p.metricCardV16}><Icon /><b>{value}</b><span>{label}</span><small>{hint}</small></div>;
-}
-
-function Step({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-  return <div className={p.workflowStepV16}><Icon /><div><strong>{title}</strong><span>{text}</span></div></div>;
+function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: string | number; label: string; hint: string }) {
+  return (
+    <div className={p.trainMetricV27}>
+      <Icon />
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{hint}</small>
+    </div>
+  );
 }
