@@ -1,6 +1,7 @@
 
 import { paths } from "@/app/paths";
 import ImageWithFallback from "@/components/ui/image-with-fallback/image-with-fallback";
+import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetStandardDetail } from "@/page-components/standards/api/get-standard";
 import { DeleteStandard } from "@/page-components/standards/components/delete-standard";
@@ -44,16 +45,6 @@ function imageFeaturesReady(image: StandardImage) {
 function featureStatusLabel(image: StandardImage) {
   if (!imageFeaturesReady(image)) return "features missing";
   return `${image.features_keypoint_count ?? 0} keypoints`;
-}
-
-function ReadinessRow({ done, title, value }: { done: boolean; title: string; value: string | number }) {
-  return (
-    <div className={`${s.readinessRow} ${done ? s.readinessRowDone : ""}`}>
-      {done ? <CheckCircle2 /> : <CircleDashed />}
-      <span>{title}</span>
-      <strong>{value}</strong>
-    </div>
-  );
 }
 
 export function Component() {
@@ -230,11 +221,11 @@ export function Component() {
                 <CheckCircle2 />
               </div>
               <div className={s.readinessRows}>
-                <ReadinessRow done={standard.stats.images_count > 0} title="Images uploaded" value={standard.stats.images_count} />
-                <ReadinessRow done={referenceImages.length > 0} title="Reference pool" value={`${referenceImages.length}/${standard.stats.images_count}`} />
-                <ReadinessRow done={poolReady} title="Pool features" value={`${poolFeaturesReadyCount}/${referenceImages.length || 0}`} />
-                <ReadinessRow done={classes.length > 0} title="Classes used" value={classes.length} />
-                <ReadinessRow done={standard.stats.annotated_images_count > 0} title="Images labeled" value={`${labeled}%`} />
+                <ReadinessItem className={`${s.readinessRow} ${standard.stats.images_count > 0 ? s.readinessRowDone : ""}`} done={standard.stats.images_count > 0} title="Images uploaded" value={standard.stats.images_count} variant="valueRow" />
+                <ReadinessItem className={`${s.readinessRow} ${referenceImages.length > 0 ? s.readinessRowDone : ""}`} done={referenceImages.length > 0} title="Reference pool" value={`${referenceImages.length}/${standard.stats.images_count}`} variant="valueRow" />
+                <ReadinessItem className={`${s.readinessRow} ${poolReady ? s.readinessRowDone : ""}`} done={poolReady} title="Pool features" value={`${poolFeaturesReadyCount}/${referenceImages.length || 0}`} variant="valueRow" />
+                <ReadinessItem className={`${s.readinessRow} ${classes.length > 0 ? s.readinessRowDone : ""}`} done={classes.length > 0} title="Classes used" value={classes.length} variant="valueRow" />
+                <ReadinessItem className={`${s.readinessRow} ${standard.stats.annotated_images_count > 0 ? s.readinessRowDone : ""}`} done={standard.stats.annotated_images_count > 0} title="Images labeled" value={`${labeled}%`} variant="valueRow" />
                 <div className={s.progressTrack}><i style={{ width: `${labeled}%` }} /></div>
               </div>
             </section>

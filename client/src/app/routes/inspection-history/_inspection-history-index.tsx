@@ -1,5 +1,6 @@
 
 import { paths } from "@/app/paths";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import type { GroupListItem } from "@/types/contracts";
@@ -44,10 +45,10 @@ export function Component() {
       </section>
 
       <section className={s.metricGrid}>
-        <Metric icon={ListChecks} value={totalRuns} label="Total runs" hint="saved reports" />
-        <Metric icon={Database} value={scopesWithRuns} label="Изделия" hint="with history" />
-        <Metric icon={Image} value={totalImages} label="Images" hint="source/reference" />
-        <Metric icon={Search} value={totalReferences} label="References" hint="available views" />
+        <MetricCard className={s.metricCard} icon={ListChecks} value={totalRuns} label="Total runs" hint="saved reports" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Database} value={scopesWithRuns} label="Изделия" hint="with history" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Image} value={totalImages} label="Images" hint="source/reference" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Search} value={totalReferences} label="References" hint="available views" variant="valueFirst" />
       </section>
 
       <QueryState
@@ -74,17 +75,6 @@ export function Component() {
         </section>
       </QueryState>
     </main>
-  );
-}
-
-function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: number; label: string; hint: string }) {
-  return (
-    <div className={s.metricCard}>
-      <Icon />
-      <b>{value}</b>
-      <span>{label}</span>
-      <small>{hint}</small>
-    </div>
   );
 }
 

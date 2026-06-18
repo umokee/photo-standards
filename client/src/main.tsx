@@ -2,12 +2,7 @@ import { createRoot } from "react-dom/client";
 import AppProvider from "./app/provider.js";
 import "./styles/main.scss";
 
-const storedTheme = window.localStorage.getItem("vc-theme");
-const preferredTheme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-const initialTheme = storedTheme === "light" || storedTheme === "dark" ? storedTheme : preferredTheme;
-document.documentElement.dataset.theme = initialTheme;
-
-const THEME_STORAGE_KEY = "visionqc-theme";
+const THEME_STORAGE_KEY = "vc-theme";
 const THEME_VALUES = new Set(["light", "dark"]);
 
 try {

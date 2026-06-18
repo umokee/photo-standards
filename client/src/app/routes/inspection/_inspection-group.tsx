@@ -1,4 +1,7 @@
 import { inspectionModePaths, paths, type InspectionModePath } from "@/app/paths";
+import { RouteHero } from "@/components/layouts/route-hero/route-hero";
+import { RoutePanel } from "@/components/layouts/route-panel/route-panel";
+import { ReadinessCard as SharedReadinessCard } from "@/components/ui/readiness-card/readiness-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroup } from "@/page-components/groups/api/get-group";
 import type { GroupStandard } from "@/types/contracts";
@@ -44,17 +47,19 @@ export function Component() {
       >
         {group ? (
           <>
-            <section className={s.scopeHeader}>
-              <div className={s.headerMain}>
-                <span className={s.eyebrow}><ShieldCheck /> Inspect / {currentMode}</span>
-                <h1>{group.name}</h1>
-                <p>Выбери эталонный вид. Классы, source и запуск проверки появятся уже на station-экране.</p>
-              </div>
-              <div className={s.scopeActions}>
+            <RouteHero
+              eyebrow={`Inspect / ${currentMode}`}
+              icon={ShieldCheck}
+              title={group.name}
+              description="Выбери эталонный вид. Классы, source и запуск проверки появятся уже на station-экране."
+              actionsClassName={s.scopeActions}
+              actions={(
+                <>
                 <Link to={paths.inspectionHistoryGroup(group.id)}><ListChecks /> Runs</Link>
                 <Link to={paths.assetReferences(group.id)}><Layers3 /> Assets</Link>
-              </div>
-            </section>
+                </>
+              )}
+            />
 
             <section className={s.readinessGrid}>
               <ReadinessCard
@@ -87,15 +92,17 @@ export function Component() {
               />
             </section>
 
-            <section className={s.referenceShell}>
-              <div className={s.sectionHeader}>
-                <div>
-                  <span className={s.eyebrow}><Image /> References</span>
-                  <h2>Выбери reference</h2>
-                </div>
-                <span className={s.sectionCount}>{group.standards.length} references</span>
-              </div>
-
+            <RoutePanel
+              className={s.referenceShell}
+              headerClassName={s.sectionHeader}
+              headingClassName={s.sectionHeading}
+              kickerClassName={s.eyebrow}
+              titleClassName={s.sectionTitle}
+              actionsClassName={s.sectionCount}
+              kicker={<><Image /> References</>}
+              title="Выбери reference"
+              actions={<>{group.standards.length} references</>}
+            >
               <QueryState
                 isEmpty={group.standards.length === 0}
                 size="block"
@@ -113,7 +120,7 @@ export function Component() {
                   ))}
                 </div>
               </QueryState>
-            </section>
+            </RoutePanel>
           </>
         ) : null}
       </QueryState>
@@ -123,16 +130,15 @@ export function Component() {
 
 function ReadinessCard({ ready, title, value, hint }: { ready: boolean; title: string; value: number; hint: string }) {
   return (
-    <div className={s.readinessCard}>
-      <div className={s.readinessTop}>
-        <div className={s.readinessIcon} data-state={ready ? "ready" : "blocked"}>
-          {ready ? <CheckCircle2 /> : <AlertTriangle />}
-        </div>
-        <span>{title}</span>
-      </div>
-      <strong>{value}</strong>
-      <p>{hint}</p>
-    </div>
+    <SharedReadinessCard
+      ready={ready}
+      title={title}
+      value={value}
+      hint={hint}
+      className={s.readinessCard}
+      topClassName={s.readinessTop}
+      iconWrapClassName={s.readinessIcon}
+    />
   );
 }
 

@@ -56,58 +56,6 @@
   gap: 14px;
 }
 
-.header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid var(--asset-line);
-  border-radius: var(--asset-radius-xl);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--asset-surface) 96%, transparent), var(--asset-surface)),
-    var(--asset-surface);
-  box-shadow: var(--vc-shadow-sm, 0 14px 36px rgba(15, 23, 42, 0.05));
-}
-
-.headerCompact {
-  min-height: 0;
-  padding: 14px 16px;
-}
-
-.header h1,
-.header h2 {
-  margin: 6px 0 0;
-  color: var(--asset-text);
-  font-weight: 900;
-  line-height: 0.98;
-  letter-spacing: -0.055em;
-}
-
-.header h1 { font-size: clamp(30px, 4.4vw, 54px); }
-.header h2 { font-size: clamp(26px, 3vw, 40px); }
-
-.header p {
-  max-width: 780px;
-  margin: 8px 0 0;
-  color: var(--asset-muted);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--asset-muted);
-  font-size: 11px;
-  font-weight: 850;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.eyebrow svg { width: 15px; height: 15px; color: var(--asset-accent); }
-
 .headerActions,
 .toolbarActions,
 .actionRow {
@@ -251,13 +199,10 @@
   background: color-mix(in srgb, var(--asset-surface) 92%, var(--asset-surface-2));
 }
 
-.panelHead > div {
+.panelHeadInner {
   min-width: 0;
-  display: grid;
-  gap: 2px;
 }
 
-.panelHead span,
 .panelKicker {
   color: var(--asset-muted);
   font-size: 11px;
@@ -266,7 +211,7 @@
   letter-spacing: 0.07em;
 }
 
-.panelHead h3 {
+.panelTitle {
   margin: 0;
   color: var(--asset-text);
   font-size: 18px;
@@ -281,6 +226,10 @@
   font-size: 13px;
   font-weight: 820;
   text-decoration: none;
+}
+
+.panelIconAction {
+  color: var(--asset-accent);
 }
 
 .scrollList {
@@ -870,7 +819,6 @@
 @media (max-width: 760px) {
   .workspacePage,
   .assetsRouteShell { padding: 12px; }
-  .header,
   .referenceHeader { grid-template-columns: 1fr; }
   .toolbar { grid-template-columns: 1fr; }
   .summaryGrid,

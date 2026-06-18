@@ -27,7 +27,6 @@
 }
 
 .hero,
-.scopeHeader,
 .queueShell,
 .referenceShell,
 .readinessCard,
@@ -43,7 +42,6 @@
 }
 
 .hero,
-.scopeHeader,
 .queueShell,
 .referenceShell {
   border-radius: 22px;
@@ -58,14 +56,6 @@
   background:
     radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--vc-accent, #0b39ff) 10%, transparent), transparent 260px),
     var(--vc-surface, #ffffff);
-}
-
-.scopeHeader {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
 }
 
 .headerMain,
@@ -91,7 +81,6 @@
 }
 
 .hero h1,
-.scopeHeader h1,
 .queueShell h2,
 .referenceShell h2,
 .blockedPanel h3,
@@ -104,7 +93,7 @@
 }
 
 .hero h1,
-.scopeHeader h1 {
+.hero h1 {
   margin-top: 7px;
   font-size: clamp(26px, 3.5vw, 42px);
   font-weight: 920;
@@ -112,7 +101,6 @@
 }
 
 .hero p,
-.scopeHeader p,
 .projectCard p,
 .referenceCard p,
 .blockedPanel p,
@@ -243,7 +231,11 @@
   border-bottom: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
 }
 
-.sectionHeader h2 {
+.sectionHeading {
+  min-width: 0;
+}
+
+.sectionTitle {
   margin-top: 5px;
   font-size: 18px;
   font-weight: 900;
@@ -723,7 +715,6 @@
 
 @media (max-width: 1180px) {
   .hero,
-  .scopeHeader,
   .stationTopbar,
   .selectionTopbar {
     align-items: stretch;
@@ -768,8 +759,7 @@
     grid-template-columns: 1fr;
   }
 
-  .sectionHeader,
-  .scopeHeader {
+  .sectionHeader {
     align-items: stretch;
     flex-direction: column;
   }

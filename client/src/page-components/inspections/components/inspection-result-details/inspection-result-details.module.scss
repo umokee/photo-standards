@@ -7,6 +7,7 @@
   grid-template-rows: auto minmax(0, 1fr);
   padding-top: $space-3;
   gap: $space-2;
+  color: var(--vc-text, #111318);
 }
 
 .rootHistory {
@@ -43,7 +44,7 @@
 
 .reportDisclosure {
   padding-top: $space-3;
-  border-top: 1px solid $line-soft;
+  border-top: 1px solid var(--vc-border-soft, #ebeff5);
 }
 
 .reportHead {
@@ -52,7 +53,7 @@
   justify-content: space-between;
   gap: $space-3;
   min-height: 24px;
-  color: $text;
+  color: var(--vc-text, #111318);
   font-size: $text-small;
   font-weight: $fw-semibold;
   line-height: 1.35;
@@ -73,7 +74,7 @@
 
 .reportCount {
   min-width: 1.5rem;
-  color: $text-hint;
+  color: var(--vc-text-subtle, #7a8497);
   font-size: $text-small;
   font-weight: $fw-medium;
   line-height: 1.35;
@@ -85,17 +86,17 @@
   gap: 0;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid $line-soft;
+  border: 1px solid var(--vc-border-soft, #ebeff5);
   border-radius: $radius;
-  background: $surface;
+  background: var(--vc-surface, #fff);
 }
 
 .reportEmpty {
   padding: $space-3;
-  border: 1px solid $line-soft;
+  border: 1px solid var(--vc-border-soft, #ebeff5);
   border-radius: $radius;
-  color: $text-hint;
-  background: $surface;
+  color: var(--vc-text-subtle, #7a8497);
+  background: var(--vc-surface, #fff);
 }
 
 .row {
@@ -105,9 +106,9 @@
   width: 100%;
   padding: 10px $space-3;
   border: 0;
-  border-bottom: 1px solid $line-soft;
+  border-bottom: 1px solid var(--vc-border-soft, #ebeff5);
   border-radius: 0;
-  color: $text;
+  color: var(--vc-text, #111318);
   text-align: left;
   background: transparent;
 }
@@ -120,13 +121,13 @@
   cursor: pointer;
 
   &:hover {
-    background: $card-hover;
+    background: var(--vc-surface-2, #f9fafc);
   }
 }
 
 .rowActive {
   border-left: 0;
-  background: $surface2;
+  background: var(--vc-surface-2, #f9fafc);
 }
 
 .rowHead {
@@ -160,21 +161,21 @@
 
 .name {
   min-width: 0;
-  color: $text;
+  color: var(--vc-text, #111318);
   font-size: $text-body;
   font-weight: $fw-semibold;
   line-height: 1.35;
 }
 
 .confidence {
-  color: $text-hint;
+  color: var(--vc-text-subtle, #7a8497);
   font-size: $text-small;
   font-weight: $fw-medium;
   white-space: nowrap;
 }
 
 .rowText {
-  color: $text-sub;
+  color: var(--vc-text-subtle, #7a8497);
   font-size: $text-small;
   line-height: 1.4;
   padding-left: 16px;
@@ -187,7 +188,7 @@
   column-gap: $space-2;
   row-gap: 0;
   padding-left: 16px;
-  color: $text-hint;
+  color: var(--vc-text-subtle, #7a8497);
   font-size: 11px;
   line-height: 1.25;
 }
@@ -198,7 +199,7 @@
 
 .empty {
   padding: $space-3;
-  color: $text-hint;
+  color: var(--vc-text-subtle, #7a8497);
   background: transparent;
 }
 
@@ -218,9 +219,9 @@
 .rootHistory .list {
   gap: 0;
   overflow: hidden;
-  border: 1px solid $line-soft;
+  border: 1px solid var(--vc-border-soft, #ebeff5);
   border-radius: $radius;
-  background: $surface;
+  background: var(--vc-surface, #fff);
 }
 
 .rootHistory .row,
@@ -229,7 +230,7 @@
   padding: 9px 10px;
   gap: 3px;
   border: 0;
-  border-bottom: 1px solid $line-soft;
+  border-bottom: 1px solid var(--vc-border-soft, #ebeff5);
   border-radius: 0;
   background: transparent;
 }
@@ -241,7 +242,7 @@
 
 .rootHistory .row:hover,
 .rowHistory:hover {
-  background: $card-hover;
+  background: var(--vc-surface-2, #f9fafc);
 }
 
 .rootHistory .rowHead {
@@ -273,7 +274,7 @@
 .rootHistory .rowActive,
 .rowHistory.rowActive {
   border-left: 0;
-  background: $surface;
+  background: var(--vc-surface-2, #f9fafc);
 }
 
 @media (max-width: 767px) {
@@ -286,56 +287,5 @@
     width: 100%;
     justify-content: space-between;
   }
-}
-
-/* v44 inspection history strict theme bridge */
-.root,
-.rootHistory,
-.reportList,
-.reportEmpty,
-.rootHistory .list,
-.componentGroupBody {
-  color: var(--vc-text, #111318);
-}
-
-.reportList,
-.reportEmpty,
-.rootHistory .list {
-  border-color: var(--vc-border-soft, #ebeff5);
-  background: var(--vc-surface, #fff);
-}
-
-.reportDisclosure {
-  border-top-color: var(--vc-border-soft, #ebeff5);
-}
-
-.reportHead,
-.name {
-  color: var(--vc-text, #111318);
-}
-
-.reportCount,
-.confidence,
-.rowText,
-.rowMeta,
-.empty {
-  color: var(--vc-text-subtle, #7a8497);
-}
-
-.row,
-.rootHistory .row,
-.rowHistory {
-  border-bottom-color: var(--vc-border-soft, #ebeff5);
-  background: transparent;
-  color: var(--vc-text, #111318);
-}
-
-.rowInteractive:hover,
-.rootHistory .row:hover,
-.rowHistory:hover,
-.rowActive,
-.rootHistory .rowActive,
-.rowHistory.rowActive {
-  background: var(--vc-surface-2, #f9fafc);
 }
 

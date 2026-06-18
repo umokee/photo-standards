@@ -4,12 +4,12 @@
 .page {
   display: grid;
   align-content: start;
-  gap: clamp(14px, 1.7vw, 20px);
+  gap: 12px;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: clamp(14px, 2vw, 24px);
+  padding: 12px;
   overflow: auto;
   background: var(--vc-app-bg, #f6f7fb);
   color: var(--vc-text, #111318);
@@ -516,6 +516,7 @@
   gap: 14px;
   min-width: 0;
   min-height: 0;
+  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 210px);
 }
 
 .timelinePanel,
@@ -524,8 +525,8 @@
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
-  min-height: min(720px, calc(100dvh - 320px));
-  max-height: calc(100dvh - 260px);
+  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 220px);
+  max-height: none;
   padding: 14px;
   border-radius: 20px;
   overflow: hidden;
@@ -784,10 +785,14 @@
     grid-template-columns: 1fr;
   }
 
+  .historyWorkbench {
+    min-height: 0;
+  }
+
   .timelinePanel,
   .reportPanel {
     max-height: none;
-    min-height: 0;
+    min-height: 420px;
   }
 
   .runList {
@@ -828,36 +833,5 @@
   .reportStats {
     width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* v47 report/detail stretch hotfix */
-.page {
-  padding: 12px;
-  gap: 12px;
-}
-
-.historyWorkbench {
-  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 210px);
-}
-
-.timelinePanel,
-.reportPanel {
-  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 220px);
-  max-height: none;
-}
-
-.reportPanel {
-  align-content: stretch;
-}
-
-@media (max-width: 1040px) {
-  .historyWorkbench {
-    min-height: 0;
-  }
-
-  .timelinePanel,
-  .reportPanel {
-    min-height: 420px;
   }
 }

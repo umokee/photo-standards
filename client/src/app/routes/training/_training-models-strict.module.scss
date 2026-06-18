@@ -16,73 +16,16 @@
   --train-radius-xl: var(--vc-radius-xl, 24px);
   --train-radius-lg: var(--vc-radius-lg, 18px);
   --train-radius-md: var(--vc-radius-md, 14px);
-  height: 100%;
+  height: auto;
   min-width: 0;
-  min-height: 0;
+  min-height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 14px;
-  padding: 20px;
-  overflow: hidden;
+  gap: 12px;
+  padding: clamp(10px, 1.2vw, 16px);
+  overflow: visible;
   color: var(--train-text);
   background: var(--train-bg);
-}
-
-.header {
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-xl);
-  background: var(--train-surface);
-  box-shadow: var(--vc-shadow-sm, 0 16px 36px rgba(15, 23, 42, 0.06));
-}
-
-.headerMain {
-  min-width: 0;
-}
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--train-muted);
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.eyebrow svg {
-  width: 14px;
-  height: 14px;
-}
-
-.header h1 {
-  margin: 7px 0 6px;
-  color: var(--train-text);
-  font-size: clamp(25px, 3vw, 38px);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.05em;
-}
-
-.header p {
-  max-width: 780px;
-  margin: 0;
-  color: var(--train-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.headerActions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .shell {
@@ -91,7 +34,8 @@
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 14px;
-  overflow: hidden;
+  align-items: start;
+  overflow: visible;
 }
 
 .rail {
@@ -104,6 +48,10 @@
   border: 1px solid var(--train-line);
   border-radius: var(--train-radius-xl);
   background: var(--train-surface);
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  max-height: calc(100svh - var(--vc-topbar-height, 56px) - 32px);
   overflow: hidden;
 }
 
@@ -273,6 +221,7 @@
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
+  scrollbar-gutter: stable;
 }
 
 .modelList {
@@ -346,31 +295,6 @@
   font-size: 11px;
 }
 
-.statusPill,
-.sourcePill,
-.activePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  min-height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--train-line);
-  border-radius: 999px;
-  background: var(--train-surface);
-  color: var(--train-muted);
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.activePill {
-  border-color: color-mix(in srgb, var(--train-success) 40%, transparent);
-  color: var(--train-success);
-  background: color-mix(in srgb, var(--train-success) 10%, var(--train-surface));
-}
-
 .modelMetrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -416,10 +340,9 @@
 .main {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: block;
   gap: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .modelHeader {
@@ -428,9 +351,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: stretch;
-  padding: 14px;
+  padding: 13px 16px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-xl);
+  border-radius: 20px;
   background: var(--train-surface);
 }
 
@@ -462,7 +385,7 @@
   margin: 0;
   overflow: hidden;
   color: var(--train-text);
-  font-size: 22px;
+  font-size: clamp(24px, 2.6vw, 34px);
   font-weight: 900;
   letter-spacing: -0.04em;
   text-overflow: ellipsis;
@@ -493,10 +416,12 @@
 .contentScroll {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   display: grid;
   gap: 12px;
   padding-right: 2px;
+  padding-bottom: 28px;
 }
 
 .metricGrid {
@@ -877,7 +802,6 @@
     padding: 12px;
   }
 
-  .header,
   .modelHeader {
     grid-template-columns: 1fr;
     flex-direction: column;
@@ -903,80 +827,9 @@
   }
 }
 
-/* v47 train models should scroll inside shell, not squeeze vertically */
-.page {
-  height: 100%;
-  min-height: min(760px, calc(100svh - var(--vc-topbar-height, 56px) - 36px));
-  padding: 12px;
-  gap: 12px;
-}
-
-.header {
-  padding: 13px 16px;
-  border-radius: 20px;
-}
-
-.header h1 {
-  font-size: clamp(24px, 2.6vw, 34px);
-}
-
-.shell {
-  min-height: 0;
-}
-
-.railBody,
-.contentScroll {
-  scrollbar-gutter: stable;
-}
 
 @media (max-height: 760px) {
   .page { min-height: 720px; }
-}
-
-/* v48 nav/scroll regression: the route content scrolls under sticky shell topbar.
-   Do not squeeze model graphs into the viewport. */
-.page {
-  height: auto !important;
-  min-height: 100% !important;
-  grid-template-rows: auto auto !important;
-  overflow: visible !important;
-  padding: clamp(10px, 1.2vw, 16px) !important;
-}
-
-.header {
-  flex-shrink: 0;
-}
-
-.shell {
-  min-height: 0 !important;
-  align-items: start !important;
-  overflow: visible !important;
-}
-
-.rail {
-  position: sticky;
-  top: 12px;
-  align-self: start;
-  max-height: calc(100svh - var(--vc-topbar-height, 56px) - 32px);
-}
-
-.railBody {
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-
-.main {
-  display: block !important;
-  min-height: 0 !important;
-  overflow: visible !important;
-}
-
-.contentScroll {
-  max-height: none !important;
-  min-height: 0 !important;
-  overflow: visible !important;
-  padding-bottom: 28px;
 }
 
 .metricGrid,

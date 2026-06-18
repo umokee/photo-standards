@@ -11,7 +11,7 @@ SUPERPOINT_INPUT_STRIDE = 8
 # Feature budgets are intentionally split by workload.
 #
 # * reference: computed once and cached for the standard image, so it can be dense;
-# * photo: one-off inspection image, allowed to be heavier than realtime;
+# * photo: ne-off inspection image, allowed to be heavier than realtime;
 # * video: live frame path, must stay small and predictable.
 SUPERPOINT_REFERENCE_MAX_SIDE: int | None = 2048
 SUPERPOINT_PHOTO_MAX_SIDE: int | None = 2048

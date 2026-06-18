@@ -1,4 +1,6 @@
 import { paths } from "@/app/paths";
+import { RouteHero } from "@/components/layouts/route-hero/route-hero";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import ImageWithFallback from "@/components/ui/image-with-fallback/image-with-fallback";
 import QueryState from "@/components/ui/query-state/query-state";
 import { CreateStandard } from "@/page-components/standards/components/create-standard";
@@ -71,14 +73,13 @@ export function Component() {
 
   return (
     <div className={p.referencesPageV25}>
-      <section className={p.assetsCommandBarV25}>
-        <div>
-          <span className={p.eyebrow}>Assets / References</span>
-          <h1>References</h1>
-          <p>Эталонные виды изделия. Каждый reference хранит фотографии, разметку и точку входа в редактор.</p>
-        </div>
-        <CreateStandard groupId={group.id} />
-      </section>
+      <RouteHero
+        eyebrow="Assets / References"
+        icon={Images}
+        title="References"
+        description="Эталонные виды изделия. Каждый reference хранит фотографии, разметку и точку входа в редактор."
+        actions={<CreateStandard groupId={group.id} />}
+      />
 
       <section className={p.referenceStatsV25}>
         <Stat icon={Images} value={group.standards.length} label="References" hint={`${readyCount} ready · ${emptyCount} empty`} />
@@ -119,14 +120,14 @@ export function Component() {
 
 function Stat({ icon: Icon, value, label, hint, suffix = "" }: { icon: typeof Images; value: number; label: string; hint: string; suffix?: string }) {
   return (
-    <div className={p.referenceStatCardV25}>
-      <Icon />
-      <div>
-        <strong>{value}{suffix}</strong>
-        <span>{label}</span>
-        <small>{hint}</small>
-      </div>
-    </div>
+    <MetricCard
+      className={p.referenceStatCardV25}
+      icon={Icon}
+      value={`${value}${suffix}`}
+      label={label}
+      hint={hint}
+      variant="valueFirst"
+    />
   );
 }
 

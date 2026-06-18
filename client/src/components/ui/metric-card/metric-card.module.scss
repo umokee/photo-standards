@@ -1,0 +1,36 @@
+.root {
+  min-width: 0;
+}
+
+.default {
+}
+
+.stacked {
+}
+
+.centered {
+}
+
+.valueFirst {
+}
+
+.icon {
+  flex: 0 0 auto;
+}
+
+.content {
+  min-width: 0;
+}
+
+.label,
+.value,
+.hint {
+  display: block;
+  min-width: 0;
+}
+
+.centered .label,
+.centered .value,
+.centered .hint {
+  text-align: center;
+}

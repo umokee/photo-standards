@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { CreateGroup } from "@/page-components/groups/components/create-group";
@@ -76,12 +77,12 @@ export function Component() {
         </header>
 
         <section className={`${s.summaryGrid} ${s.summaryGridSix}`}>
-          <Metric icon={FolderKanban} value={groups.length} label="Projects" hint={`${readyProjects} ready`} />
-          <Metric icon={Box} value={totals.references} label="References" hint="эталонные виды" />
-          <Metric icon={Image} value={totals.images} label="Images" hint={`${globalLabeling}% labeled`} />
-          <Metric icon={Tags} value={totals.classes} label="Classes" hint={`${totals.polygons} polygons`} />
-          <Metric icon={Sparkles} value={totals.models} label="Models" hint="trained/imported" />
-          <Metric icon={ListChecks} value={totals.runs} label="Runs" hint="inspection history" />
+          <MetricCard className={s.metricCard} icon={FolderKanban} value={groups.length} label="Projects" hint={`${readyProjects} ready`} />
+          <MetricCard className={s.metricCard} icon={Box} value={totals.references} label="References" hint="эталонные виды" />
+          <MetricCard className={s.metricCard} icon={Image} value={totals.images} label="Images" hint={`${globalLabeling}% labeled`} />
+          <MetricCard className={s.metricCard} icon={Tags} value={totals.classes} label="Classes" hint={`${totals.polygons} polygons`} />
+          <MetricCard className={s.metricCard} icon={Sparkles} value={totals.models} label="Models" hint="trained/imported" />
+          <MetricCard className={s.metricCard} icon={ListChecks} value={totals.runs} label="Runs" hint="inspection history" />
         </section>
 
         <section className={s.contentGrid}>
@@ -159,15 +160,6 @@ export function Component() {
           </aside>
         </section>
       </div>
-    </div>
-  );
-}
-
-function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: number; label: string; hint: string }) {
-  return (
-    <div className={s.metricCard}>
-      <Icon />
-      <div><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>
     </div>
   );
 }

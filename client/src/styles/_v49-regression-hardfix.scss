@@ -29,27 +29,9 @@ body.theme-dark,
   color-scheme: dark;
 }
 
-/* Main shell/content should own scrolling. Sidebar and topbar stay fixed/sticky. */
-:where([class*="PlatformShell"], [class*="platform-shell"], [class*="root"]):has(> aside):has(main) {
-  min-height: 100dvh;
-  overflow: hidden;
-}
-
 :where(main, [class*="content"]):not([class*="editor"]):not([class*="canvas"]) {
   min-width: 0;
   min-height: 0;
-}
-
-/* Full-page loading/error states: never occupy only one third of the screen. */
-:where([class*="query-state"], [class*="QueryState"], [class*="state--page"], [class*="state_page"]),
-:where([class*="state"])[class*="page"] {
-  width: 100% !important;
-}
-
-:where([class*="state--page"], [class*="state_page"]) {
-  min-height: calc(100dvh - var(--v49-topbar-h) - 2px) !important;
-  height: calc(100dvh - var(--v49-topbar-h) - 2px) !important;
-  border-radius: 0 !important;
 }
 
 html[data-theme="dark"] :where([class*="state"], [class*="State"]):not([class*="editor"]),

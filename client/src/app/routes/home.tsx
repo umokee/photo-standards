@@ -1,5 +1,6 @@
 import { paths } from "@/app/paths";
 import Button from "@/components/ui/button/button";
+import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { getInspectionHistoryQueryOptions } from "@/page-components/inspections/api/get-inspection-history";
 import { useQuery } from "@tanstack/react-query";
@@ -151,11 +152,5 @@ function Stat({ icon: Icon, value, label }: { icon: LucideIcon; value: number; l
 }
 
 function ChecklistItem({ done, title, text }: { done: boolean; title: string; text: string }) {
-  return (
-    <div className={done ? `${p.homeCheckItemV18} ${p.homeCheckDoneV18}` : p.homeCheckItemV18}>
-      <span>{done ? "✓" : "•"}</span>
-      <strong>{title}</strong>
-      <small>{text}</small>
-    </div>
-  );
+  return <ReadinessItem className={done ? `${p.homeCheckItemV18} ${p.homeCheckDoneV18}` : p.homeCheckItemV18} done={done} pendingIcon={CircleDot} title={title} description={text} variant="compact" />;
 }

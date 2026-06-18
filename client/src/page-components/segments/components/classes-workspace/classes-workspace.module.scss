@@ -1,6 +1,41 @@
 .page {
+  --cw-border: #eee4d6;
+  --cw-border-soft: #eadfce;
+  --cw-border-faint: #f0e7dc;
+  --cw-border-strong: #e9ddcb;
+  --cw-surface: color-mix(in srgb, var(--vc-surface, #fff) 92%, #fffdf6);
+  --cw-surface-2: color-mix(in srgb, var(--vc-field, #fff) 90%, #fbf7ee);
+  --cw-surface-3: color-mix(in srgb, var(--vc-surface-2, #f8fafc) 88%, #faf5ea);
+  --cw-shell: color-mix(in srgb, var(--vc-surface, #fff) 94%, transparent);
+  --cw-text: var(--vc-text, #17130f);
+  --cw-muted: var(--vc-muted, #766d60);
+  --cw-faint: var(--vc-faint, #a59a8c);
+  --cw-accent: var(--vc-accent, #042aff);
+  --cw-on-accent: var(--vc-on-accent, #fff);
+  --cw-danger: var(--vc-danger, #bd2c24);
+  --cw-danger-bg: var(--vc-danger-bg, #fff4f3);
+  --cw-danger-border: var(--vc-danger-border, #ffd8d4);
+  --cw-shadow: var(--vc-shadow-sm, 0 18px 44px rgba(43, 31, 12, 0.055));
+  --cw-hero-glow: rgba(225, 255, 37, 0.2);
   display: grid;
   gap: 18px;
+}
+
+:global(html[data-theme="dark"]) .page,
+:global(.theme-dark) .page {
+  --cw-border: var(--vc-line, rgba(255, 255, 255, 0.12));
+  --cw-border-soft: var(--vc-line, rgba(255, 255, 255, 0.12));
+  --cw-border-faint: var(--vc-line-soft, rgba(255, 255, 255, 0.075));
+  --cw-border-strong: var(--vc-line-strong, rgba(255, 255, 255, 0.18));
+  --cw-surface: var(--vc-surface, #101315);
+  --cw-surface-2: var(--vc-surface-2, #15191b);
+  --cw-surface-3: var(--vc-surface-3, #1a1e20);
+  --cw-shell: color-mix(in srgb, var(--vc-surface, #101315) 92%, transparent);
+  --cw-text: var(--vc-text, #f3f6f7);
+  --cw-muted: var(--vc-muted, #9ca5a8);
+  --cw-faint: var(--vc-faint, rgba(244, 247, 248, 0.52));
+  --cw-shadow: none;
+  --cw-hero-glow: rgba(223, 255, 33, 0.08);
 }
 
 .header {
@@ -9,12 +44,12 @@
   align-items: flex-start;
   gap: 18px;
   padding: 22px;
-  border: 1px solid #eee4d6;
+  border: 1px solid var(--cw-border);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 98% 0%, rgba(225, 255, 37, 0.2), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 253, 246, 0.96));
-  box-shadow: 0 18px 44px rgba(43, 31, 12, 0.055);
+    radial-gradient(circle at 98% 0%, var(--cw-hero-glow), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--cw-surface) 92%, transparent), var(--cw-surface));
+  box-shadow: var(--cw-shadow);
 }
 
 .header h2 {
@@ -22,13 +57,13 @@
   font-size: clamp(30px, 4vw, 54px);
   line-height: 0.95;
   letter-spacing: -0.065em;
-  color: #16120d;
+  color: var(--cw-text);
 }
 
 .header p {
   margin: 0;
   max-width: 760px;
-  color: #766d60;
+  color: var(--cw-muted);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -40,7 +75,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #7f7468;
+  color: var(--cw-muted);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: -0.02em;
@@ -50,7 +85,7 @@
 .inspectorHeader svg {
   width: 15px;
   height: 15px;
-  color: #042aff;
+  color: var(--cw-accent);
 }
 
 .headerStats {
@@ -64,14 +99,14 @@
   gap: 2px;
   min-width: 92px;
   padding: 10px 12px;
-  border: 1px solid #eee4d6;
+  border: 1px solid var(--cw-border);
   border-radius: 14px;
-  background: rgba(255, 253, 246, 0.74);
-  color: #817567;
+  background: color-mix(in srgb, var(--cw-surface) 82%, transparent);
+  color: var(--cw-muted);
 }
 
 .headerStats b {
-  color: #16120d;
+  color: var(--cw-text);
   font-size: 20px;
   line-height: 1;
 }
@@ -86,10 +121,10 @@
 
 .listPane,
 .inspectorPane {
-  border: 1px solid #eee4d6;
+  border: 1px solid var(--cw-border);
   border-radius: 22px;
-  background: rgba(255, 253, 246, 0.92);
-  box-shadow: 0 18px 44px rgba(43, 31, 12, 0.055);
+  background: color-mix(in srgb, var(--cw-surface) 96%, transparent);
+  box-shadow: var(--cw-shadow);
 }
 
 .listPane {
@@ -110,15 +145,15 @@
   gap: 9px;
   min-height: 44px;
   padding: 0 13px;
-  border: 1px solid #eadfce;
+  border: 1px solid var(--cw-border-soft);
   border-radius: 14px;
-  background: var(--vc-surface);
+  background: var(--cw-surface);
 }
 
 .search svg {
   width: 16px;
   height: 16px;
-  color: #9a8f81;
+  color: var(--cw-faint);
 }
 
 .search input,
@@ -129,14 +164,14 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: #17130f;
+  color: var(--cw-text);
   font: inherit;
   font-weight: 750;
 }
 
 .search input::placeholder,
 .field input::placeholder {
-  color: #a59a8c;
+  color: var(--cw-faint);
   font-weight: 650;
 }
 
@@ -146,10 +181,10 @@
 .iconButtonDanger,
 .deleteClassButton,
 .emptyState button {
-  border: 1px solid #e9ddcb;
+  border: 1px solid var(--cw-border-strong);
   border-radius: 13px;
-  background: var(--vc-surface);
-  color: #17130f;
+  background: var(--cw-surface);
+  color: var(--cw-text);
   font: inherit;
   font-size: 13px;
   font-weight: 900;
@@ -177,10 +212,10 @@
 }
 
 .toolButtonPrimary {
-  border-color: rgba(4, 42, 255, 0.26);
-  background: #042aff;
-  color: white;
-  box-shadow: 0 12px 24px rgba(4, 42, 255, 0.18);
+  border-color: color-mix(in srgb, var(--cw-accent) 30%, transparent);
+  background: var(--cw-accent);
+  color: var(--cw-on-accent);
+  box-shadow: var(--cw-shadow);
 }
 
 .toolButton:hover,
@@ -189,7 +224,7 @@
 .iconButtonDanger:hover,
 .emptyState button:hover {
   transform: translateY(-1px);
-  border-color: #d6c6b0;
+  border-color: var(--cw-border-strong);
   box-shadow: 0 12px 24px rgba(44, 32, 12, 0.08);
 }
 
@@ -205,7 +240,7 @@
 
 .categoryCard {
   overflow: hidden;
-  border: 1px solid #eadfce;
+  border: 1px solid var(--cw-border-soft);
   border-radius: 17px;
   background: var(--vc-surface);
 }
@@ -222,7 +257,7 @@
   align-items: center;
   min-height: 56px;
   padding: 9px 11px;
-  border-bottom: 1px solid #f0e7dc;
+  border-bottom: 1px solid var(--cw-border-faint);
 }
 
 .categoryHeader > span:not(.collapseButton) {
@@ -233,8 +268,8 @@
   height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #f5eddf;
-  color: #766b5d;
+  background: var(--cw-surface-3);
+  color: var(--cw-muted);
   font-size: 12px;
   font-weight: 900;
 }
@@ -253,7 +288,7 @@
 .collapseButton {
   border: 0;
   background: transparent;
-  color: #817568;
+  color: var(--cw-muted);
   cursor: pointer;
 }
 
@@ -264,7 +299,7 @@
 
 .iconButtonDanger,
 .deleteClassButton {
-  color: #bd2c24;
+  color: var(--cw-danger);
 }
 
 .classRows {
@@ -282,7 +317,7 @@
   padding: 0 11px;
   border: 1px solid transparent;
   border-radius: 13px;
-  background: #faf5ea;
+  background: var(--cw-surface-3);
   text-align: left;
 }
 
@@ -297,7 +332,7 @@
 }
 
 .classRowError {
-  border-color: #ffb3ad;
+  border-color: var(--cw-danger-border);
 }
 
 .classRow i,
@@ -317,14 +352,14 @@
 .classRow strong {
   min-width: 0;
   overflow: hidden;
-  color: #201a13;
+  color: var(--cw-text);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .classRow small {
-  color: #817567;
+  color: var(--cw-muted);
   font-size: 11px;
   font-weight: 850;
 }
@@ -332,13 +367,13 @@
 .categoryEmpty,
 .inlineError {
   padding: 9px 12px;
-  color: #918679;
+  color: var(--cw-faint);
   font-size: 12px;
   font-weight: 750;
 }
 
 .inlineError {
-  color: #bd2c24;
+  color: var(--cw-danger);
 }
 
 .emptyState,
@@ -348,12 +383,12 @@
   align-content: center;
   gap: 9px;
   min-height: 260px;
-  border: 1px dashed #e4d7c6;
+  border: 1px dashed var(--cw-border-soft);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(4, 42, 255, 0.045), transparent 34%),
-    var(--vc-surface);
-  color: #7d7164;
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cw-accent) 8%, transparent), transparent 34%),
+    var(--cw-surface);
+  color: var(--cw-muted);
   text-align: center;
 }
 
@@ -361,12 +396,12 @@
 .noSelection svg {
   width: 34px;
   height: 34px;
-  color: #042aff;
+  color: var(--cw-accent);
 }
 
 .emptyState strong,
 .noSelection strong {
-  color: #17130f;
+  color: var(--cw-text);
 }
 
 .emptyState span,
@@ -392,8 +427,8 @@
   align-items: center;
   min-height: 58px;
   padding: 0 18px;
-  border-bottom: 1px solid #eee4d6;
-  background: rgba(255, 253, 246, 0.78);
+  border-bottom: 1px solid var(--cw-border);
+  background: color-mix(in srgb, var(--cw-surface) 80%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -414,7 +449,7 @@
 }
 
 .field > span {
-  color: #877b6d;
+  color: var(--cw-muted);
   font-size: 11px;
   font-weight: 950;
   letter-spacing: 0.04em;
@@ -426,13 +461,13 @@
 .colorBox {
   min-height: 46px;
   padding: 0 13px;
-  border: 1px solid #e9ddcb;
+  border: 1px solid var(--cw-border-strong);
   border-radius: 13px;
-  background: #fbf7ee;
+  background: var(--cw-surface-2);
 }
 
 .field small {
-  color: #bd2c24;
+  color: var(--cw-danger);
   font-size: 12px;
   font-weight: 800;
 }
@@ -459,16 +494,16 @@
   display: flex;
   gap: 11px;
   padding: 13px;
-  border: 1px dashed #e7d9c6;
+  border: 1px dashed var(--cw-border-soft);
   border-radius: 14px;
-  background: var(--vc-surface-2);
-  color: #766b5d;
+  background: var(--cw-surface-2);
+  color: var(--cw-muted);
 }
 
 .usageBox svg {
   width: 18px;
   height: 18px;
-  color: #042aff;
+  color: var(--cw-accent);
   flex: 0 0 auto;
 }
 
@@ -478,7 +513,7 @@
 }
 
 .usageBox strong {
-  color: #17130f;
+  color: var(--cw-text);
   font-size: 13px;
 }
 
@@ -493,8 +528,8 @@
   justify-content: center;
   gap: 7px;
   min-height: 40px;
-  background: #fff4f3;
-  border-color: #ffd8d4;
+  background: var(--cw-danger-bg);
+  border-color: var(--cw-danger-border);
 }
 
 .saveBar {
@@ -502,8 +537,8 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 18px;
-  border-top: 1px solid #eee4d6;
-  background: rgba(255, 253, 246, 0.86);
+  border-top: 1px solid var(--cw-border);
+  background: color-mix(in srgb, var(--cw-surface) 88%, transparent);
 }
 
 @media (max-width: 1180px) {
@@ -529,310 +564,4 @@
   .toolbar {
     grid-template-columns: 1fr;
   }
-}
-
-/* v47 classes dark/surface regression hotfix */
-.page {
-  min-height: 100%;
-  padding: 12px;
-}
-
-:global(html[data-theme="dark"]) .header,
-:global(html[data-theme="dark"]) .listPane,
-:global(html[data-theme="dark"]) .inspectorPane,
-:global(html[data-theme="dark"]) .categoryCard,
-:global(html[data-theme="dark"]) .emptyState,
-:global(html[data-theme="dark"]) .noSelection {
-  border-color: var(--vc-line, #283035);
-  background: var(--vc-surface, #101315);
-  color: var(--vc-text, #f3f6f7);
-  box-shadow: none;
-}
-
-:global(html[data-theme="dark"]) .header {
-  background:
-    radial-gradient(circle at 98% 0%, rgba(223, 255, 33, 0.08), transparent 26%),
-    var(--vc-surface, #101315);
-}
-
-:global(html[data-theme="dark"]) .header h2,
-:global(html[data-theme="dark"]) .headerStats b,
-:global(html[data-theme="dark"]) .classRow strong,
-:global(html[data-theme="dark"]) .emptyState strong,
-:global(html[data-theme="dark"]) .noSelection strong,
-:global(html[data-theme="dark"]) .usageBox strong {
-  color: var(--vc-text, #f3f6f7);
-}
-
-:global(html[data-theme="dark"]) .header p,
-:global(html[data-theme="dark"]) .eyebrow,
-:global(html[data-theme="dark"]) .headerStats,
-:global(html[data-theme="dark"]) .listMeta,
-:global(html[data-theme="dark"]) .classRow small,
-:global(html[data-theme="dark"]) .categoryEmpty,
-:global(html[data-theme="dark"]) .field > span,
-:global(html[data-theme="dark"]) .usageBox {
-  color: var(--vc-muted, #9ca5a8);
-}
-
-:global(html[data-theme="dark"]) .headerStats span,
-:global(html[data-theme="dark"]) .search,
-:global(html[data-theme="dark"]) .toolButton,
-:global(html[data-theme="dark"]) .iconButton,
-:global(html[data-theme="dark"]) .field input,
-:global(html[data-theme="dark"]) .field select,
-:global(html[data-theme="dark"]) .colorBox,
-:global(html[data-theme="dark"]) .categoryHeader > span:not(.collapseButton),
-:global(html[data-theme="dark"]) .classRow,
-:global(html[data-theme="dark"]) .inspectorHeader,
-:global(html[data-theme="dark"]) .usageBox,
-:global(html[data-theme="dark"]) .saveBar {
-  border-color: var(--vc-line, #283035);
-  background: var(--vc-surface-2, #15191b);
-  color: var(--vc-text, #f3f6f7);
-}
-
-:global(html[data-theme="dark"]) .search input,
-:global(html[data-theme="dark"]) .categoryHeader input,
-:global(html[data-theme="dark"]) .field input,
-:global(html[data-theme="dark"]) .field select {
-  color: var(--vc-text, #f3f6f7);
-}
-
-:global(html[data-theme="dark"]) .deleteClassButton {
-  border-color: var(--vc-danger-border, rgba(255, 91, 102, 0.25));
-  background: var(--vc-danger-soft, rgba(255, 91, 102, 0.12));
-  color: var(--vc-danger, #ff5b66);
-}
-
-/* v49 real regression hardfix */
-.page {
-  min-height: 0;
-  height: 100%;
-  max-height: calc(100dvh - var(--v49-topbar-h, 64px));
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
-  padding: clamp(14px, 1.8vw, 24px);
-}
-
-.workspace {
-  min-height: 0;
-  height: 100%;
-  align-items: stretch;
-  overflow: hidden;
-}
-
-.listPane,
-.inspectorPane {
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-}
-
-.listPane {
-  display: flex;
-  flex-direction: column;
-}
-
-.categoryList {
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  padding-right: 6px;
-  max-height: calc(100dvh - var(--v49-topbar-h, 64px) - 290px);
-}
-
-.inspectorPane {
-  position: sticky;
-  top: 14px;
-  max-height: calc(100dvh - var(--v49-topbar-h, 64px) - 34px);
-  overflow-y: auto;
-}
-
-:global(html[data-theme="dark"]) .header,
-:global(html[data-theme="dark"]) .listPane,
-:global(html[data-theme="dark"]) .inspectorPane,
-:global(html[data-theme="dark"]) .categoryCard,
-:global(html[data-theme="dark"]) .classRow,
-:global(html[data-theme="dark"]) .search,
-:global(html[data-theme="dark"]) .field input,
-:global(html[data-theme="dark"]) .field select,
-:global(html[data-theme="dark"]) .colorBox,
-:global(html[data-theme="dark"]) .usageBox,
-:global(html[data-theme="dark"]) .saveBar,
-:global(.theme-dark) .header,
-:global(.theme-dark) .listPane,
-:global(.theme-dark) .inspectorPane,
-:global(.theme-dark) .categoryCard,
-:global(.theme-dark) .classRow,
-:global(.theme-dark) .search,
-:global(.theme-dark) .field input,
-:global(.theme-dark) .field select,
-:global(.theme-dark) .colorBox,
-:global(.theme-dark) .usageBox,
-:global(.theme-dark) .saveBar {
-  background: var(--vc-surface, #0f1314) !important;
-  border-color: var(--vc-line, rgba(255,255,255,.11)) !important;
-  color: var(--vc-text, #f4f7f8) !important;
-}
-
-:global(html[data-theme="dark"]) .headerStats span,
-:global(html[data-theme="dark"]) .categoryHeader,
-:global(html[data-theme="dark"]) .classRow:hover,
-:global(html[data-theme="dark"]) .classRowActive,
-:global(.theme-dark) .headerStats span,
-:global(.theme-dark) .categoryHeader,
-:global(.theme-dark) .classRow:hover,
-:global(.theme-dark) .classRowActive {
-  background: var(--vc-surface-2, #151a1b) !important;
-  border-color: var(--vc-line, rgba(255,255,255,.12)) !important;
-}
-
-:global(html[data-theme="dark"]) .header h2,
-:global(html[data-theme="dark"]) .headerStats b,
-:global(html[data-theme="dark"]) .classRow strong,
-:global(html[data-theme="dark"]) .usageBox strong,
-:global(.theme-dark) .header h2,
-:global(.theme-dark) .headerStats b,
-:global(.theme-dark) .classRow strong,
-:global(.theme-dark) .usageBox strong {
-  color: var(--vc-text, #f4f7f8) !important;
-}
-
-:global(html[data-theme="dark"]) .header p,
-:global(html[data-theme="dark"]) .classRow small,
-:global(html[data-theme="dark"]) .usageBox span,
-:global(.theme-dark) .header p,
-:global(.theme-dark) .classRow small,
-:global(.theme-dark) .usageBox span {
-  color: var(--vc-muted, rgba(244,247,248,.62)) !important;
-}
-
-@media (max-width: 1180px) {
-  .page {
-    height: auto;
-    max-height: none;
-    overflow-y: auto;
-  }
-
-  .workspace,
-  .listPane,
-  .inspectorPane {
-    overflow: visible;
-    max-height: none;
-  }
-
-  .categoryList {
-    max-height: none;
-  }
-}
-
-/* v50 classes scroll and theme fixes */
-.page {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  color: var(--vc-text);
-}
-
-.header,
-.listPane,
-.inspectorPane,
-.categoryCard,
-.search,
-.categoryHeader,
-.field input,
-.field select,
-.colorBox,
-.usageBox,
-.saveBar {
-  border-color: var(--vc-line) !important;
-  background: var(--vc-surface) !important;
-  color: var(--vc-text) !important;
-  box-shadow: none !important;
-}
-
-.header h2,
-.headerStats b,
-.categoryHeader input,
-.field input,
-.field select,
-.usageBox strong,
-.categoryClass strong,
-.inspectorHeader strong,
-.listMeta strong {
-  color: var(--vc-text) !important;
-}
-
-.header p,
-.eyebrow,
-.headerStats,
-.listMeta,
-.inspectorHeader span,
-.field > span,
-.usageBox,
-.categoryClass small,
-.search input::placeholder,
-.field input::placeholder {
-  color: var(--vc-muted) !important;
-}
-
-.workspace {
-  min-height: 0;
-  height: min(760px, calc(100dvh - var(--vc-topbar-height, 64px) - 190px));
-  align-items: stretch !important;
-  overflow: hidden;
-}
-
-.listPane,
-.inspectorPane {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.listPane {
-  display: flex;
-  flex-direction: column;
-}
-
-.categoryList {
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 6px;
-  scrollbar-gutter: stable;
-}
-
-.inspectorPane {
-  position: sticky;
-  top: calc(var(--vc-topbar-height, 64px) + 12px);
-  max-height: calc(100dvh - var(--vc-topbar-height, 64px) - 24px);
-  display: flex;
-  flex-direction: column;
-}
-
-.inspectorForm,
-.emptyState {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.toolButton,
-.iconButton,
-.deleteClassButton,
-.emptyState button {
-  background: var(--vc-field) !important;
-  color: var(--vc-text) !important;
-  border-color: var(--vc-line) !important;
-}
-
-.toolButtonPrimary {
-  background: var(--vc-accent) !important;
-  color: var(--vc-on-accent) !important;
-  border-color: transparent !important;
-}
-
-.deleteClassButton {
-  color: var(--vc-danger) !important;
-  background: var(--vc-danger-bg) !important;
 }

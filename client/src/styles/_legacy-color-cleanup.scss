@@ -1,31 +1,4 @@
 /* v50 global legacy color cleanup. Keep this last until old modules are deleted. */
-html,
-body,
-#root {
-  background: var(--vc-page) !important;
-  color: var(--vc-text);
-}
-
-:where(a, button, input, select, textarea) {
-  font: inherit;
-}
-
-:where(input, select, textarea) {
-  color: var(--vc-text);
-  background: var(--vc-field);
-  border-color: var(--vc-line);
-}
-
-:root[data-theme="dark"] :where(
-  [class*="page"], [class*="Page"],
-  [class*="workspace"], [class*="Workspace"],
-  [class*="shell"], [class*="Shell"],
-  [class*="layout"], [class*="Layout"]
-) {
-  background-color: var(--vc-page) !important;
-  color: var(--vc-text);
-}
-
 :root[data-theme="dark"] :where(
   [class*="hero"], [class*="Hero"],
   [class*="card"], [class*="Card"],
@@ -97,26 +70,6 @@ body,
 
 :root[data-theme="dark"] :where([class*="success"], [class*="Success"], [class*="ok"], [class*="Ok"]) {
   color: var(--vc-success);
-}
-
-/* Camera / monitoring pages had large white route wrappers. */
-:root[data-theme="dark"] :where(
-  [class*="cameras"], [class*="Cameras"],
-  [class*="camera"], [class*="Camera"],
-  [class*="monitor"], [class*="Monitor"],
-  [class*="settings"], [class*="Settings"]
-) {
-  background-color: var(--vc-surface) !important;
-  color: var(--vc-text);
-}
-
-/* Project portal is glass in both themes, not a solid black slab. */
-[class*="projectMenuPortalV50"] {
-  background: rgba(255, 255, 255, 0.62) !important;
-}
-
-:root[data-theme="dark"] [class*="projectMenuPortalV50"] {
-  background: rgba(15, 19, 21, 0.58) !important;
 }
 
 /* Continue arrow should not create a separate square. */

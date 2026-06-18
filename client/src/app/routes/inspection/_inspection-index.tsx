@@ -1,4 +1,5 @@
 import { inspectionModePaths, paths, type InspectionModePath } from "@/app/paths";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import type { GroupListItem } from "@/types/contracts";
@@ -62,9 +63,9 @@ export function Component() {
           </p>
         </div>
         <div className={s.heroStats}>
-          <Metric icon={ShieldCheck} value={readyGroups} label="ready projects" />
-          <Metric icon={Image} value={totalReferences} label="references" />
-          <Metric icon={ListChecks} value={totalRuns} label="runs" />
+          <MetricCard className={s.metric} icon={ShieldCheck} value={readyGroups} label="ready projects" variant="valueFirst" />
+          <MetricCard className={s.metric} icon={Image} value={totalReferences} label="references" variant="valueFirst" />
+          <MetricCard className={s.metric} icon={ListChecks} value={totalRuns} label="runs" variant="valueFirst" />
         </div>
       </section>
 
@@ -154,15 +155,5 @@ function ProjectCard({ group, mode }: { group: GroupListItem; mode: InspectionMo
         <span>{group.stats.inspections_count} runs</span>
       </div>
     </Link>
-  );
-}
-
-function Metric({ icon: Icon, value, label }: { icon: LucideIcon; value: number; label: string }) {
-  return (
-    <div className={s.metric}>
-      <Icon />
-      <b>{value}</b>
-      <span>{label}</span>
-    </div>
   );
 }

@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import type { GroupListItem } from "@/types/contracts";
@@ -41,10 +42,10 @@ export function Component() {
       </header>
 
       <section className={p.trainMetricGridV27}>
-        <Metric icon={Database} value={groups.length} label="Projects" hint={`${trainingReady} train-ready`} />
-        <Metric icon={Image} value={totalImages} label="Images" hint={`${percent(totalLabeled, totalImages)}% labeled`} />
-        <Metric icon={Tags} value={groups.reduce((sum, group) => sum + group.stats.segment_classes_count, 0)} label="Classes" hint="segment labels" />
-        <Metric icon={Brain} value={totalModels} label="Models" hint="weights" />
+        <MetricCard className={p.trainMetricV27} icon={Database} value={groups.length} label="Projects" hint={`${trainingReady} train-ready`} />
+        <MetricCard className={p.trainMetricV27} icon={Image} value={totalImages} label="Images" hint={`${percent(totalLabeled, totalImages)}% labeled`} />
+        <MetricCard className={p.trainMetricV27} icon={Tags} value={groups.reduce((sum, group) => sum + group.stats.segment_classes_count, 0)} label="Classes" hint="segment labels" />
+        <MetricCard className={p.trainMetricV27} icon={Brain} value={totalModels} label="Models" hint="weights" />
       </section>
 
       <QueryState
@@ -91,17 +92,6 @@ export function Component() {
           </div>
         </details>
       </QueryState>
-    </div>
-  );
-}
-
-function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: string | number; label: string; hint: string }) {
-  return (
-    <div className={p.trainMetricV27}>
-      <Icon />
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{hint}</small>
     </div>
   );
 }

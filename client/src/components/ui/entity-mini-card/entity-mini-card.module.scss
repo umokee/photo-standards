@@ -1,0 +1,44 @@
+.root {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.title,
+.meta,
+.trailing {
+  display: block;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 900;
+}
+
+.meta {
+  color: var(--vc-muted, #64748b);
+}
+
+.trailing {
+  justify-self: end;
+}
+
+.link {
+  text-decoration: none;
+}

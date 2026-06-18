@@ -246,41 +246,6 @@ html[data-theme="dark"] [class*="nextActionItemV19"] {
   background: var(--vc-surface-2) !important;
 }
 
-/* Sidebar strict pass ----------------------------------------------------- */
-[class*="projectMenuV19"] {
-  position: static !important;
-  margin-top: 6px !important;
-  max-height: 180px !important;
-  overflow: auto !important;
-  background: var(--vc-surface-2) !important;
-  border-color: var(--vc-border) !important;
-  box-shadow: none !important;
-}
-
-[class*="projectSwitcherV19"],
-[class*="projectMenuV19"] a,
-[class*="createFirstProjectV19"] {
-  background: var(--vc-surface-2) !important;
-  border-color: var(--vc-border) !important;
-  color: var(--vc-text) !important;
-}
-
-[class*="projectMenuV19"] a:hover,
-[class*="projectMenuItemActiveV19"],
-[class*="workspaceLinkActiveV19"],
-[class*="workspaceLinkV19"]:hover,
-[class*="emptyTreeLinkV19"]:hover {
-  background: var(--vc-accent-soft) !important;
-  color: var(--vc-accent) !important;
-}
-
-[class*="treePlusV19"] {
-  background: var(--vc-surface-3) !important;
-  border-color: var(--vc-border) !important;
-  color: var(--vc-accent) !important;
-  box-shadow: none !important;
-}
-
 /* Tables / menus / modals ------------------------------------------------- */
 html[data-theme="dark"] [role="dialog"],
 html[data-theme="dark"] [class*="Modal"],

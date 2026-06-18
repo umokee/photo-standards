@@ -1,0 +1,64 @@
+.root {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  color: var(--vc-text, #111827);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.main {
+  min-width: 0;
+}
+
+.title,
+.description,
+.value {
+  display: block;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 850;
+}
+
+.description {
+  color: var(--vc-muted, #64748b);
+}
+
+.value {
+  font-weight: 900;
+}
+
+.trailing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.compact {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.valueRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.done {
+}
+
+.pending {
+}
+
+.link {
+  text-decoration: none;
+}

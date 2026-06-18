@@ -1,0 +1,58 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--chip-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
+  border-radius: 999px;
+  background: var(--chip-bg, var(--vc-surface-2, #f8fafc));
+  color: var(--chip-fg, var(--vc-muted, #64748b));
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.uppercase {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.neutral {
+  --chip-bg: var(--vc-surface-2, #f8fafc);
+  --chip-fg: var(--vc-muted, #64748b);
+  --chip-border: var(--vc-line, rgba(15, 23, 42, 0.12));
+}
+
+.accent {
+  --chip-bg: color-mix(in srgb, var(--vc-accent, #0b46ff) 10%, var(--vc-surface, #ffffff));
+  --chip-fg: var(--vc-accent, #0b46ff);
+  --chip-border: color-mix(in srgb, var(--vc-accent, #0b46ff) 30%, transparent);
+}
+
+.success {
+  --chip-bg: color-mix(in srgb, var(--vc-success, #16a34a) 9%, var(--vc-surface, #ffffff));
+  --chip-fg: var(--vc-success, #16a34a);
+  --chip-border: color-mix(in srgb, var(--vc-success, #16a34a) 28%, transparent);
+}
+
+.warning {
+  --chip-bg: color-mix(in srgb, var(--vc-warning, #d97706) 10%, var(--vc-surface, #ffffff));
+  --chip-fg: var(--vc-warning, #d97706);
+  --chip-border: color-mix(in srgb, var(--vc-warning, #d97706) 28%, transparent);
+}
+
+.danger {
+  --chip-bg: color-mix(in srgb, var(--vc-danger, #dc2626) 9%, var(--vc-surface, #ffffff));
+  --chip-fg: var(--vc-danger, #dc2626);
+  --chip-border: color-mix(in srgb, var(--vc-danger, #dc2626) 28%, transparent);
+}

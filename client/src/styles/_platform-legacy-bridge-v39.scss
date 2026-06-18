@@ -38,9 +38,6 @@
 :where(
   [class*="homeCockpitV18"],
   [class*="homePanelV18"],
-  [class*="projectSwitcherV19"],
-  [class*="projectMenuV19"],
-  [class*="workspaceLinkV19"],
   [class*="treeHeader"],
   [class*="navItem"],
   [class*="topbarCenter"]
@@ -57,9 +54,7 @@ html[data-theme="dark"] :where(
   [class*="classRow"],
   [class*="modelCard"],
   [class*="runCard"],
-  [class*="inspectCard"],
-  [class*="projectSwitcherV19"],
-  [class*="projectMenuV19"]
+  [class*="inspectCard"]
 ) {
   background: var(--vc-surface-2) !important;
   color: var(--vc-text) !important;

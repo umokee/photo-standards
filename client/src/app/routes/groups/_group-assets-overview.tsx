@@ -1,6 +1,7 @@
 import { paths } from "@/app/paths";
+import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
 import QueryState from "@/components/ui/query-state/query-state";
-import { ArrowRight, CheckCircle2, CircleDashed, Image, Images, Layers3, ListChecks, Sparkles, Tags, type LucideIcon } from "lucide-react";
+import { ArrowRight, Image, Images, Layers3, ListChecks, Sparkles, Tags, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useGroupDetailOutletContext } from "./_group-detail";
 import p from "../platform-pages.module.scss";
@@ -56,13 +57,7 @@ export function Component() {
 
           <div className={p.assetChecklistCompactV23}>
             {readinessChecks.map((item) => (
-              <div key={item.title}>
-                {item.done ? <CheckCircle2 /> : <CircleDashed />}
-                <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.text}</small>
-                </span>
-              </div>
+              <ReadinessItem key={item.title} done={item.done} title={item.title} description={item.text} variant="compact" />
             ))}
           </div>
         </article>

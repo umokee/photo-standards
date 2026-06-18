@@ -1,10 +1,14 @@
 import { paths } from "@/app/paths";
+import { EmptyStateCard } from "@/components/ui/empty-state-card/empty-state-card";
+import { EntityMiniCard } from "@/components/ui/entity-mini-card/entity-mini-card";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
+import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
 import { ExportModel } from "@/page-components/models/components/export-model/export-model";
 import { ImportModel } from "@/page-components/models/components/import-model/import-model";
 import { TrainModel } from "@/page-components/models/components/train-model/train-model";
 import { isActiveTaskStatus } from "@/page-components/tasks/lib/task-helpers";
 import { formatDate } from "@/utils/formatDate";
-import { Activity, Brain, CheckCircle2, CircleDashed, Database, Image, ListChecks, Rocket, Tags, type LucideIcon } from "lucide-react";
+import { Activity, Brain, CircleDashed, Database, Image, ListChecks, Rocket, Tags } from "lucide-react";
 import { Link } from "react-router-dom";
 import p from "../platform-pages.module.scss";
 import { useTrainingModelOutletContext } from "./_training-detail";
@@ -59,10 +63,10 @@ export function Component() {
 
       <div className={p.trainBodyScrollV29}>
         <section className={p.trainMetricGridV27}>
-          <Metric icon={Rocket} value={`${readiness}%`} label="Readiness" hint={canTrain ? "ready to train" : "needs assets"} />
-          <Metric icon={Image} value={`${labeled}%`} label="Labeled" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} images`} />
-          <Metric icon={Brain} value={models.length} label="Models" hint={activeModel ? "active selected" : "no active model"} />
-          <Metric icon={Activity} value={tasks.length} label="Jobs" hint={`${tasks.filter((task) => isActiveTaskStatus(task.status)).length} active`} />
+          <MetricCard className={p.trainMetricV27} icon={Rocket} value={`${readiness}%`} label="Readiness" hint={canTrain ? "ready to train" : "needs assets"} />
+          <MetricCard className={p.trainMetricV27} icon={Image} value={`${labeled}%`} label="Labeled" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} images`} />
+          <MetricCard className={p.trainMetricV27} icon={Brain} value={models.length} label="Models" hint={activeModel ? "active selected" : "no active model"} />
+          <MetricCard className={p.trainMetricV27} icon={Activity} value={tasks.length} label="Jobs" hint={`${tasks.filter((task) => isActiveTaskStatus(task.status)).length} active`} />
         </section>
 
         <section className={p.trainWorkspaceGridV27}>
@@ -77,11 +81,11 @@ export function Component() {
             </div>
 
             <div className={p.trainReadinessListV27}>
-              <ReadinessItem done={group.stats.standards_count > 0} title="References exist" text={`${group.stats.standards_count} reference views`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem done={group.stats.images_count > 0} title="Images uploaded" text={`${group.stats.images_count} images in annotation queue`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem done={group.stats.segment_classes_count > 0} title="Classes configured" text={`${group.stats.segment_classes_count} classes in Assets / Classes`} to={paths.assetClasses(group.id)} />
-              <ReadinessItem done={group.stats.annotated_images_count > 0} title="Annotations exist" text={`${labeled}% labeled images`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem done={models.length > 0} title="Model exists" text={`${models.length} trained/imported models`} to={paths.trainingModels(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.standards_count > 0} title="References exist" description={`${group.stats.standards_count} reference views`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.images_count > 0} title="Images uploaded" description={`${group.stats.images_count} images in annotation queue`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.segment_classes_count > 0} title="Classes configured" description={`${group.stats.segment_classes_count} classes in Assets / Classes`} to={paths.assetClasses(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.annotated_images_count > 0} title="Annotations exist" description={`${labeled}% labeled images`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={models.length > 0} title="Model exists" description={`${models.length} trained/imported models`} to={paths.trainingModels(group.id)} />
             </div>
           </main>
 
@@ -89,59 +93,36 @@ export function Component() {
             <section className={p.trainRailCardV27}>
               <span className={p.eyebrow}><Brain /> Active model</span>
               {activeModel ? (
-                <Link to={paths.trainingModel(group.id, activeModel.id)} className={p.trainModelMiniV27}>
-                  <Brain />
-                  <div>
-                    <strong>{activeModel.architecture} {activeModel.version ? `v${activeModel.version}` : ""}</strong>
-                    <span>{activeModel.imgsz}px · {activeModel.epochs ?? "—"} epochs · {activeModel.num_classes ?? group.stats.segment_classes_count} classes</span>
-                  </div>
-                </Link>
+                <EntityMiniCard
+                  to={paths.trainingModel(group.id, activeModel.id)}
+                  className={p.trainModelMiniV27}
+                  icon={Brain}
+                  title={`${activeModel.architecture} ${activeModel.version ? `v${activeModel.version}` : ""}`}
+                  meta={`${activeModel.imgsz}px · ${activeModel.epochs ?? "—"} epochs · ${activeModel.num_classes ?? group.stats.segment_classes_count} classes`}
+                />
               ) : (
-                <div className={p.trainEmptyV27}><CircleDashed /><strong>No active model</strong><span>Train/import model, then activate it for Inspect.</span></div>
+                <EmptyStateCard className={p.trainEmptyV27} icon={CircleDashed} title="No active model" description="Train/import model, then activate it for Inspect." />
               )}
             </section>
 
             <section className={p.trainRailCardV27}>
               <span className={p.eyebrow}><Activity /> Latest job</span>
               {latestTask ? (
-                <Link to={paths.trainingRuns(group.id)} className={p.trainTaskMiniV27}>
-                  <Activity />
-                  <div>
-                    <strong>{latestTask.type}</strong>
-                    <span>{latestTask.status} · {latestTask.stage ?? "queued"} · {formatDate(latestTask.created_at)}</span>
-                  </div>
-                  <b>{latestTask.progress_percent ?? 0}%</b>
-                </Link>
+                <EntityMiniCard
+                  to={paths.trainingRuns(group.id)}
+                  className={p.trainTaskMiniV27}
+                  icon={Activity}
+                  title={latestTask.type}
+                  meta={`${latestTask.status} · ${latestTask.stage ?? "queued"} · ${formatDate(latestTask.created_at)}`}
+                  trailing={<b>{latestTask.progress_percent ?? 0}%</b>}
+                />
               ) : (
-                <div className={p.trainEmptyV27}><CircleDashed /><strong>No training jobs</strong><span>Jobs appear after Train/Import/Export.</span></div>
+                <EmptyStateCard className={p.trainEmptyV27} icon={CircleDashed} title="No training jobs" description="Jobs appear after Train/Import/Export." />
               )}
             </section>
           </aside>
         </section>
       </div>
     </div>
-  );
-}
-
-function Metric({ icon: Icon, value, label, hint }: { icon: LucideIcon; value: string | number; label: string; hint: string }) {
-  return (
-    <div className={p.trainMetricV27}>
-      <Icon />
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{hint}</small>
-    </div>
-  );
-}
-
-function ReadinessItem({ done, title, text, to }: { done: boolean; title: string; text: string; to: string }) {
-  return (
-    <Link to={to} className={`${p.trainReadinessItemV27} ${done ? p.trainReadinessDoneV27 : ""}`}>
-      {done ? <CheckCircle2 /> : <CircleDashed />}
-      <div>
-        <strong>{title}</strong>
-        <span>{text}</span>
-      </div>
-    </Link>
   );
 }

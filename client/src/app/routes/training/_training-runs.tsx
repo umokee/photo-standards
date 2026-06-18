@@ -1,4 +1,8 @@
 import { paths } from "@/app/paths";
+import { EmptyStateCard } from "@/components/ui/empty-state-card/empty-state-card";
+import { RouteHero } from "@/components/layouts/route-hero/route-hero";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
+import { StatusChip, type StatusChipTone } from "@/components/ui/status-chip/status-chip";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useCancelTask } from "@/page-components/tasks/api/cancel-task";
 import { usePauseTask } from "@/page-components/tasks/api/pause-task";
@@ -41,7 +45,7 @@ type TaskFilter = "all" | "active" | "failed" | "finished" | "cancelled";
 type SortMode = "latest" | "oldest" | "progress" | "priority";
 type JobBucket = "live" | "failed" | "history";
 
-type StatusTone = "live" | "paused" | "success" | "failed" | "cancelled" | "neutral";
+type StatusTone = "warning" | "success" | "danger" | "neutral";
 
 type StatusMeta = {
   label: string;
@@ -74,10 +78,10 @@ function isFinishedTask(task: Pick<TaskResponse, "status">) {
 
 function statusMeta(status: string): StatusMeta {
   if (status === "succeeded") return { label: "Succeeded", tone: "success", icon: CheckCircle2 };
-  if (status === "failed") return { label: "Failed", tone: "failed", icon: XCircle };
-  if (status === "cancelled") return { label: "Cancelled", tone: "cancelled", icon: Trash2 };
-  if (status === "paused") return { label: "Paused", tone: "paused", icon: Pause };
-  if (isActiveTaskStatus(status)) return { label: status, tone: "live", icon: RotateCcw };
+  if (status === "failed") return { label: "Failed", tone: "danger", icon: XCircle };
+  if (status === "cancelled") return { label: "Cancelled", tone: "danger", icon: Trash2 };
+  if (status === "paused") return { label: "Paused", tone: "warning", icon: Pause };
+  if (isActiveTaskStatus(status)) return { label: status, tone: "warning", icon: RotateCcw };
   return { label: status || "unknown", tone: "neutral", icon: CircleDashed };
 }
 
@@ -248,23 +252,24 @@ export function Component() {
 
   return (
     <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.headerCopy}>
-          <span className={s.eyebrow}><Activity /> Train / Runs</span>
-          <h1>Jobs registry</h1>
-          <p>Очередь обучения, импорта и служебных задач проекта. Метрики модели берутся из backend/model endpoint, а Runs отвечает только за состояние jobs.</p>
-        </div>
-        <div className={s.headerActions}>
+      <RouteHero
+        eyebrow="Train / Runs"
+        icon={Activity}
+        title="Jobs registry"
+        description="Очередь обучения, импорта и служебных задач проекта. Метрики модели берутся из backend/model endpoint, а Runs отвечает только за состояние jobs."
+        actions={(
+          <>
           <Link to={paths.trainingModels(group.id)} className={s.secondaryAction}><Brain /> Models</Link>
           <Link to={paths.trainingGroup(group.id)} className={s.secondaryAction}><ListChecks /> Overview</Link>
-        </div>
-      </header>
+          </>
+        )}
+      />
 
       <section className={s.metricsGrid} aria-label="Training jobs summary">
-        <MetricCard icon={Activity} label="Total jobs" value={tasks.length} hint={`${totals.withModel} linked to models`} />
-        <MetricCard icon={RotateCcw} label="Live" value={totals.live} hint="running / queued / paused" tone="live" />
-        <MetricCard icon={CheckCircle2} label="Succeeded" value={totals.succeeded} hint="completed jobs" tone="success" />
-        <MetricCard icon={XCircle} label="Failed" value={totals.failed} hint={`${totals.cancelled} cancelled`} tone="failed" />
+        <MetricCard className={s.metricCard} icon={Activity} label="Total jobs" value={tasks.length} hint={`${totals.withModel} linked to models`} />
+        <MetricCard className={s.metricCard} icon={RotateCcw} label="Live" value={totals.live} hint="running / queued / paused" tone="warning" />
+        <MetricCard className={s.metricCard} icon={CheckCircle2} label="Succeeded" value={totals.succeeded} hint="completed jobs" tone="success" />
+        <MetricCard className={s.metricCard} icon={XCircle} label="Failed" value={totals.failed} hint={`${totals.cancelled} cancelled`} tone="danger" />
       </section>
 
       <section className={s.workbench}>
@@ -330,11 +335,11 @@ export function Component() {
             emptyDescription="Измени фильтр или запусти обучение/импорт модели — задачи появятся здесь."
           >
             <div className={s.jobsScroller}>
-              <TaskGroup title="Live / paused" icon={RefreshCw} count={buckets.live.length} tone="live">
+              <TaskGroup title="Live / paused" icon={RefreshCw} count={buckets.live.length} tone="warning">
                 {buckets.live.length ? buckets.live.map(renderTask) : <EmptyLine text="Активных задач нет." />}
               </TaskGroup>
 
-              <TaskGroup title="Failed" icon={AlertTriangle} count={buckets.failed.length} tone="failed">
+              <TaskGroup title="Failed" icon={AlertTriangle} count={buckets.failed.length} tone="danger">
                 {buckets.failed.length ? buckets.failed.map(renderTask) : <EmptyLine text="Ошибок в текущем фильтре нет." />}
               </TaskGroup>
 
@@ -354,11 +359,12 @@ export function Component() {
           {selectedTask ? (
             <TaskInspector task={selectedTask} model={selectedModel} groupId={group.id} />
           ) : (
-            <div className={s.emptyInspector}>
-              <CircleDashed />
-              <strong>No job selected</strong>
-              <span>Выбери задачу в списке, чтобы посмотреть payload, result, timeline и linked model.</span>
-            </div>
+            <EmptyStateCard
+              className={s.emptyInspector}
+              icon={CircleDashed}
+              title="No job selected"
+              description="Выбери задачу в списке, чтобы посмотреть payload, result, timeline и linked model."
+            />
           )}
         </aside>
       </section>
@@ -366,28 +372,9 @@ export function Component() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, hint, tone = "neutral" }: { icon: LucideIcon; label: string; value: string | number; hint: string; tone?: StatusTone }) {
-  return (
-    <article className={s.metricCard} data-tone={tone}>
-      <Icon />
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-      <small>{hint}</small>
-    </article>
-  );
-}
-
 function StatusPill({ status }: { status: string }) {
   const meta = statusMeta(status);
-  const Icon = meta.icon;
-  return (
-    <span className={s.statusPill} data-tone={meta.tone}>
-      <Icon />
-      {meta.label}
-    </span>
-  );
+  return <StatusChip tone={meta.tone as StatusChipTone} icon={meta.icon}>{meta.label}</StatusChip>;
 }
 
 function TaskGroup({ title, icon: Icon, count, tone = "neutral", children }: { title: string; icon: LucideIcon; count: number; tone?: StatusTone; children: ReactNode }) {

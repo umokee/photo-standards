@@ -1,5 +1,8 @@
 import { paths } from "@/app/paths";
+import { RouteHero } from "@/components/layouts/route-hero/route-hero";
+import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
+import { StatusChip, type StatusChipTone } from "@/components/ui/status-chip/status-chip";
 import { useActivateModel } from "@/page-components/models/api/activate-model";
 import { useDeleteModel } from "@/page-components/models/api/delete-model";
 import { useGetModel } from "@/page-components/models/api/get-ml";
@@ -23,6 +26,7 @@ import {
   Brain,
   CalendarClock,
   CheckCircle2,
+  Clock3,
   ChevronDown,
   ChevronRight,
   CircleDashed,
@@ -118,9 +122,20 @@ function taskFor(model: MlModel, tasks: TaskResponse[]) {
 function statusFor(model: MlModel, tasks: TaskResponse[]) {
   const task = taskFor(model, tasks);
   if (model.is_active) return "active";
-  if (task && isActiveTaskStatus(task.status)) return task.status;
+  if (task) return task.status;
   if (model.trained_at || model.weights_path) return "trained";
   return "draft";
+}
+
+function modelStatusMeta(model: MlModel, tasks: TaskResponse[]) {
+  const status = statusFor(model, tasks);
+
+  if (status === "active") return { label: "active", tone: "accent" as StatusChipTone, icon: ShieldCheck };
+  if (status === "trained" || status === "succeeded") return { label: status, tone: "success" as StatusChipTone, icon: CheckCircle2 };
+  if (status === "failed" || status === "cancelled") return { label: status, tone: "danger" as StatusChipTone, icon: Trash2 };
+  if (status === "paused") return { label: status, tone: "warning" as StatusChipTone, icon: Pause };
+  if (isActiveTaskStatus(status)) return { label: status, tone: "warning" as StatusChipTone, icon: RefreshCw };
+  return { label: status, tone: "neutral" as StatusChipTone, icon: Clock3 };
 }
 
 function isModelVisible(model: MlModel, tasks: TaskResponse[], filter: FilterMode, query: string) {
@@ -218,7 +233,7 @@ function sourceLabel(source: SeriesSource | null | undefined) {
 }
 
 function SourcePill({ source }: { source: SeriesSource | null | undefined }) {
-  return <span className={s.sourcePill}>{sourceLabel(source)}</span>;
+  return <StatusChip tone="neutral">{sourceLabel(source)}</StatusChip>;
 }
 
 function CollapsibleBlock({
@@ -282,16 +297,6 @@ function ChartCard({ model, history, chart }: { model: MlModel | null; history?:
         <span className={s.legendItem}><i className={s.legendSwatch} /> {model ? modelName(model) : "model"}</span>
         {series ? <span>epoch {series.epochs[0]} → {series.epochs[series.epochs.length - 1]}</span> : null}
       </div>
-    </article>
-  );
-}
-
-function MetricCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <article className={s.metricCard}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{hint}</small>
     </article>
   );
 }
@@ -360,7 +365,7 @@ function CompareBlock({ models }: { models: MlModel[] }) {
         <article className={s.compareCard} key={model.id}>
           <header>
             <strong>{modelName(model)}</strong>
-            {model.is_active ? <span className={s.activePill}>active</span> : null}
+            {model.is_active ? <StatusChip tone="accent" icon={ShieldCheck}>active</StatusChip> : null}
           </header>
           <div className={s.compareBars}>
             {metricKeys.map((key) => {
@@ -449,18 +454,19 @@ export function Component() {
 
   return (
     <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.headerMain}>
-          <span className={s.eyebrow}><Brain /> Train / Models</span>
-          <h1>Model laboratory</h1>
-          <p>Строгая страница анализа модели: список моделей слева, метрики и графики справа. История метрик запрашивается при открытии модели и может обновляться во время обучения.</p>
-        </div>
-        <div className={s.headerActions}>
+      <RouteHero
+        eyebrow="Train / Models"
+        icon={Brain}
+        title="Model laboratory"
+        description="Строгая страница анализа модели: список моделей слева, метрики и графики справа. История метрик запрашивается при открытии модели и может обновляться во время обучения."
+        actions={(
+          <>
           <ImportModel groupId={group.id} />
           <ExportModel models={models} />
           <TrainModel groupId={group.id} canTrain={canTrain} isTrainingLocked={hasActiveTrainingTask} />
-        </div>
-      </header>
+          </>
+        )}
+      />
 
       <section className={s.shell}>
         <aside className={`${s.rail} ${railOpen ? "" : s.railCollapsed}`}>
@@ -508,6 +514,7 @@ export function Component() {
                         {items.map((model) => {
                           const selected = selectedModel?.id === model.id;
                           const checked = compareIds.includes(model.id);
+                          const statusMeta = modelStatusMeta(model, tasks);
                           return (
                             <article key={model.id} className={`${s.modelCard} ${selected ? s.modelCardActive : ""}`} role="button" tabIndex={0} onClick={() => navigate(paths.trainingModel(group.id, model.id))} onKeyDown={(event) => { if (event.key === "Enter") navigate(paths.trainingModel(group.id, model.id)); }}>
                               <span className={s.modelCardTop}>
@@ -515,7 +522,7 @@ export function Component() {
                                   <strong>{modelName(model)}</strong>
                                   <span>{formatDate(model.created_at)} · {statusFor(model, tasks)}</span>
                                 </span>
-                                {model.is_active ? <span className={s.activePill}>active</span> : null}
+                                <StatusChip tone={statusMeta.tone} icon={statusMeta.icon}>{statusMeta.label}</StatusChip>
                               </span>
                               <span className={s.modelMetrics}>
                                 {metricKeys.map((key) => (
@@ -523,8 +530,8 @@ export function Component() {
                                 ))}
                               </span>
                               <span className={s.railControls}>
-                                <span className={s.sourcePill}>{model.architecture}</span>
-                                <span className={s.sourcePill}>{model.num_classes ?? "—"} classes</span>
+                                <StatusChip tone="neutral">{model.architecture}</StatusChip>
+                                <StatusChip tone="neutral">{model.num_classes ?? "—"} classes</StatusChip>
                                 <button className={s.iconButton} type="button" title="Compare" onClick={(event) => { event.stopPropagation(); toggleCompare(model); }}>
                                   {checked ? <CheckCircle2 /> : <CircleDashed />}
                                 </button>
@@ -552,9 +559,12 @@ export function Component() {
                       <h2>{modelName(selectedModel)}</h2>
                       <p>Created {formatDate(selectedModel.created_at)} · {selectedModel.trained_at ? `trained ${formatDate(selectedModel.trained_at)}` : "not trained yet"}</p>
                       <div className={s.modelBadges}>
-                        {selectedModel.is_active ? <span className={s.activePill}><ShieldCheck /> active</span> : <span className={s.statusPill}>{statusFor(selectedModel, tasks)}</span>}
-                        <span className={s.statusPill}><Layers3 /> {selectedModel.architecture}</span>
-                        <span className={s.statusPill}><Image /> {selectedModel.imgsz}px</span>
+                        {(() => {
+                          const statusMeta = modelStatusMeta(selectedModel, tasks);
+                          return <StatusChip tone={statusMeta.tone} icon={statusMeta.icon}>{statusMeta.label}</StatusChip>;
+                        })()}
+                        <StatusChip tone="neutral" icon={Layers3}>{selectedModel.architecture}</StatusChip>
+                        <StatusChip tone="neutral" icon={Image}>{selectedModel.imgsz}px</StatusChip>
                         <SourcePill source={metricHistory?.source ?? (metricsQuery.isLoading ? "live" : "empty")} />
                       </div>
                     </div>
@@ -568,10 +578,10 @@ export function Component() {
 
                 <div className={s.contentScroll}>
                   <section className={s.metricGrid}>
-                    <MetricCard label="mAP50-95" value={formatPercent(metricValue(selectedModel, "mAP50_95"))} hint="primary quality metric" />
-                    <MetricCard label="mAP50" value={formatPercent(metricValue(selectedModel, "mAP50"))} hint="object matching quality" />
-                    <MetricCard label="Precision" value={formatPercent(metricValue(selectedModel, "precision"))} hint="false positives control" />
-                    <MetricCard label="Recall" value={formatPercent(metricValue(selectedModel, "recall"))} hint="missed detections control" />
+                    <MetricCard className={s.metricCard} label="mAP50-95" value={formatPercent(metricValue(selectedModel, "mAP50_95"))} hint="primary quality metric" />
+                    <MetricCard className={s.metricCard} label="mAP50" value={formatPercent(metricValue(selectedModel, "mAP50"))} hint="object matching quality" />
+                    <MetricCard className={s.metricCard} label="Precision" value={formatPercent(metricValue(selectedModel, "precision"))} hint="false positives control" />
+                    <MetricCard className={s.metricCard} label="Recall" value={formatPercent(metricValue(selectedModel, "recall"))} hint="missed detections control" />
                   </section>
 
                   <CollapsibleBlock id="metrics" title="Metrics" description="Live/checkpoint curves from backend" icon={Activity} open={openBlocks.metrics} onToggle={toggleBlock}>
