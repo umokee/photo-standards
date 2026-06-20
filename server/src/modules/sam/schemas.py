@@ -19,9 +19,7 @@ class SamClickRequest(BaseModel):
     @classmethod
     def validate_points(cls, value: list[SamPromptPoint]) -> list[SamPromptPoint]:
         if not value:
-            raise PydanticCustomError(
-                "sam_points_error", "Добавьте хотя бы одну точку"
-            )
+            raise PydanticCustomError("sam_points_error", "Добавьте хотя бы одну точку")
         return value
 
 
