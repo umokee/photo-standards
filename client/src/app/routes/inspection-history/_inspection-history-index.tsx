@@ -31,11 +31,10 @@ export function Component() {
     <main className={s.page}>
       <section className={s.heroPanel}>
         <div className={s.heroContent}>
-          <span className={s.eyebrow}><History /> Inspection history</span>
           <div className={s.titleRow}>
             <div>
-              <h1>Runs</h1>
-              <p>Сохранённые проверки по изделиям: результат, исходное фото, эталон, режим запуска и детализация по компонентам.</p>
+              <h1>История проверок</h1>
+              <p>Сохранённые результаты по изделиям.</p>
             </div>
             <Link className={s.primaryAction} to={paths.inspectionMode("photo")}>
               <PlayCircle /> Новая проверка
@@ -45,10 +44,10 @@ export function Component() {
       </section>
 
       <section className={s.metricGrid}>
-        <MetricCard className={s.metricCard} icon={ListChecks} value={totalRuns} label="Total runs" hint="saved reports" variant="valueFirst" />
-        <MetricCard className={s.metricCard} icon={Database} value={scopesWithRuns} label="Изделия" hint="with history" variant="valueFirst" />
-        <MetricCard className={s.metricCard} icon={Image} value={totalImages} label="Images" hint="source/reference" variant="valueFirst" />
-        <MetricCard className={s.metricCard} icon={Search} value={totalReferences} label="References" hint="available views" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={ListChecks} value={totalRuns} label="Проверки" hint="отчёты" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Database} value={scopesWithRuns} label="Изделия" hint="с историей" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Image} value={totalImages} label="Фото" hint="источники" variant="valueFirst" />
+        <MetricCard className={s.metricCard} icon={Search} value={totalReferences} label="Эталоны" hint="виды" variant="valueFirst" />
       </section>
 
       <QueryState
@@ -59,13 +58,12 @@ export function Component() {
       >
         <section className={s.scopeShell}>
           <aside className={s.scopeIntro}>
-            <span className={s.sideLabel}>Registry</span>
-            <h2>История по изделиям</h2>
-            <p>Открой изделие, чтобы посмотреть timeline запусков и полный отчёт выбранной проверки.</p>
+            <h2>Изделия</h2>
+            <p>Открой изделие, чтобы посмотреть проверки.</p>
             <div className={s.sideFacts}>
-              <span><CircleDot /> {groups.length} scopes</span>
-              <span><CheckCircle2 /> {scopesWithRuns} active</span>
-              <span><ListChecks /> {totalRuns} reports</span>
+              <span><CircleDot /> {groups.length} изделий</span>
+              <span><CheckCircle2 /> {scopesWithRuns} с историей</span>
+              <span><ListChecks /> {totalRuns} отчётов</span>
             </div>
           </aside>
 
@@ -88,12 +86,12 @@ function ScopeCard({ group }: { group: GroupListItem }) {
       <div className={s.scopeBody}>
         <div className={s.scopeTopline}>
           <strong>{group.name}</strong>
-          <span className={hasRuns ? s.statusReady : s.statusEmpty}>{hasRuns ? "has runs" : "empty"}</span>
+          <span className={hasRuns ? s.statusReady : s.statusEmpty}>{hasRuns ? "есть проверки" : "пусто"}</span>
         </div>
         <p>{group.description || `${group.stats.standards_count} эталонов · ${group.stats.segment_classes_count} классов · ${group.stats.models_count} моделей`}</p>
         <div className={s.scopeMeta}>
-          <span><ListChecks /> {group.stats.inspections_count} runs</span>
-          <span><Image /> {group.stats.images_count} images</span>
+          <span><ListChecks /> {group.stats.inspections_count} проверок</span>
+          <span><Image /> {group.stats.images_count} фото</span>
           <span><Database /> {readiness}</span>
         </div>
       </div>
@@ -106,8 +104,8 @@ function ScopeCard({ group }: { group: GroupListItem }) {
 }
 
 function getReadiness(group: GroupListItem) {
-  if (!group.stats.standards_count) return "no references";
-  if (!group.stats.segment_classes_count) return "no classes";
-  if (!group.stats.models_count) return "no model";
-  return "ready";
+  if (!group.stats.standards_count) return "нет эталонов";
+  if (!group.stats.segment_classes_count) return "нет классов";
+  if (!group.stats.models_count) return "нет модели";
+  return "готово";
 }

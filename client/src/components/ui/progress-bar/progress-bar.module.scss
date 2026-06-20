@@ -15,22 +15,22 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--vc-surface-3, #e5e7eb);
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  background: $surface3;
+  border: 1px solid $line;
 }
 
 .fill {
   height: 100%;
   border-radius: inherit;
-  background: var(--vc-accent, #2563eb);
+  background: $accent;
   transition: width 180ms ease;
 
-  &.warn { background: var(--vc-warning, #d97706); }
+  &.warn { background: $warning; }
 }
 
 .label {
   min-width: 42px;
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
   font-weight: 680;
   text-align: right;
@@ -38,7 +38,7 @@
 }
 
 .warn {
-  color: var(--vc-warning-text, #92400e);
+  color: $warning-text;
   flex-shrink: 0;
 }
 

@@ -20,12 +20,17 @@ import s from "./export-model.module.scss";
 
 interface Props {
   models: MlModel[];
+  triggerClassName?: string;
 }
 
-export const ExportModel = ({ models }: Props) => (
+type ExportModelModalProps = {
+  models: MlModel[];
+};
+
+export const ExportModel = ({ models, triggerClassName }: Props) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="ghost">Экспорт</Button>
+      <Button className={triggerClassName} variant="ghost">Экспорт</Button>
     </Modal.Trigger>
     <Modal.Content>
       <ExportModelModal models={models} />
@@ -33,7 +38,7 @@ export const ExportModel = ({ models }: Props) => (
   </Modal>
 );
 
-const ExportModelModal = ({ models }: Props) => {
+const ExportModelModal = ({ models }: ExportModelModalProps) => {
   const close = useModalClose();
   const mutation = useExportModel();
 

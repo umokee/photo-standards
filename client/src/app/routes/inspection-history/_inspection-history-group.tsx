@@ -88,8 +88,8 @@ export function Component() {
       </section>
 
       <section className={s.summaryGrid}>
-        <SummaryCard value={filtered.length} label="Total" hint="reports" icon={ListChecks} />
-        <SummaryCard value={passedRuns} label="Passed" hint="without issues" icon={CheckCircle2} tone="ok" />
+        <SummaryCard value={filtered.length} label="Всего" hint="отчётов" icon={ListChecks} />
+        <SummaryCard value={passedRuns} label="Успешно" hint="без проблем" icon={CheckCircle2} tone="ok" />
         <SummaryCard value={issueRuns} label="Need review" hint="missing/extra" icon={AlertTriangle} tone="warn" />
         <SummaryCard value={photoRuns + snapshotRuns + realtimeRuns} label="Modes" hint={`${photoRuns}/${snapshotRuns}/${realtimeRuns}`} icon={Clock3} />
       </section>
@@ -97,15 +97,15 @@ export function Component() {
       <section className={s.filterPanel}>
         <div className={s.searchShell}>
           <Search />
-          <Input noMargin placeholder="Поиск по эталону, камере, модели, статусу..." value={search} onChange={setSearch} />
+          <Input noMargin placeholder="Поиск по эталону, камере или статусу..." value={search} onChange={setSearch} />
         </div>
 
         <div className={s.filterRow}>
           <SegmentButton active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Все</SegmentButton>
-          <SegmentButton active={statusFilter === "passed"} onClick={() => setStatusFilter("passed")}>Passed</SegmentButton>
-          <SegmentButton active={statusFilter === "issues"} onClick={() => setStatusFilter("issues")}>Issues</SegmentButton>
+          <SegmentButton active={statusFilter === "passed"} onClick={() => setStatusFilter("passed")}>Успешно</SegmentButton>
+          <SegmentButton active={statusFilter === "issues"} onClick={() => setStatusFilter("issues")}>Проблемы</SegmentButton>
           <span className={s.filterDivider} />
-          <SegmentButton active={modeFilter === "all"} onClick={() => setModeFilter("all")}>All modes</SegmentButton>
+          <SegmentButton active={modeFilter === "all"} onClick={() => setModeFilter("all")}>Все режимы</SegmentButton>
           <SegmentButton active={modeFilter === "photo"} onClick={() => setModeFilter("photo")}>Photo</SegmentButton>
           <SegmentButton active={modeFilter === "snapshot"} onClick={() => setModeFilter("snapshot")}>Snapshot</SegmentButton>
           <SegmentButton active={modeFilter === "realtime"} onClick={() => setModeFilter("realtime")}>Realtime</SegmentButton>

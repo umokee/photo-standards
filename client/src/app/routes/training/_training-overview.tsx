@@ -1,5 +1,4 @@
 import { paths } from "@/app/paths";
-import { EmptyStateCard } from "@/components/ui/empty-state-card/empty-state-card";
 import { EntityMiniCard } from "@/components/ui/entity-mini-card/entity-mini-card";
 import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
@@ -8,9 +7,9 @@ import { ImportModel } from "@/page-components/models/components/import-model/im
 import { TrainModel } from "@/page-components/models/components/train-model/train-model";
 import { isActiveTaskStatus } from "@/page-components/tasks/lib/task-helpers";
 import { formatDate } from "@/utils/formatDate";
-import { Activity, Brain, CircleDashed, Database, Image, ListChecks, Rocket, Tags } from "lucide-react";
+import { Activity, Brain, Image, ListChecks, Rocket } from "lucide-react";
 import { Link } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import p from "./_training-overview.module.scss";
 import { useTrainingModelOutletContext } from "./_training-detail";
 
 function percent(part: number, total: number) {
@@ -39,88 +38,85 @@ export function Component() {
   const readiness = percent(readyChecks.filter(Boolean).length, readyChecks.length);
 
   const nextAction =
-    group.stats.standards_count === 0 ? { label: "Create reference", to: paths.assetReferences(group.id) } :
-    group.stats.segment_classes_count === 0 ? { label: "Create classes", to: paths.assetClasses(group.id) } :
-    group.stats.annotated_images_count === 0 ? { label: "Annotate images", to: paths.assetReferences(group.id) } :
-    models.length === 0 ? { label: "Open models", to: paths.trainingModels(group.id) } :
-    activeModel ? { label: "Inspect with active model", to: paths.inspectionGroup("photo", group.id) } :
-    { label: "Choose active model", to: paths.trainingModels(group.id) };
+    group.stats.standards_count === 0 ? { label: "Добавить эталон", to: paths.assetReferences(group.id) } :
+    group.stats.segment_classes_count === 0 ? { label: "Настроить классы", to: paths.assetClasses(group.id) } :
+    group.stats.annotated_images_count === 0 ? { label: "Разметить фото", to: paths.assetReferences(group.id) } :
+    models.length === 0 ? { label: "Открыть модели", to: paths.trainingModels(group.id) } :
+    activeModel ? { label: "Проверить с моделью", to: paths.inspectionGroup("photo", group.id) } :
+    { label: "Выбрать модель", to: paths.trainingModels(group.id) };
 
   return (
     <div className={`${p.page} ${p.trainPageV27} ${p.trainOverviewScreenV29}`}>
       <header className={`${p.trainHeaderV27} ${p.trainHeaderCompactV27} ${p.trainHeaderSlimV29}`}>
         <div>
-          <span className={p.eyebrow}><Brain /> Train / Overview</span>
           <h1>{group.name}</h1>
-          <p>Train отвечает только за готовность данных к обучению, модели и training jobs. References/classes/annotations остаются в Assets.</p>
+          <p>Данные, модели и задания обучения.</p>
         </div>
         <div className={p.trainActionsV27}>
-          <ImportModel groupId={group.id} />
-          <ExportModel models={models} />
-          <TrainModel groupId={group.id} canTrain={canTrain} isTrainingLocked={hasActiveTrainingTask} />
+          <TrainModel groupId={group.id} canTrain={canTrain} isTrainingLocked={hasActiveTrainingTask} triggerClassName={p.trainPrimaryAction} />
+          <ImportModel groupId={group.id} triggerClassName={p.trainSecondaryAction} />
+          <ExportModel models={models} triggerClassName={p.trainSecondaryAction} />
         </div>
       </header>
 
       <div className={p.trainBodyScrollV29}>
         <section className={p.trainMetricGridV27}>
-          <MetricCard className={p.trainMetricV27} icon={Rocket} value={`${readiness}%`} label="Readiness" hint={canTrain ? "ready to train" : "needs assets"} />
-          <MetricCard className={p.trainMetricV27} icon={Image} value={`${labeled}%`} label="Labeled" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} images`} />
-          <MetricCard className={p.trainMetricV27} icon={Brain} value={models.length} label="Models" hint={activeModel ? "active selected" : "no active model"} />
-          <MetricCard className={p.trainMetricV27} icon={Activity} value={tasks.length} label="Jobs" hint={`${tasks.filter((task) => isActiveTaskStatus(task.status)).length} active`} />
+          <MetricCard className={p.trainMetricV27} icon={Rocket} value={`${readiness}%`} label="Готовность" hint={canTrain ? "можно обучать" : "нужны данные"} />
+          <MetricCard className={p.trainMetricV27} icon={Image} value={`${labeled}%`} label="Разметка" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} фото`} />
+          <MetricCard className={p.trainMetricV27} icon={Brain} value={models.length} label="Модели" hint={activeModel ? "активная выбрана" : "нет активной"} />
+          <MetricCard className={p.trainMetricV27} icon={Activity} value={tasks.length} label="Задания" hint={`${tasks.filter((task) => isActiveTaskStatus(task.status)).length} активных`} />
         </section>
 
-        <section className={p.trainWorkspaceGridV27}>
+        <section className={activeModel || latestTask ? p.trainWorkspaceGridV27 : `${p.trainWorkspaceGridV27} ${p.trainWorkspaceFullV87}`}>
           <main className={p.trainMainPanelV27}>
             <div className={p.trainPanelHeaderV27}>
               <div>
-                <span className={p.eyebrow}><ListChecks /> Quality gates</span>
-                <h2>{canTrain ? "Assets are ready" : "Finish Assets before training"}</h2>
-                <p>Эта страница не создаёт classes/references сама, а показывает зависимости и ведёт в нужную зону.</p>
+                <span className={p.eyebrow}><ListChecks /> Готовность</span>
+                <h2>{canTrain ? "Данные готовы" : "Доделай Assets"}</h2>
+                <p>Проверь зависимости перед обучением.</p>
               </div>
               <Link to={nextAction.to} className={p.trainPrimaryLinkV27}>{nextAction.label}</Link>
             </div>
 
             <div className={p.trainReadinessListV27}>
-              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.standards_count > 0} title="References exist" description={`${group.stats.standards_count} reference views`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.images_count > 0} title="Images uploaded" description={`${group.stats.images_count} images in annotation queue`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.segment_classes_count > 0} title="Classes configured" description={`${group.stats.segment_classes_count} classes in Assets / Classes`} to={paths.assetClasses(group.id)} />
-              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.annotated_images_count > 0} title="Annotations exist" description={`${labeled}% labeled images`} to={paths.assetReferences(group.id)} />
-              <ReadinessItem className={p.trainReadinessItemV27} done={models.length > 0} title="Model exists" description={`${models.length} trained/imported models`} to={paths.trainingModels(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.standards_count > 0} title="Эталоны" description={`${group.stats.standards_count} видов`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.images_count > 0} title="Фото" description={`${group.stats.images_count} загружено`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.segment_classes_count > 0} title="Классы" description={`${group.stats.segment_classes_count} настроено`} to={paths.assetClasses(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={group.stats.annotated_images_count > 0} title="Разметка" description={`${labeled}% готово`} to={paths.assetReferences(group.id)} />
+              <ReadinessItem className={p.trainReadinessItemV27} done={models.length > 0} title="Модель" description={`${models.length} обучено/импортировано`} to={paths.trainingModels(group.id)} />
             </div>
           </main>
 
-          <aside className={p.trainSideRailV27}>
-            <section className={p.trainRailCardV27}>
-              <span className={p.eyebrow}><Brain /> Active model</span>
+          {activeModel || latestTask ? (
+            <aside className={p.trainSideRailV27}>
               {activeModel ? (
-                <EntityMiniCard
-                  to={paths.trainingModel(group.id, activeModel.id)}
-                  className={p.trainModelMiniV27}
-                  icon={Brain}
-                  title={`${activeModel.architecture} ${activeModel.version ? `v${activeModel.version}` : ""}`}
-                  meta={`${activeModel.imgsz}px · ${activeModel.epochs ?? "—"} epochs · ${activeModel.num_classes ?? group.stats.segment_classes_count} classes`}
-                />
-              ) : (
-                <EmptyStateCard className={p.trainEmptyV27} icon={CircleDashed} title="No active model" description="Train/import model, then activate it for Inspect." />
-              )}
-            </section>
+                <section className={p.trainRailCardV27}>
+                  <span className={p.eyebrow}><Brain /> Активная модель</span>
+                  <EntityMiniCard
+                    to={paths.trainingModel(group.id, activeModel.id)}
+                    className={p.trainModelMiniV27}
+                    icon={Brain}
+                    title={`${activeModel.architecture} ${activeModel.version ? `v${activeModel.version}` : ""}`}
+                    meta={`${activeModel.imgsz}px · ${activeModel.epochs ?? "—"} epochs · ${activeModel.num_classes ?? group.stats.segment_classes_count} classes`}
+                  />
+                </section>
+              ) : null}
 
-            <section className={p.trainRailCardV27}>
-              <span className={p.eyebrow}><Activity /> Latest job</span>
               {latestTask ? (
-                <EntityMiniCard
-                  to={paths.trainingRuns(group.id)}
-                  className={p.trainTaskMiniV27}
-                  icon={Activity}
-                  title={latestTask.type}
-                  meta={`${latestTask.status} · ${latestTask.stage ?? "queued"} · ${formatDate(latestTask.created_at)}`}
-                  trailing={<b>{latestTask.progress_percent ?? 0}%</b>}
-                />
-              ) : (
-                <EmptyStateCard className={p.trainEmptyV27} icon={CircleDashed} title="No training jobs" description="Jobs appear after Train/Import/Export." />
-              )}
-            </section>
-          </aside>
+                <section className={p.trainRailCardV27}>
+                  <span className={p.eyebrow}><Activity /> Последнее задание</span>
+                  <EntityMiniCard
+                    to={paths.trainingRuns(group.id)}
+                    className={p.trainTaskMiniV27}
+                    icon={Activity}
+                    title={latestTask.type}
+                    meta={`${latestTask.status} · ${latestTask.stage ?? "queued"} · ${formatDate(latestTask.created_at)}`}
+                    trailing={<b>{latestTask.progress_percent ?? 0}%</b>}
+                  />
+                </section>
+              ) : null}
+            </aside>
+          ) : null}
         </section>
       </div>
     </div>

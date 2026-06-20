@@ -7,14 +7,14 @@
   width: 100%;
   height: auto;
   aspect-ratio: 180 / 115;
-  background: #0c0f10;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, #{$text-white} 16%, transparent);
   border-radius: $radius;
   overflow: hidden;
+  background: $inspection-canvas-soft;
   box-shadow: none;
 
   &:hover {
-    border-color: $line-strong;
+    border-color: color-mix(in srgb, #{$text-white} 28%, transparent);
   }
 }
 
@@ -26,9 +26,9 @@
   justify-content: center;
   gap: $space-1;
   padding: $space-1 $space-2;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(8, 10, 11, 0.82);
-  color: rgba(255, 255, 255, 0.82);
+  border-top: 1px solid color-mix(in srgb, #{$text-white} 12%, transparent);
+  background: color-mix(in srgb, #{$inspection-canvas} 82%, transparent);
+  color: color-mix(in srgb, #{$text-white} 82%, transparent);
   font-size: $text-micro;
   font-weight: $fw-medium;
   line-height: 1.2;
@@ -39,7 +39,7 @@
   width: 100%;
   height: 100%;
   display: block;
-  background: #0c0f10;
+  background: $inspection-canvas-soft;
 }
 
 .svgLarge {
@@ -54,8 +54,8 @@
   z-index: 1000;
   display: grid;
   place-items: center;
-  padding: 24px;
-  background: rgba(0, 0, 0, 0.72);
+  padding: $space-6;
+  background: color-mix(in srgb, #{$inspection-canvas} 72%, transparent);
 }
 
 .lightboxContent {
@@ -70,16 +70,16 @@
   justify-content: center;
   max-width: 90vw;
   max-height: 85vh;
-  background: var(--vc-surface, #101315);
-  border: 1px solid var(--vc-line, rgba(255, 255, 255, 0.12));
+  border: 1px solid color-mix(in srgb, #{$text-white} 12%, transparent);
   border-radius: $radius;
   overflow: hidden;
+  background: $inspection-canvas-soft;
 }
 
 .closeBtn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: $space-3;
+  right: $space-3;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -87,29 +87,29 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--vc-surface, #101315);
-  color: var(--vc-text, #f3f6f7);
-  border: 1px solid var(--vc-line, rgba(255, 255, 255, 0.12));
+  border: 1px solid color-mix(in srgb, #{$text-white} 12%, transparent);
   border-radius: $radius;
+  background: $inspection-canvas-soft;
+  color: $text-white;
   cursor: pointer;
 
   &:hover {
-    background: $surface2;
-    border-color: $line;
+    border-color: color-mix(in srgb, #{$text-white} 24%, transparent);
+    background: color-mix(in srgb, #{$text-white} 8%, #{$inspection-canvas-soft});
   }
 }
 
 .svgFallback {
   width: 100%;
   height: 100%;
-  background: #0c0f10;
+  background: $inspection-canvas-soft;
 }
 
 .svgFallback img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
   display: block;
+  object-fit: contain;
 }
 
 @media (max-width: 767px) {

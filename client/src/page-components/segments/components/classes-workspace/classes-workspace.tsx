@@ -1,19 +1,6 @@
-import Button from "@/components/ui/button/button";
-import type { GroupDetail } from "@/types/contracts";
 import clsx from "clsx";
-import {
-  ChevronDown,
-  ChevronRight,
-  Circle,
-  FolderPlus,
-  Info,
-  ListPlus,
-  Palette,
-  Save,
-  Search,
-  Tags,
-  Trash2,
-} from "lucide-react";
+import type { GroupDetail } from "@/types/contracts";
+import { FolderPlus, ListPlus, Save, Search, Tags, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useManageSegmentGroups } from "../../hooks/use-manage-segment-groups";
@@ -23,45 +10,47 @@ type Manager = ReturnType<typeof useManageSegmentGroups>;
 type CategoryState = Manager["categories"][number];
 type ClassState = Manager["ungroupedClasses"][number];
 
-type Selection = {
+type CategoryFilter = "all" | "ungrouped" | string;
+
+type ClassLocation = {
   categoryKey: string | null;
   classKey: string;
 };
 
-type FlatClass = Selection & {
-  item: ClassState;
+type FlatClass = ClassLocation & {
   categoryName: string;
+  item: ClassState;
 };
 
 function normalize(value: string) {
   return value.trim().toLowerCase();
 }
 
-function classColor(hue: number) {
-  return `hsl(${hue}, 70%, 52%)`;
-}
-
 function flattenClasses(categories: CategoryState[], ungroupedClasses: ClassState[]): FlatClass[] {
   return [
     ...categories.flatMap((category) =>
       category.segmentClasses.map((item) => ({
-        item,
-        classKey: item.key,
         categoryKey: category.key,
+        classKey: item.key,
         categoryName: category.name || "Без названия",
+        item,
       }))
     ),
     ...ungroupedClasses.map((item) => ({
-      item,
-      classKey: item.key,
       categoryKey: null,
+      classKey: item.key,
       categoryName: "Без категории",
+      item,
     })),
   ];
 }
 
-function isSameSelection(a: Selection | null, b: Selection | null) {
-  return a?.classKey === b?.classKey && a?.categoryKey === b?.categoryKey;
+function selectionEquals(a: ClassLocation | null, b: ClassLocation | null) {
+  return a?.categoryKey === b?.categoryKey && a?.classKey === b?.classKey;
+}
+
+function getRowStyle(hue: number): CSSProperties {
+  return { "--class-hue": String(hue) } as CSSProperties;
 }
 
 export function ClassesWorkspace({ group }: { group: GroupDetail }) {
@@ -79,8 +68,9 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
   } = manager;
 
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Selection | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [selected, setSelected] = useState<ClassLocation | null>(null);
   const normalizedQuery = normalize(query);
 
   const flatClasses = useMemo(
@@ -88,378 +78,308 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
     [categories, ungroupedClasses]
   );
 
-  const active = flatClasses.find(
-    (item) => item.classKey === selected?.classKey && item.categoryKey === selected.categoryKey
-  ) ?? flatClasses[0] ?? null;
+  const visibleClasses = useMemo(() => {
+    return flatClasses.filter(({ categoryKey, categoryName, item }) => {
+      const matchesFilter =
+        categoryFilter === "all"
+          ? true
+          : categoryFilter === "ungrouped"
+            ? categoryKey === null
+            : categoryKey === categoryFilter;
+
+      if (!matchesFilter) return false;
+      if (!normalizedQuery) return true;
+
+      return (
+        item.name.toLowerCase().includes(normalizedQuery) ||
+        categoryName.toLowerCase().includes(normalizedQuery)
+      );
+    });
+  }, [flatClasses, categoryFilter, normalizedQuery]);
 
   useEffect(() => {
-    if (!flatClasses.length) {
+    if (!visibleClasses.length) {
       setSelected(null);
       return;
     }
 
-    const selectedStillExists = flatClasses.some(
-      (item) => item.classKey === selected?.classKey && item.categoryKey === selected.categoryKey
-    );
-
-    if (!selectedStillExists) {
-      setSelected({ categoryKey: flatClasses[0].categoryKey, classKey: flatClasses[0].classKey });
+    const selectedStillVisible = visibleClasses.some((item) => selectionEquals(selected, item));
+    if (!selectedStillVisible) {
+      const first = visibleClasses[0];
+      setSelected({ categoryKey: first.categoryKey, classKey: first.classKey });
     }
-  }, [flatClasses, selected]);
+  }, [visibleClasses, selected]);
 
-  const visibleCategories = useMemo(
-    () =>
-      categories
-        .map((category) => ({
-          ...category,
-          segmentClasses: category.segmentClasses.filter(
-            (item) =>
-              !normalizedQuery ||
-              item.name.toLowerCase().includes(normalizedQuery) ||
-              category.name.toLowerCase().includes(normalizedQuery)
-          ),
-        }))
-        .filter((category) => category.segmentClasses.length || !normalizedQuery),
-    [categories, normalizedQuery]
-  );
-
-  const visibleUngrouped = useMemo(
-    () =>
-      ungroupedClasses.filter((item) => !normalizedQuery || item.name.toLowerCase().includes(normalizedQuery)),
-    [ungroupedClasses, normalizedQuery]
-  );
-
-  const visibleCount =
-    visibleCategories.reduce((sum, category) => sum + category.segmentClasses.length, 0) +
-    visibleUngrouped.length;
+  const selectedCategory =
+    categoryFilter !== "all" && categoryFilter !== "ungrouped"
+      ? categories.find((item) => item.key === categoryFilter) ?? null
+      : null;
 
   const handleAddClass = () => {
-    if (active?.categoryKey) {
-      classActions.addToCategory(active.categoryKey);
+    if (selectedCategory) {
+      classActions.addToCategory(selectedCategory.key);
+      return;
+    }
+
+    if (categoryFilter === "ungrouped") {
+      classActions.addUngrouped();
+      return;
+    }
+
+    if (categories[0]) {
+      classActions.addToCategory(categories[0].key);
       return;
     }
 
     classActions.addUngrouped();
   };
 
-  const handleSave = async () => {
-    const ok = await save();
-    if (ok) {
-      setSavedAt(new Date());
+  const handleDeleteClass = (location: ClassLocation, name: string) => {
+    if (!window.confirm(`Удалить класс «${name || "без названия"}»?`)) return;
+    if (location.categoryKey) {
+      classActions.removeFromCategory(location.categoryKey, location.classKey);
+    } else {
+      classActions.removeUngrouped(location.classKey);
     }
   };
 
-  const empty = !flatClasses.length;
+  const handleSave = async () => {
+    const ok = await save();
+    if (ok) setSavedAt(new Date());
+  };
 
   return (
     <div className={s.page}>
-      <section className={s.header}>
-        <div>
-          <span className={s.eyebrow}><Tags /> Assets / Classes</span>
-          <h2>Классы деталей</h2>
-          <p>
-            Структура обязательных компонентов изделия. Здесь создаются категории, классы и цвета,
-            которые затем используются в редакторе, обучении и проверке.
-          </p>
-        </div>
-
-        <div className={s.headerStats}>
-          <span><b>{flatClasses.length}</b> классов</span>
-          <span><b>{categories.length}</b> категорий</span>
-          <span><b>{group.stats.polygons_count}</b> полигонов</span>
-        </div>
+      <section className={s.summary}>
+        <article className={s.summaryCard}>
+          <span>Классы</span>
+          <strong>{flatClasses.length}</strong>
+          <small>Всего label-ов</small>
+        </article>
+        <article className={s.summaryCard}>
+          <span>Категории</span>
+          <strong>{categories.length}</strong>
+          <small>Группы для порядка</small>
+        </article>
+        <article className={s.summaryCard}>
+          <span>Полигоны</span>
+          <strong>{group.stats.polygons_count}</strong>
+          <small>Разметка в проекте</small>
+        </article>
       </section>
 
       <section className={s.workspace}>
-        <div className={s.listPane}>
-          <div className={s.toolbar}>
-            <label className={s.search}>
-              <Search />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск классов..." />
-            </label>
-
-            <button type="button" className={s.toolButton} onClick={categoryActions.add}>
-              <FolderPlus /> Категория
-            </button>
-            <button type="button" className={s.toolButtonPrimary} onClick={handleAddClass}>
-              <ListPlus /> Класс
-            </button>
-          </div>
-
-          <div className={s.listMeta}>
-            <span>{visibleCount} показано · {flatClasses.length} всего</span>
-            {saving ? (
-              <span>Сохранение...</span>
-            ) : isDirty ? (
-              <span>Есть несохранённые изменения</span>
-            ) : savedAt ? (
-              <span>Сохранено {savedAt.toLocaleTimeString()}</span>
-            ) : (
-              <span>Изменений нет</span>
-            )}
-          </div>
-
-          {empty ? (
-            <div className={s.emptyState}>
-              <Tags />
-              <strong>Классы ещё не настроены</strong>
-              <span>Создай категории и классы деталей: вентиль, манометр, рычаг, табличка и другие элементы контроля.</span>
-              <button type="button" onClick={handleAddClass}>Создать первый класс</button>
+        <aside className={s.sidebar}>
+          <div className={s.cardHead}>
+            <div>
+              <h2>Категории</h2>
+              <p>Фильтр списка и группы классов.</p>
             </div>
-          ) : null}
+            <button type="button" className={s.iconAction} onClick={categoryActions.add} title="Создать категорию">
+              <FolderPlus />
+            </button>
+          </div>
 
-          {!empty && visibleCount === 0 ? (
+          <div className={s.categoryList}>
+            <button
+              type="button"
+              className={clsx(s.categoryItem, categoryFilter === "all" && s.categoryItemActive)}
+              onClick={() => setCategoryFilter("all")}
+            >
+              <span>Все классы</span>
+              <b>{flatClasses.length}</b>
+            </button>
+
+            {categories.map((category) => (
+              <div
+                key={category.key}
+                className={clsx(s.categoryRow, categoryFilter === category.key && s.categoryRowActive)}
+              >
+                <button
+                  type="button"
+                  className={s.categoryItem}
+                  onClick={() => setCategoryFilter(category.key)}
+                >
+                  <span>{category.name || "Без названия"}</span>
+                  <b>{category.segmentClasses.length}</b>
+                </button>
+                <button
+                  type="button"
+                  className={s.rowDangerButton}
+                  title="Удалить категорию"
+                  onClick={() => {
+                    if (!window.confirm(`Удалить категорию «${category.name || "без названия"}»? Классы перейдут в «Без категории».`)) return;
+                    categoryActions.remove(category.key);
+                    setCategoryFilter("all");
+                  }}
+                >
+                  <Trash2 />
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              className={clsx(s.categoryItem, categoryFilter === "ungrouped" && s.categoryItemActive)}
+              onClick={() => setCategoryFilter("ungrouped")}
+            >
+              <span>Без категории</span>
+              <b>{ungroupedClasses.length}</b>
+            </button>
+          </div>
+
+          {selectedCategory ? (
+            <label className={s.inlineField}>
+              <span>Название выбранной категории</span>
+              <input
+                value={selectedCategory.name}
+                placeholder="Название категории"
+                onChange={(event) => categoryActions.updateName(selectedCategory.key, event.target.value)}
+              />
+              {fieldErrors[`category:${selectedCategory.key}`] ? (
+                <small>{fieldErrors[`category:${selectedCategory.key}`]}</small>
+              ) : null}
+            </label>
+          ) : null}
+        </aside>
+
+        <div className={s.contentCard}>
+          <div className={s.contentHead}>
+            <div>
+              <span className={s.panelLabel}><Tags /> {selectedCategory?.name || (categoryFilter === "ungrouped" ? "Без категории" : "Классы")}</span>
+              <h3>{visibleClasses.length} показано из {flatClasses.length}</h3>
+            </div>
+
+            <div className={s.headControls}>
+              <label className={s.searchField}>
+                <Search />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Найти класс или категорию"
+                />
+              </label>
+
+              <button type="button" className={s.primaryAction} onClick={handleAddClass}>
+                <ListPlus />
+                {selectedCategory ? "Класс в категорию" : "Добавить класс"}
+              </button>
+            </div>
+          </div>
+
+          {visibleClasses.length ? (
+            <div className={s.table}>
+              <div className={s.tableHead}>
+                <span>Цвет</span>
+                <span>Класс</span>
+                <span>Категория</span>
+                <span>Оттенок</span>
+                <span aria-hidden="true" />
+              </div>
+
+              <div className={s.rows}>
+                {visibleClasses.map(({ item, categoryKey, classKey }) => {
+                  const location = { categoryKey, classKey };
+                  return (
+                    <div
+                      key={classKey}
+                      className={clsx(
+                        s.classRow,
+                        selectionEquals(selected, location) && s.classRowSelected,
+                        fieldErrors[`class:${classKey}`] && s.classRowError,
+                      )}
+                      style={getRowStyle(item.hue)}
+                      onClick={() => setSelected(location)}
+                    >
+                      <div className={s.colorCell}>
+                        <i />
+                      </div>
+
+                      <label className={s.rowField}>
+                        <span>Класс</span>
+                        <input
+                          value={item.name}
+                          placeholder="Название класса"
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => classActions.updateName(categoryKey, classKey, event.target.value)}
+                        />
+                        {fieldErrors[`class:${classKey}`] ? <small>{fieldErrors[`class:${classKey}`]}</small> : null}
+                      </label>
+
+                      <label className={s.rowField}>
+                        <span>Категория</span>
+                        <select
+                          value={categoryKey ?? ""}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => {
+                            const nextCategoryKey = event.target.value || null;
+                            classActions.move(categoryKey, classKey, nextCategoryKey);
+                            setSelected({ categoryKey: nextCategoryKey, classKey });
+                          }}
+                        >
+                          <option value="">Без категории</option>
+                          {categories.map((category) => (
+                            <option key={category.key} value={category.key}>
+                              {category.name || "Без названия"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className={s.hueField}>
+                        <span>{item.hue}°</span>
+                        <input
+                          className={s.slider}
+                          type="range"
+                          min={0}
+                          max={359}
+                          value={item.hue}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => classActions.updateHue(categoryKey, classKey, Number(event.target.value))}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        className={s.rowDangerButton}
+                        title="Удалить класс"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteClass(location, item.name);
+                        }}
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
             <div className={s.emptyState}>
               <Search />
               <strong>Ничего не найдено</strong>
-              <span>Попробуй изменить поисковый запрос.</span>
-            </div>
-          ) : null}
-
-          <div className={s.categoryList}>
-            {visibleCategories.map((category) => (
-              <CategoryBlock
-                key={category.key}
-                category={category}
-                selected={selected}
-                fieldErrors={fieldErrors}
-                onSelect={setSelected}
-                onAddClass={() => classActions.addToCategory(category.key)}
-                onToggle={() => categoryActions.toggle(category.key)}
-                onRemove={() => {
-                  if (window.confirm(`Удалить категорию «${category.name || "без названия"}»? Классы перейдут в блок «Без категории».`)) {
-                    categoryActions.remove(category.key);
-                  }
-                }}
-                onRename={(value) => categoryActions.updateName(category.key, value)}
-              />
-            ))}
-
-            {(visibleUngrouped.length > 0 || !normalizedQuery) && (
-              <UngroupedBlock
-                items={visibleUngrouped}
-                selected={selected}
-                fieldErrors={fieldErrors}
-                onSelect={setSelected}
-                onAddClass={classActions.addUngrouped}
-              />
-            )}
-          </div>
-        </div>
-
-        <aside className={s.inspectorPane}>
-          <div className={s.inspectorHeader}>
-            <span><Palette /> Параметры класса</span>
-            {active ? <b style={{ "--class-hue": active.item.hue } as CSSProperties} /> : null}
-          </div>
-
-          {active ? (
-            <div className={s.inspectorBody}>
-              <label className={s.field}>
-                <span>Название</span>
-                <input
-                  value={active.item.name}
-                  placeholder="Например: Винт M16"
-                  onChange={(event) => classActions.updateName(active.categoryKey, active.classKey, event.target.value)}
-                />
-                {fieldErrors[`class:${active.classKey}`] ? <small>{fieldErrors[`class:${active.classKey}`]}</small> : null}
-              </label>
-
-              <label className={s.field}>
-                <span>Категория</span>
-                <select
-                  value={active.categoryKey ?? ""}
-                  onChange={(event) => {
-                    const nextCategoryKey = event.target.value || null;
-                    classActions.move(active.categoryKey, active.classKey, nextCategoryKey);
-                    setSelected({ categoryKey: nextCategoryKey, classKey: active.classKey });
-                  }}
-                >
-                  <option value="">Без категории</option>
-                  {categories.map((category) => (
-                    <option key={category.key} value={category.key}>{category.name || "Без названия"}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={s.field}>
-                <span>Цвет · hue {active.item.hue}</span>
-                <div className={s.colorBox} style={{ "--class-hue": active.item.hue } as CSSProperties}>
-                  <i />
-                  <input
-                    type="range"
-                    min={0}
-                    max={359}
-                    value={active.item.hue}
-                    onChange={(event) => classActions.updateHue(active.categoryKey, active.classKey, Number(event.target.value))}
-                  />
-                </div>
-              </label>
-
-              <div className={s.usageBox}>
-                <Info />
-                <div>
-                  <strong>Где используется</strong>
-                  <span>
-                    Класс появится в редакторе разметки, попадёт в Train как label и будет доступен в Inspect как проверяемая деталь.
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className={s.deleteClassButton}
-                onClick={() => {
-                  if (!window.confirm(`Удалить класс «${active.item.name || "без названия"}»?`)) return;
-                  if (active.categoryKey) {
-                    classActions.removeFromCategory(active.categoryKey, active.classKey);
-                  } else {
-                    classActions.removeUngrouped(active.classKey);
-                  }
-                }}
-              >
-                <Trash2 /> Удалить класс
-              </button>
-            </div>
-          ) : (
-            <div className={s.noSelection}>
-              <Circle />
-              <strong>Выбери класс</strong>
-              <span>После выбора справа появятся название, категория и цвет.</span>
+              <span>Попробуй изменить фильтр или поисковый запрос.</span>
             </div>
           )}
 
-          <div className={s.saveBar}>
-            <Button variant="ghost" size="sm" disabled={!isDirty || saving} onClick={reset}>
-              Отменить
-            </Button>
-            <Button icon={Save} disabled={saving || !isDirty} onClick={handleSave}>
-              {saving ? "Сохранение..." : "Сохранить"}
-            </Button>
+          <div className={s.footerBar}>
+            <div className={s.saveMeta}>
+              {saving ? "Сохранение..." : isDirty ? "Есть несохранённые изменения" : savedAt ? `Сохранено ${savedAt.toLocaleTimeString()}` : "Изменений нет"}
+            </div>
+            <div className={s.footerActions}>
+              <button type="button" className={s.secondaryAction} disabled={!isDirty || saving} onClick={reset}>
+                Отменить
+              </button>
+              <button type="button" className={s.primaryAction} disabled={!isDirty || saving} onClick={handleSave}>
+                <Save />
+                {saving ? "Сохранение..." : "Сохранить"}
+              </button>
+            </div>
           </div>
-        </aside>
+        </div>
       </section>
     </div>
-  );
-}
-
-function CategoryBlock({
-  category,
-  selected,
-  fieldErrors,
-  onSelect,
-  onAddClass,
-  onToggle,
-  onRemove,
-  onRename,
-}: {
-  category: CategoryState;
-  selected: Selection | null;
-  fieldErrors: Record<string, string>;
-  onSelect: (selection: Selection) => void;
-  onAddClass: () => void;
-  onToggle: () => void;
-  onRemove: () => void;
-  onRename: (value: string) => void;
-}) {
-  const firstHue = category.segmentClasses[0]?.hue ?? 210;
-
-  return (
-    <section className={s.categoryCard} style={{ "--class-hue": firstHue } as CSSProperties}>
-      <header className={s.categoryHeader}>
-        <button type="button" className={s.collapseButton} onClick={onToggle}>
-          {category.collapsed ? <ChevronRight /> : <ChevronDown />}
-        </button>
-
-        <input
-          value={category.name}
-          placeholder="Название категории"
-          onChange={(event) => onRename(event.target.value)}
-        />
-
-        <span>{category.segmentClasses.length}</span>
-
-        <button type="button" className={s.iconButton} onClick={onAddClass} title="Добавить класс">
-          <ListPlus />
-        </button>
-        <button type="button" className={s.iconButtonDanger} onClick={onRemove} title="Удалить категорию">
-          <Trash2 />
-        </button>
-      </header>
-
-      {fieldErrors[`category:${category.key}`] ? <small className={s.inlineError}>{fieldErrors[`category:${category.key}`]}</small> : null}
-
-      {!category.collapsed ? (
-        <div className={s.classRows}>
-          {category.segmentClasses.map((item) => (
-            <ClassRow
-              key={item.key}
-              item={item}
-              selected={isSameSelection(selected, { categoryKey: category.key, classKey: item.key })}
-              error={fieldErrors[`class:${item.key}`]}
-              onSelect={() => onSelect({ categoryKey: category.key, classKey: item.key })}
-            />
-          ))}
-
-          {!category.segmentClasses.length ? <div className={s.categoryEmpty}>В категории пока нет классов.</div> : null}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function UngroupedBlock({
-  items,
-  selected,
-  fieldErrors,
-  onSelect,
-  onAddClass,
-}: {
-  items: ClassState[];
-  selected: Selection | null;
-  fieldErrors: Record<string, string>;
-  onSelect: (selection: Selection) => void;
-  onAddClass: () => void;
-}) {
-  return (
-    <section className={s.categoryCard} style={{ "--class-hue": 210 } as CSSProperties}>
-      <header className={s.categoryHeader}>
-        <span className={s.collapseButton}><Circle /></span>
-        <input value="Без категории" readOnly />
-        <span>{items.length}</span>
-        <button type="button" className={s.iconButton} onClick={onAddClass} title="Добавить класс без категории">
-          <ListPlus />
-        </button>
-      </header>
-
-      <div className={s.classRows}>
-        {items.map((item) => (
-          <ClassRow
-            key={item.key}
-            item={item}
-            selected={isSameSelection(selected, { categoryKey: null, classKey: item.key })}
-            error={fieldErrors[`class:${item.key}`]}
-            onSelect={() => onSelect({ categoryKey: null, classKey: item.key })}
-          />
-        ))}
-
-        {!items.length ? <div className={s.categoryEmpty}>Классов без категории нет.</div> : null}
-      </div>
-    </section>
-  );
-}
-
-function ClassRow({ item, selected, error, onSelect }: { item: ClassState; selected: boolean; error?: string; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      className={clsx(s.classRow, selected && s.classRowActive, error && s.classRowError)}
-      style={{ "--class-hue": item.hue } as CSSProperties}
-      onClick={onSelect}
-    >
-      <i />
-      <strong>{item.name || "Новый класс"}</strong>
-      <small>{error || `hue ${item.hue}`}</small>
-    </button>
   );
 }

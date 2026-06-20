@@ -1,31 +1,128 @@
+@use "@/styles/variables" as *;
+
 .page {
-  --train-bg: var(--vc-bg, #f6f7f9);
-  --train-surface: var(--vc-surface, #ffffff);
-  --train-surface-2: var(--vc-surface-2, #f3f5f8);
-  --train-surface-3: var(--vc-surface-3, #e7ebf1);
-  --train-line: var(--vc-line, rgba(15, 23, 42, 0.12));
-  --train-line-strong: var(--vc-line-strong, rgba(15, 23, 42, 0.2));
-  --train-text: var(--vc-text, #111827);
-  --train-muted: var(--vc-muted, #64748b);
-  --train-faint: var(--vc-faint, #94a3b8);
-  --train-accent: var(--vc-accent, #0b46ff);
-  --train-accent-2: var(--vc-accent-2, #00a3ff);
-  --train-success: var(--vc-success, #16a34a);
-  --train-warning: var(--vc-warning, #f59e0b);
-  --train-danger: var(--vc-danger, #ef4444);
-  --train-radius-xl: var(--vc-radius-xl, 24px);
-  --train-radius-lg: var(--vc-radius-lg, 18px);
-  --train-radius-md: var(--vc-radius-md, 14px);
-  height: auto;
+  --train-bg: #{$bg};
+  --train-surface: #{$surface};
+  --train-surface-2: #{$surface2};
+  --train-surface-3: #{$surface3};
+  --train-line: #{$line};
+  --train-line-strong: #{$line-strong};
+  --train-text: #{$text};
+  --train-muted: #{$text-sub};
+  --train-faint: #{$text-hint};
+  --train-accent: #{$accent};
+  --train-accent-2: #{$accent-2};
+  --train-success: #{$success};
+  --train-warning: #{$warning};
+  --train-danger: #{$danger};
+  --train-radius-xl: #{$radius-xl};
+  --train-radius-lg: #{$radius-lg};
+  --train-radius-md: #{$radius-md};
+  height: 100%;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
-  padding: clamp(10px, 1.2vw, 16px);
-  overflow: visible;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   color: var(--train-text);
   background: var(--train-bg);
+}
+
+
+.header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid var(--train-line);
+  border-radius: var(--train-radius-xl);
+  background: var(--train-surface);
+  box-shadow: $shadow-sm;
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--train-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 15px;
+  height: 15px;
+  color: var(--train-accent);
+}
+
+.header h1 {
+  margin: 6px 0 2px;
+  color: var(--train-text);
+  font-size: clamp(30px, 3.2vw, 44px);
+  font-weight: 930;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.header p {
+  margin: 0;
+  max-width: 680px;
+  color: var(--train-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.headerStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(82px, auto));
+  gap: 8px;
+}
+
+.headerStats div {
+  min-height: 54px;
+  padding: 9px 11px;
+  border: 1px solid var(--train-line);
+  border-radius: 14px;
+  background: var(--train-surface-2);
+}
+
+.headerStats span {
+  display: block;
+  color: var(--train-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.headerStats strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--train-text);
+  font-size: 18px;
+  font-weight: 920;
+  line-height: 1;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .shell {
@@ -51,7 +148,7 @@
   position: sticky;
   top: 12px;
   align-self: start;
-  max-height: calc(100svh - var(--vc-topbar-height, 56px) - 32px);
+  max-height: calc(100svh - $topbar-height - 32px);
   overflow: hidden;
 }
 
@@ -530,9 +627,9 @@
 .chartCard {
   min-width: 0;
   display: grid;
-  grid-template-rows: auto minmax(150px, 1fr) auto;
+  grid-template-rows: auto minmax(190px, 1fr) auto;
   gap: 10px;
-  min-height: 242px;
+  min-height: 266px;
   padding: 12px;
   border: 1px solid var(--train-line);
   border-radius: var(--train-radius-lg);
@@ -563,15 +660,90 @@
 
 .chartSvg {
   width: 100%;
-  height: 160px;
+  height: 190px;
+  min-height: 190px;
   display: block;
   border: 1px solid var(--train-line);
   border-radius: 14px;
-  background:
-    linear-gradient(to right, color-mix(in srgb, var(--train-line) 50%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--train-line) 50%, transparent) 1px, transparent 1px),
-    var(--train-surface);
-  background-size: 25% 100%, 100% 25%, auto;
+  background: var(--train-surface);
+  outline: none;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.chartSvg:focus-visible {
+  border-color: color-mix(in srgb, var(--train-accent) 46%, var(--train-line));
+  box-shadow: $focus-ring;
+}
+
+.chartGridLine,
+.chartAxisLine {
+  stroke: color-mix(in srgb, var(--train-line) 80%, transparent);
+  stroke-width: 1;
+}
+
+.chartAxisLine {
+  stroke: var(--train-line-strong);
+}
+
+.chartAxisLabel {
+  fill: var(--train-faint);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.chartArea {
+  pointer-events: none;
+}
+
+.chartLine {
+  fill: none;
+  stroke: var(--train-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.chartPoint {
+  fill: var(--train-surface);
+  stroke: var(--train-accent);
+  stroke-width: 2;
+  opacity: 0.72;
+  transition: r 120ms ease, opacity 120ms ease;
+  pointer-events: none;
+}
+
+.chartPointActive {
+  fill: var(--train-accent);
+  opacity: 1;
+}
+
+.chartFocus {
+  pointer-events: none;
+}
+
+.chartFocus > line {
+  stroke: color-mix(in srgb, var(--train-accent) 52%, transparent);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+}
+
+.chartFocus > circle {
+  fill: var(--train-accent);
+  stroke: var(--train-surface);
+  stroke-width: 3;
+}
+
+.chartFocus rect {
+  fill: color-mix(in srgb, var(--train-surface) 94%, var(--train-accent));
+  stroke: var(--train-line-strong);
+}
+
+.chartFocus text {
+  fill: var(--train-text);
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .chartLegend {
@@ -596,7 +768,7 @@
 }
 
 .todoChart {
-  min-height: 160px;
+  min-height: 190px;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -687,11 +859,12 @@
 }
 
 .classDot {
+  --class-hue: 210;
   width: 14px;
   height: 14px;
   border: 1px solid var(--train-line-strong);
   border-radius: 999px;
-  background: hsl(var(--class-hue, 210), 80%, 52%);
+  background: hsl(var(--class-hue), 80%, 52%);
 }
 
 .splits {
@@ -717,8 +890,9 @@
 }
 
 .splitFill {
+  --split-width: 0%;
   height: 100%;
-  width: var(--split-width, 0%);
+  width: var(--split-width);
   border-radius: inherit;
   background: var(--train-accent);
 }
@@ -773,8 +947,9 @@
 }
 
 .compareFill {
+  --compare-width: 0%;
   height: 100%;
-  width: var(--compare-width, 0%);
+  width: var(--compare-width);
   border-radius: inherit;
   background: var(--train-accent);
 }
@@ -796,15 +971,16 @@
 
 @media (max-width: 860px) {
   .page {
-    height: auto;
-    min-height: 100%;
-    overflow: visible;
-    padding: 12px;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0;
   }
 
+  .header,
   .modelHeader {
     grid-template-columns: 1fr;
-    flex-direction: column;
   }
 
   .shell {
@@ -846,13 +1022,13 @@
 
 .chartCard {
   min-height: 266px;
-  grid-template-rows: auto minmax(180px, 180px) auto;
+  grid-template-rows: auto minmax(190px, 190px) auto;
 }
 
 .chartSvg,
 .todoChart {
-  min-height: 180px;
-  height: 180px;
+  min-height: 190px;
+  height: 190px;
 }
 
 @media (max-width: 860px) {

@@ -1,28 +1,30 @@
 @use "@/styles/variables" as *;
 
 .editorShell {
-  height: calc(100svh - 52px);
-  min-height: 520px;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(circle at 28% 0%, rgba(4, 42, 255, 0.14), transparent 34%),
-    radial-gradient(circle at 72% 12%, rgba(225, 255, 37, 0.08), transparent 28%),
-    #0f1113;
-  color: #f6f2ea;
+    radial-gradient(circle at 28% 0%, color-mix(in srgb, #{$accent} 14%, transparent), transparent 34%),
+    radial-gradient(circle at 72% 12%, color-mix(in srgb, #{$accent-2} 8%, transparent), transparent 28%),
+    color-mix(in srgb, #{$text} 88%, black);
+  color: $surface2;
   overflow: hidden;
 }
 
 .editorTopbar {
+  min-width: 0;
   min-height: 50px;
   padding: 7px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 19, 20, 0.86);
+  border-bottom: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 86%, transparent);
   backdrop-filter: blur(18px);
   flex-shrink: 0;
 }
 
 .editorBody {
+  min-width: 0;
   min-height: 0;
   flex: 1;
   display: grid;
@@ -36,17 +38,18 @@
   flex-direction: column;
   gap: 10px;
   padding: 10px 8px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(13, 15, 16, 0.94);
+  border-right: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 94%, transparent);
 }
 
 .filmstripHead {
+  min-width: 0;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: rgba(246, 242, 234, 0.74);
+  color: color-mix(in srgb, #{$surface2} 74%, transparent);
   font-size: 12px;
   font-weight: 800;
 
@@ -65,11 +68,11 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1.14;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   border-radius: 10px;
   padding: 0;
   overflow: hidden;
-  background: #17191b;
+  background: color-mix(in srgb, #{$text} 92%, black);
   cursor: pointer;
   opacity: 0.72;
   transition: opacity 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
@@ -77,7 +80,7 @@
   &:hover {
     opacity: 1;
     transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: color-mix(in srgb, #{$surface} 18%, transparent);
   }
 
   img {
@@ -90,8 +93,8 @@
 
 .thumbActive {
   opacity: 1;
-  border-color: #e1ff25;
-  box-shadow: 0 0 0 1px #e1ff25, 0 10px 24px rgba(0, 0, 0, 0.32);
+  border-color: $accent-2;
+  box-shadow: 0 0 0 1px $accent-2, 0 10px 24px color-mix(in srgb, black 32%, transparent);
 }
 
 .thumbIndex,
@@ -101,8 +104,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.68);
-  color: #fff;
+  background: color-mix(in srgb, black 68%, transparent);
+  color: $text-white;
   font-size: 10px;
   font-weight: 800;
 }
@@ -110,7 +113,7 @@
 .thumbIndex { left: 6px; top: 6px; min-width: 18px; height: 18px; }
 .thumbState { right: 6px; top: 6px; width: 18px; height: 18px; }
 .thumbState svg { width: 12px; height: 12px; }
-.thumbStateDone { color: #7dff9f; }
+.thumbStateDone { color: color-mix(in srgb, #{$success} 64%, #{$surface}); }
 
 .canvasColumn {
   position: relative;
@@ -119,7 +122,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #0b0d0f;
+  background: color-mix(in srgb, #{$text} 84%, black);
 }
 
 .canvasMeta {
@@ -130,27 +133,31 @@
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  max-width: calc(100% - 32px);
+  row-gap: 4px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
   padding: 4px;
   border-radius: 999px;
-  background: rgba(8, 9, 10, 0.72);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  background: color-mix(in srgb, #{$text} 72%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, black 28%, transparent);
   backdrop-filter: blur(14px);
   pointer-events: none;
 
   span {
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     padding: 4px 8px;
     border-radius: 999px;
-    color: rgba(255, 255, 255, 0.72);
+    color: color-mix(in srgb, #{$surface} 72%, transparent);
     font-size: 11px;
     font-weight: 800;
   }
 
   span:last-child {
-    color: #08110b;
-    background: #e1ff25;
+    color: color-mix(in srgb, #{$success} 12%, black);
+    background: $accent-2;
   }
 }
 
@@ -160,8 +167,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 20, 21, 0.96);
+  border-left: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 96%, transparent);
 }
 
 .panelIntro {
@@ -170,13 +177,13 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
 
-  svg { width: 18px; height: 18px; color: #e1ff25; }
+  svg { width: 18px; height: 18px; color: $accent-2; }
 
   div { min-width: 0; display: grid; gap: 2px; }
   strong { font-size: 14px; letter-spacing: -0.02em; }
-  span { color: rgba(246, 242, 234, 0.56); font-size: 11px; font-weight: 700; }
+  span { color: color-mix(in srgb, #{$surface2} 56%, transparent); font-size: 11px; font-weight: 700; }
 }
 
 @media (max-width: 1180px) {
@@ -192,7 +199,6 @@
 }
 
 
-/* v5 editor fix + polish */
 .editorShell {
   height: calc(100svh - 48px);
 }
@@ -213,11 +219,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  row-gap: 4px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
   padding: 5px;
   border-radius: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(13, 14, 14, 0.76);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 76%, transparent);
+  box-shadow: 0 16px 34px color-mix(in srgb, black 28%, transparent);
   backdrop-filter: blur(16px);
 }
 
@@ -230,7 +239,7 @@
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: rgba(255, 253, 246, 0.72);
+  color: color-mix(in srgb, #{$surface} 72%, transparent);
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
@@ -238,13 +247,13 @@
 
 .floatingToolstrip button:hover,
 .floatingToolstrip .toolActive {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, #{$surface} 10%, transparent);
   color: var(--vc-surface);
 }
 
 .floatingToolstrip .toolActive {
-  background: #e1ff25;
-  color: #071006;
+  background: $accent-2;
+  color: color-mix(in srgb, #{$success} 10%, black);
 }
 
 .floatingToolstrip svg {
@@ -257,16 +266,16 @@
   left: 12px;
   top: 56px;
   z-index: 5;
-  max-width: 280px;
+  max-width: min(280px, calc(100% - 24px));
   padding: 9px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(225, 255, 37, 0.24);
-  background: rgba(225, 255, 37, 0.11);
-  color: #f3ff8b;
+  border: 1px solid color-mix(in srgb, #{$accent-2} 24%, transparent);
+  background: color-mix(in srgb, #{$accent-2} 11%, transparent);
+  color: color-mix(in srgb, #{$accent-2} 66%, #{$surface});
   font-size: 12px;
   font-weight: 800;
   line-height: 1.35;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 14px 30px color-mix(in srgb, black 22%, transparent);
   backdrop-filter: blur(12px);
   pointer-events: none;
 }
@@ -276,7 +285,7 @@
 }
 
 .editorPanel {
-  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.16);
+  box-shadow: -18px 0 48px color-mix(in srgb, black 16%, transparent);
 }
 
 @media (max-width: 1180px) {
@@ -297,13 +306,12 @@
 }
 
 
-/* v6 editor filmstrip + polish */
 .editorShell {
   height: calc(100svh - 48px);
   background:
-    radial-gradient(circle at 20% -10%, rgba(225, 255, 37, 0.09), transparent 28%),
-    radial-gradient(circle at 78% 0%, rgba(4, 42, 255, 0.12), transparent 26%),
-    #0f1113;
+    radial-gradient(circle at 20% -10%, color-mix(in srgb, #{$accent-2} 9%, transparent), transparent 28%),
+    radial-gradient(circle at 78% 0%, color-mix(in srgb, #{$accent} 12%, transparent), transparent 26%),
+    color-mix(in srgb, #{$text} 88%, black);
 }
 
 .editorBody {
@@ -314,19 +322,19 @@
   gap: 12px;
   padding: 12px 10px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 120px),
-    rgba(13, 15, 16, 0.97);
+    linear-gradient(180deg, color-mix(in srgb, #{$surface} 4%, transparent), transparent 120px),
+    color-mix(in srgb, #{$text} 97%, transparent);
 }
 
 .filmstripHead {
   height: auto;
   min-height: 38px;
   padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(255, 253, 246, 0.82);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  background: color-mix(in srgb, #{$surface} 4%, transparent);
+  color: color-mix(in srgb, #{$surface} 82%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, black 18%, transparent);
 }
 
 .filmstripHead span {
@@ -353,7 +361,7 @@
 .classes::-webkit-scrollbar-thumb,
 .anns::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, #{$surface} 16%, transparent);
 }
 
 .thumb {
@@ -363,11 +371,11 @@
   aspect-ratio: 1.56;
   border-radius: 15px;
   opacity: 0.86;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: #0b0c0d;
+  border-color: color-mix(in srgb, #{$surface} 10%, transparent);
+  background: color-mix(in srgb, #{$text} 86%, black);
   overflow: hidden;
   scroll-margin-block: 18px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 14px 28px color-mix(in srgb, black 24%, transparent);
 }
 
 .thumb::after {
@@ -375,16 +383,16 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 38%),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent 58%);
+    linear-gradient(180deg, color-mix(in srgb, black 16%, transparent), transparent 38%),
+    linear-gradient(0deg, color-mix(in srgb, black 72%, transparent), transparent 58%);
   pointer-events: none;
 }
 
 .thumb:hover {
   opacity: 1;
   transform: translateY(-2px);
-  border-color: rgba(225, 255, 37, 0.32);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  border-color: color-mix(in srgb, #{$accent-2} 32%, transparent);
+  box-shadow: 0 18px 36px color-mix(in srgb, black 35%, transparent);
 }
 
 .thumb img {
@@ -405,11 +413,11 @@
 
 .thumbActive {
   opacity: 1;
-  border-color: #e1ff25;
+  border-color: $accent-2;
   box-shadow:
-    0 0 0 1px #e1ff25,
-    0 18px 38px rgba(0, 0, 0, 0.42),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    0 0 0 1px $accent-2,
+    0 18px 38px color-mix(in srgb, black 42%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #{$surface} 12%, transparent);
 }
 
 .thumbOverlay {
@@ -423,8 +431,8 @@
   gap: 6px;
   padding: 5px 6px;
   border-radius: 11px;
-  background: rgba(0, 0, 0, 0.62);
-  color: rgba(255, 253, 246, 0.88);
+  background: color-mix(in srgb, black 62%, transparent);
+  color: color-mix(in srgb, #{$surface} 88%, transparent);
   backdrop-filter: blur(13px);
 }
 
@@ -441,7 +449,7 @@
   min-width: 27px;
   height: 20px;
   padding: 0 6px;
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, #{$surface} 12%, transparent);
   color: var(--vc-surface);
   font-size: 10px;
   font-weight: 900;
@@ -452,7 +460,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: rgba(255, 253, 246, 0.76);
+  color: color-mix(in srgb, #{$surface} 76%, transparent);
   font-size: 10px;
   font-weight: 850;
   text-align: left;
@@ -461,19 +469,19 @@
 .thumbState {
   width: 20px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 253, 246, 0.64);
+  background: color-mix(in srgb, #{$surface} 12%, transparent);
+  color: color-mix(in srgb, #{$surface} 64%, transparent);
 }
 
 .thumbStateDone {
-  background: rgba(27, 220, 74, 0.18);
-  color: #73ff94;
+  background: color-mix(in srgb, #{$success} 18%, transparent);
+  color: color-mix(in srgb, #{$success} 64%, #{$surface});
 }
 
 .canvasColumn {
   background:
-    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.055), transparent 34%),
-    #080a0b;
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, #{$surface} 6%, transparent), transparent 34%),
+    color-mix(in srgb, #{$text} 80%, black);
 }
 
 .canvasColumn::before {
@@ -482,7 +490,7 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 55%, rgba(0, 0, 0, 0.28));
+  background: radial-gradient(circle at center, transparent 55%, color-mix(in srgb, black 28%, transparent));
 }
 
 .floatingToolstrip {
@@ -490,8 +498,8 @@
   left: 14px;
   border-radius: 14px;
   padding: 6px;
-  background: rgba(15, 16, 16, 0.82);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  background: color-mix(in srgb, #{$text} 82%, transparent);
+  box-shadow: 0 18px 42px color-mix(in srgb, black 34%, transparent);
 }
 
 .floatingToolstrip button {
@@ -503,8 +511,8 @@
 .canvasMeta {
   bottom: 18px;
   padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  background: rgba(8, 9, 10, 0.76);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 76%, transparent);
 }
 
 .selectClassHint {
@@ -514,13 +522,13 @@
 
 .editorPanel {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 96px),
-    rgba(18, 20, 21, 0.98);
+    linear-gradient(180deg, color-mix(in srgb, #{$surface} 4%, transparent), transparent 96px),
+    color-mix(in srgb, #{$text} 98%, transparent);
 }
 
 .panelIntro {
   min-height: 62px;
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in srgb, #{$surface} 2%, transparent);
 }
 
 @media (max-width: 1280px) {
@@ -542,7 +550,6 @@
 }
 
 
-/* v7 editor flow polish: bottom navigator, progress, selected class */
 .editorBody {
   grid-template-columns: 204px minmax(0, 1fr) 332px;
 }
@@ -556,7 +563,7 @@
 }
 
 .filmstripHead svg {
-  color: #e1ff25;
+  color: $accent-2;
 }
 
 .filmstripTitle {
@@ -579,13 +586,13 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: rgba(255, 253, 246, 0.48);
+  color: color-mix(in srgb, #{$surface} 48%, transparent);
   font-size: 10px;
   font-weight: 750;
 }
 
 .filmstripCount {
-  color: rgba(255, 253, 246, 0.72);
+  color: color-mix(in srgb, #{$surface} 72%, transparent);
   font-size: 12px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -596,7 +603,7 @@
   height: 5px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
+  background: color-mix(in srgb, #{$surface} 9%, transparent);
 }
 
 .filmstripProgress span {
@@ -604,8 +611,8 @@
   height: 100%;
   min-width: 6px;
   border-radius: inherit;
-  background: linear-gradient(90deg, #e1ff25, #20d85a);
-  box-shadow: 0 0 18px rgba(225, 255, 37, 0.24);
+  background: linear-gradient(90deg, $accent-2, $success);
+  box-shadow: 0 0 18px color-mix(in srgb, #{$accent-2} 24%, transparent);
 }
 
 .thumb {
@@ -622,8 +629,8 @@
   gap: 5px;
   padding: 4px 6px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.58);
-  color: rgba(255, 253, 246, 0.82);
+  background: color-mix(in srgb, black 58%, transparent);
+  color: color-mix(in srgb, #{$surface} 82%, transparent);
   font-size: 10px;
   font-weight: 900;
   backdrop-filter: blur(12px);
@@ -639,16 +646,17 @@
   bottom: 16px;
   z-index: 6;
   transform: translateX(-50%);
-  width: min(680px, calc(100% - 32px));
+  width: min(680px, calc(100% - 24px));
+  max-width: calc(100% - 20px);
   display: grid;
-  grid-template-columns: auto minmax(170px, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   border-radius: 18px;
-  background: rgba(8, 9, 10, 0.76);
-  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.34);
+  background: color-mix(in srgb, #{$text} 76%, transparent);
+  box-shadow: 0 20px 52px color-mix(in srgb, black 34%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -662,8 +670,8 @@
   padding: 0 12px;
   border: 0;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 253, 246, 0.78);
+  background: color-mix(in srgb, #{$surface} 7%, transparent);
+  color: color-mix(in srgb, #{$text-white} 78%, transparent);
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
@@ -672,7 +680,7 @@
 
 .bottomNavigator button:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, #{$surface} 12%, transparent);
   color: var(--vc-surface);
 }
 
@@ -687,13 +695,13 @@
 }
 
 .bottomNavigator .nextButton {
-  background: #e1ff25;
-  color: #061007;
+  background: $accent-2;
+  color: color-mix(in srgb, #{$success} 10%, black);
 }
 
 .bottomNavigator .nextButton:hover:not(:disabled) {
-  background: #eeff5a;
-  color: #061007;
+  background: $accent-2;
+  color: color-mix(in srgb, #{$success} 10%, black);
 }
 
 .bottomProgressPanel {
@@ -706,8 +714,9 @@
 .bottomProgressText {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
-  color: rgba(255, 253, 246, 0.58);
+  color: color-mix(in srgb, #{$surface} 58%, transparent);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.01em;
@@ -718,7 +727,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
+  background: color-mix(in srgb, #{$surface} 9%, transparent);
 }
 
 .bottomProgressTrack span {
@@ -726,7 +735,7 @@
   height: 100%;
   min-width: 7px;
   border-radius: inherit;
-  background: linear-gradient(90deg, #e1ff25, #1bdc4a);
+  background: linear-gradient(90deg, $accent-2, $success);
 }
 
 .hotkeyRow {
@@ -734,13 +743,16 @@
   right: 16px;
   bottom: 67px;
   z-index: 5;
+  max-width: calc(100% - 32px);
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex-wrap: wrap;
   padding: 5px;
   border-radius: 999px;
-  background: rgba(8, 9, 10, 0.58);
-  color: rgba(255, 253, 246, 0.54);
+  background: color-mix(in srgb, #{$text} 58%, transparent);
+  color: color-mix(in srgb, #{$surface} 54%, transparent);
   font-size: 10px;
   font-weight: 800;
   backdrop-filter: blur(14px);
@@ -755,8 +767,8 @@
   justify-content: center;
   padding: 0 6px;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.11);
-  color: rgba(255, 253, 246, 0.84);
+  background: color-mix(in srgb, #{$surface} 11%, transparent);
+  color: color-mix(in srgb, #{$text-white} 84%, transparent);
   font: inherit;
   font-size: 10px;
   font-weight: 950;
@@ -764,15 +776,15 @@
 
 .panelIntroSelected {
   background:
-    radial-gradient(circle at 20% 0%, rgba(225, 255, 37, 0.08), transparent 40%),
-    rgba(255, 255, 255, 0.035);
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, #{$accent-2} 8%, transparent), transparent 40%),
+    color-mix(in srgb, #{$surface} 4%, transparent);
 }
 
 .selectedDot {
   width: 11px;
   height: 11px;
   border-radius: 999px;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 4px color-mix(in srgb, #{$surface} 6%, transparent);
 }
 
 .panelIntroText {
@@ -796,8 +808,8 @@
 @media (max-width: 1050px) {
   .editorBody { grid-template-columns: 132px minmax(0, 1fr) 294px; }
   .filmstripTitle small { display: none; }
-  .bottomNavigator { grid-template-columns: auto 1fr auto; }
-  .skipButton { display: none !important; }
+  .bottomNavigator { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .skipButton { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -813,18 +825,17 @@
 }
 
 
-/* v8 editor maturity polish: cleaner stage, status card, softer rails */
 .editorShell {
   background:
-    radial-gradient(circle at 18% -8%, rgba(225, 255, 37, 0.075), transparent 26%),
-    radial-gradient(circle at 68% 4%, rgba(4, 42, 255, 0.11), transparent 24%),
-    linear-gradient(180deg, #111416 0%, #090b0c 100%);
+    radial-gradient(circle at 18% -8%, color-mix(in srgb, #{$accent-2} 8%, transparent), transparent 26%),
+    radial-gradient(circle at 68% 4%, color-mix(in srgb, #{$accent} 11%, transparent), transparent 24%),
+    linear-gradient(180deg, $text 0%, $text 100%);
 }
 
 .editorTopbar {
-  border-bottom-color: rgba(255, 255, 255, 0.065);
-  background: rgba(14, 16, 17, 0.92);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.18);
+  border-bottom-color: color-mix(in srgb, #{$surface} 6%, transparent);
+  background: color-mix(in srgb, #{$text} 92%, transparent);
+  box-shadow: 0 16px 44px color-mix(in srgb, black 18%, transparent);
 }
 
 .editorBody {
@@ -832,8 +843,8 @@
 }
 
 .filmstrip {
-  border-right-color: rgba(255, 255, 255, 0.065);
-  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.13);
+  border-right-color: color-mix(in srgb, #{$surface} 6%, transparent);
+  box-shadow: 18px 0 48px color-mix(in srgb, #{$text} 13%, transparent);
 }
 
 .thumbs {
@@ -851,7 +862,7 @@
 .thumb:hover .thumbOverlay,
 .thumbActive .thumbOverlay {
   transform: translateY(-1px);
-  background: rgba(0, 0, 0, 0.72);
+  background: color-mix(in srgb, black 72%, transparent);
 }
 
 .canvasColumn::after {
@@ -861,8 +872,8 @@
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.28), transparent 90px, transparent calc(100% - 90px), rgba(0, 0, 0, 0.22)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.24), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.32));
+    linear-gradient(90deg, color-mix(in srgb, black 28%, transparent), transparent 90px, transparent calc(100% - 90px), color-mix(in srgb, black 22%, transparent)),
+    linear-gradient(180deg, color-mix(in srgb, black 24%, transparent), transparent 110px, transparent calc(100% - 110px), color-mix(in srgb, black 32%, transparent));
 }
 
 .floatingToolstrip,
@@ -876,8 +887,8 @@
 
 .floatingToolstrip {
   gap: 5px;
-  background: rgba(12, 13, 13, 0.86);
-  border-color: rgba(255, 255, 255, 0.095);
+  background: color-mix(in srgb, #{$text} 86%, transparent);
+  border-color: color-mix(in srgb, #{$surface} 10%, transparent);
 }
 
 .floatingToolstrip button kbd {
@@ -888,7 +899,7 @@
   justify-content: center;
   padding: 0 5px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, #{$surface} 10%, transparent);
   color: currentColor;
   font: inherit;
   font-size: 10px;
@@ -896,7 +907,7 @@
 }
 
 .floatingToolstrip .toolActive kbd {
-  background: rgba(7, 16, 6, 0.12);
+  background: color-mix(in srgb, #{$text} 12%, transparent);
 }
 
 .reviewCard {
@@ -908,10 +919,10 @@
   gap: 5px;
   padding: 12px 13px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.085);
-  background: rgba(10, 11, 12, 0.7);
-  color: rgba(255, 253, 246, 0.7);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$text} 70%, transparent);
+  color: color-mix(in srgb, #{$text-white} 70%, transparent);
+  box-shadow: 0 18px 46px color-mix(in srgb, black 28%, transparent);
   backdrop-filter: blur(18px);
   pointer-events: none;
 }
@@ -920,8 +931,8 @@
   width: fit-content;
   padding: 4px 7px;
   border-radius: 999px;
-  background: rgba(255, 176, 32, 0.14);
-  color: #ffd98d;
+  background: color-mix(in srgb, #{$warning} 14%, transparent);
+  color: $warning;
   font-size: 10px;
   font-weight: 950;
   text-transform: uppercase;
@@ -940,27 +951,27 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: rgba(255, 253, 246, 0.52);
+  color: color-mix(in srgb, #{$text-white} 52%, transparent);
   font-size: 11px;
   font-weight: 750;
 }
 
 .reviewCardDone span {
-  background: rgba(27, 220, 74, 0.15);
-  color: #83ff9e;
+  background: color-mix(in srgb, #{$success} 15%, transparent);
+  color: $success;
 }
 
 .reviewCardDone {
-  border-color: rgba(27, 220, 74, 0.16);
+  border-color: color-mix(in srgb, #{$success} 16%, transparent);
 }
 
 .editorPanel {
-  border-left-color: rgba(255, 255, 255, 0.065);
-  box-shadow: -22px 0 52px rgba(0, 0, 0, 0.14);
+  border-left-color: color-mix(in srgb, #{$surface} 6%, transparent);
+  box-shadow: -22px 0 52px color-mix(in srgb, #{$text} 14%, transparent);
 }
 
 .panelIntro {
-  border-bottom-color: rgba(255, 255, 255, 0.065);
+  border-bottom-color: color-mix(in srgb, #{$surface} 6%, transparent);
 }
 
 .bottomNavigator {
@@ -982,7 +993,6 @@
   .thumb { min-height: 92px; }
 }
 
-/* v13 editor maturity polish */
 .editorShell {
   isolation: isolate;
 }
@@ -1023,7 +1033,7 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #{$surface} 8%, transparent);
 }
 
 .thumbnailCardActive::before {
@@ -1034,23 +1044,23 @@
   bottom: 18px;
   width: 3px;
   border-radius: 999px;
-  background: #e1ff25;
-  box-shadow: 0 0 18px rgba(225, 255, 37, 0.6);
+  background: $accent-2;
+  box-shadow: 0 0 18px color-mix(in srgb, #{$accent-2} 60%, transparent);
 }
 
 .canvasStage {
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.08),
-    inset 0 0 80px rgba(0,0,0,.45),
-    0 28px 70px rgba(0,0,0,.28);
+    inset 0 0 0 1px color-mix(in srgb, #{$surface} 8%, transparent),
+    inset 0 0 80px color-mix(in srgb, #{$text} 45%, transparent),
+    0 28px 70px color-mix(in srgb, #{$text} 28%, transparent);
 }
 
 .editorCanvasWrap {
   background:
-    radial-gradient(circle at 50% 40%, rgba(255,255,255,.06), transparent 36%),
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
-    #0b0d0e;
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, #{$surface} 6%, transparent), transparent 36%),
+    linear-gradient(color-mix(in srgb, #{$surface} 2%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, #{$surface} 2%, transparent) 1px, transparent 1px),
+    $text;
   background-size: auto, 28px 28px, 28px 28px, auto;
 }
 
@@ -1073,5 +1083,27 @@
     width: auto;
     height: 3px;
   }
+}
+
+.editorTopbar,
+.editorBody,
+.filmstrip,
+.canvasColumn,
+.editorPanel,
+.panelIntro,
+.panelIntroText,
+.bottomProgressPanel,
+.bottomNavigator,
+.floatingToolstrip,
+.canvasMeta {
+  min-width: 0;
+}
+
+.editorTopbar,
+.panelIntro,
+.bottomProgressText,
+.canvasMeta,
+.floatingToolstrip {
+  overflow-wrap: anywhere;
 }
 

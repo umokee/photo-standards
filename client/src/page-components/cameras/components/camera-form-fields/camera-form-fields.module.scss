@@ -4,15 +4,15 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: var(--vc-space-3, 12px);
+  gap: $space-3;
   min-width: 0;
 }
 
 .formSection {
   gap: 10px;
   padding: 12px 14px;
-  border-color: var(--vc-border, #dfe3e8);
-  background: var(--vc-surface, #fff);
+  border-color: $border;
+  background: $surface;
 }
 
 .gridTwo {
@@ -36,14 +36,14 @@
   align-items: center;
   justify-content: center;
   height: 40px;
-  color: var(--vc-text-soft, #7a8493);
+  color: $text-subtle;
   font-size: 13px;
   line-height: 1;
 }
 
 .metaNote {
-  color: var(--vc-text-muted, #667085);
-  font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: $text-muted;
+  font-family: $font-mono;
   font-size: 11px;
   line-height: 1.45;
   overflow-wrap: anywhere;

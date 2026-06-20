@@ -1,0 +1,562 @@
+@use "@/styles/variables" as *;
+
+/* Training index route local styles. */
+
+.page { display: grid; align-content: start; gap: 18px; min-width: 0; max-width: 100%; min-height: 100%; overflow: visible;
+}
+
+.page {
+  gap: 20px;
+}
+
+.page {
+  animation: platform-page-enter .18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+.page {
+    animation: none;
+    transition: none;
+}
+}
+
+.page {
+  --qc-card-bg: color-mix(in srgb, #{$surface} 82%, transparent);
+  --qc-card-border: color-mix(in srgb, #{$line-soft} 72%, transparent);
+  --qc-card-shadow: 0 22px 70px color-mix(in srgb, #{$text} 6%, transparent), 0 1px 0 color-mix(in srgb, #{$surface} 95%, transparent) inset;
+  --qc-blue: #{$accent};
+  --qc-lime: #{$accent-2};
+}
+
+.trainPageV27 { gap: 16px;
+}
+
+.trainHeaderV27 {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, #{$line-soft} 95%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, #{$accent-2} 24%, transparent), transparent 20rem),
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, #{$accent} 8%, transparent), transparent 20rem),
+    color-mix(in srgb, #{$surface} 95%, transparent);
+  box-shadow: 0 18px 50px color-mix(in srgb, #{$text} 6%, transparent);
+}
+
+.trainHeaderV27 h1 { margin: 4px 0 6px; color: $text; font-size: clamp(28px, 4vw, 48px); line-height: .98; letter-spacing: -.07em;
+}
+
+.trainHeaderV27 p { max-width: 780px; margin: 0; color: $text-hint; font-size: 14px; line-height: 1.55;
+}
+
+.trainHeaderIconV27,
+.trainProjectAvatarV27 {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, $accent, color-mix(in srgb, #{$accent} 62%, #{$danger}));
+  color: $text-white;
+  font-weight: 950;
+  box-shadow: 0 18px 34px color-mix(in srgb, #{$accent} 18%, transparent);
+}
+
+.trainHeaderIconV27 { width: 72px; height: 72px; font-size: 30px;
+}
+
+.trainHeaderIconV27 svg,
+.trainProjectAvatarV27 svg { width: 22px; height: 22px;
+}
+
+.trainMetricGridV27 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+}
+
+.trainMetricV27,
+.trainProjectCardV27 {
+  border: 1px solid color-mix(in srgb, #{$line-soft} 95%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, #{$surface} 94%, transparent);
+  box-shadow: 0 14px 34px color-mix(in srgb, #{$text} 5%, transparent);
+}
+
+.trainMetricV27 { min-height: 104px; padding: 15px;
+}
+
+.trainMetricV27 svg { width: 18px; height: 18px; color: $accent;
+}
+
+.trainMetricV27 span,
+.trainMetricV27 small { display: block; color: $text-sub; font-size: 12px; font-weight: 850;
+}
+
+.trainMetricV27 strong { display: block; margin: 4px 0; color: $text; font-size: 28px; line-height: 1; letter-spacing: -.06em;
+}
+
+.trainProjectCardV27 strong { color: $text;
+}
+
+.trainProjectCardV27 span { color: $text-sub; font-size: 12px; font-weight: 800;
+}
+
+.trainProjectCardV27 { text-decoration: none;
+}
+
+.trainProjectQueueV27 { display: grid; gap: 10px;
+}
+
+.trainProjectQueueV27 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.trainProjectCardV27 { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding: 14px; color: inherit;
+}
+
+.trainProjectAvatarV27 { width: 48px; height: 48px;
+}
+
+.trainProjectMetaV27 { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+.trainProjectMetaV27 small { display: inline-flex; align-items: center; gap: 5px; color: $text-sub; font-size: 11px; font-weight: 850;
+}
+
+.trainProjectMetaV27 svg { width: 13px; height: 13px;
+}
+
+.trainProjectProgressV27 { grid-column: 1 / -1; height: 7px; overflow: hidden; border-radius: 999px; background: $surface;
+}
+
+.trainProjectProgressV27 span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, $accent, $success, $accent-2);
+}
+
+@media (max-width: 1180px) {
+.trainMetricGridV27 { grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+}
+
+@media (max-width: 760px) {
+.trainHeaderV27 { grid-template-columns: 1fr;
+}
+
+.trainMetricGridV27 { grid-template-columns: 1fr;
+}
+}
+
+.trainPageV27 {
+  min-height: 0;
+}
+
+.collapsiblePanelV28 {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #{$line-soft} 95%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, #{$surface} 94%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, #{$text} 4%, transparent);
+}
+
+.collapsiblePanelV28 + .collapsiblePanelV28 {
+  margin-top: 12px;
+}
+
+.collapsiblePanelV28 > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 14px;
+  cursor: pointer;
+  list-style: none;
+  color: $text;
+  font-size: 13px;
+  font-weight: 950;
+  user-select: none;
+}
+
+.collapsiblePanelV28 > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsiblePanelV28 > summary::before {
+  content: "›";
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: $warning-soft;
+  color: $text-sub;
+  font-size: 20px;
+  line-height: 1;
+  transition: rotate .16s ease;
+}
+
+.collapsiblePanelV28[open] > summary::before {
+  rotate: 90deg;
+}
+
+.collapsiblePanelV28 > summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.collapsiblePanelV28 > summary svg {
+  width: 15px;
+  height: 15px;
+  color: $accent;
+}
+
+.collapsiblePanelV28 > summary b {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: $surface;
+  color: $text-hint;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.scrollListV28,
+.trainProjectQueueV27 {
+  min-height: 0;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.scrollListV28 {
+  max-height: min(58vh, 560px);
+  overflow: auto;
+  padding: 0 12px 12px;
+}
+
+.trainProjectQueueV27.scrollListV28 {
+  padding-top: 12px;
+}
+
+@media (max-width: 1180px) {
+.scrollListV28 {
+    max-height: none;
+}
+}
+
+.page {
+  color: var(--vc-text);
+}
+
+.page :where(input,
+  select,
+  textarea) {
+  border-color: var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+}
+
+.page :where(input,
+  select,
+  textarea)::placeholder {
+  color: var(--vc-text-subtle);
+}
+
+.page :where(button) {
+  border-color: var(--vc-border);
+}
+
+.page :where([class*="Card"],
+  [class*="Panel"],
+  [class*="Rail"],
+  [class*="Tile"],
+  [class*="Block"],
+  [class*="Section"],
+  [class*="Header"],
+  [class*="Toolbar"],
+  [class*="Workspace"],
+  [class*="Dialog"],
+  [class*="Shell"],
+  [class*="Queue"],
+  [class*="List"]) {
+  border-color: var(--vc-border);
+}
+
+.page :where([class*="Hero"],
+  [class*="Header"],
+  [class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Block"],
+  [class*="Rail"],
+  [class*="Dialog"]) {
+  background-color: var(--vc-surface);
+  color: var(--vc-text);
+}
+
+.page :where([class*="Hero"],
+  [class*="CompactHeader"],
+  [class*="Intro"]) {
+  background-image: linear-gradient(180deg, var(--vc-surface), var(--vc-surface-2));
+  box-shadow: var(--vc-shadow-sm);
+}
+
+.page :where([class*="Chip"],
+  [class*="Badge"],
+  [class*="Pill"],
+  [class*="Status"],
+  [class*="Tab"]) {
+  border-color: var(--vc-border);
+}
+
+.page :where(h1,
+  h2,
+  h3,
+  h4,
+  strong,
+  b) {
+  color: var(--vc-text);
+}
+
+.page :where(p,
+  small,
+  span) {
+  border-color: var(--vc-border-soft);
+}
+
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg);
+}
+
+:global(html[data-theme="dark"]) .page :where([class*="Grid"],
+  [class*="Canvas"],
+  [class*="Viewer"],
+  [class*="Chart"],
+  [class*="Graph"]) {
+  border-color: var(--vc-border);
+}
+
+:global(html[data-theme="dark"]) .page :where([class*="Ghost"],
+  [class*="Secondary"],
+  [class*="Action"],
+  [class*="Button"]) {
+  color: var(--vc-text-muted);
+}
+
+.page {
+  min-width: 0;
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(h1,
+  h2,
+  h3,
+  h4,
+  strong,
+  b,
+  label) {
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(p,
+  small,
+  span,
+  dd,
+  dt,
+  li) {
+  color: inherit;
+}
+
+:global(html[data-theme="dark"]) .page :where(input,
+  select,
+  textarea,
+  button) {
+  border-color: var(--vc-border);
+  background-color: var(--vc-surface-2);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(a) {
+  color: var(--vc-accent);
+}
+
+.page {
+  min-width: 0;
+  min-height: 0;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+.page :where([class*="Shell"],
+  [class*="Workspace"],
+  [class*="Layout"],
+  [class*="Grid"],
+  [class*="Board"]) {
+  min-width: 0;
+  min-height: 0;
+}
+
+.page :where([class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Rail"],
+  [class*="Hero"],
+  [class*="Toolbar"],
+  [class*="Inspector"],
+  [class*="Meta"],
+  [class*="Summary"],
+  [class*="Block"]) {
+  border-color: var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-xs);
+}
+
+.page :where([class*="Row"],
+  [class*="Item"],
+  [class*="Chip"],
+  [class*="Badge"],
+  [class*="Pill"],
+  [class*="Stat"],
+  [class*="Cell"],
+  [class*="Option"]) {
+  border-color: var(--vc-border-soft);
+}
+
+.page :where([class*="Row"],
+  [class*="Item"],
+  [class*="Option"],
+  [class*="Cell"]) {
+  background: var(--vc-surface-2);
+  color: var(--vc-text);
+}
+
+.page :where(input,
+  select,
+  textarea) {
+  background: var(--vc-surface);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+  box-shadow: none;
+}
+
+.page :where(button) {
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+}
+
+.page :where(h1,
+  h2,
+  h3,
+  h4,
+  strong,
+  b,
+  label) {
+  color: var(--vc-text);
+}
+
+.page :where(p,
+  small,
+  dd,
+  dt,
+  li) {
+  color: var(--vc-text-muted);
+}
+
+.page :where(a) {
+  color: inherit;
+}
+
+.page :where([class*="Primary"],
+  [class*="primary"],
+  [class*="Accent"],
+  [class*="accent"]) {
+  border-color: var(--vc-accent-border);
+}
+
+/* Dark theme: no $text-white/cream cards from older prototype CSS. */
+:global(html[data-theme="dark"]) .page {
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where([class*="Panel"],
+  [class*="Card"],
+  [class*="Tile"],
+  [class*="Rail"],
+  [class*="Hero"],
+  [class*="Toolbar"],
+  [class*="Inspector"],
+  [class*="Meta"],
+  [class*="Summary"],
+  [class*="Block"],
+  [class*="Shell"]) {
+  background: var(--vc-surface);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+  box-shadow: none;
+}
+
+:global(html[data-theme="dark"]) .page :where([class*="Row"],
+  [class*="Item"],
+  [class*="Option"],
+  [class*="Cell"],
+  [class*="Input"],
+  [class*="Select"]) {
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border-soft);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where([class*="Ghost"],
+  [class*="Secondary"],
+  [class*="Muted"],
+  [class*="Subtle"]) {
+  color: var(--vc-text-muted);
+}
+
+:global(html[data-theme="dark"]) .page :where(input,
+  select,
+  textarea,
+  button) {
+  background-color: var(--vc-surface-2);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+}
+
+:global(html[data-theme="dark"]) .page :where(svg) {
+  color: currentColor;
+}
+
+.trainHeaderV27 {
+  background: var(--vc-surface);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-xs);
+}
+
+.trainMetricGridV27 {
+  align-items: stretch;
+}
+
+.trainMetricV27 {
+  background: var(--vc-surface);
+  border-color: var(--vc-border);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-xs);
+}
+
+.page {
+  min-height: 0;
+  background: var(--vc-bg);
+  color: var(--vc-text);
+}

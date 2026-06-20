@@ -3,7 +3,7 @@
 
 .container {
   position: fixed;
-  top: calc(var(--vc-topbar-height, 56px) + 8px);
+  top: calc(#{$topbar-height} + 8px);
   left: 50%;
   z-index: 9999;
   display: flex;
@@ -21,29 +21,29 @@
   gap: 10px;
   padding: 12px;
   padding-right: 34px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
-  border-radius: 14px;
-  background: var(--vc-surface, #ffffff);
-  color: var(--vc-text, #111827);
-  box-shadow: var(--vc-shadow-popover, 0 18px 48px rgba(15, 23, 42, 0.16));
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  background: $surface;
+  color: $text;
+  box-shadow: $popover-shadow;
   overflow: hidden;
   pointer-events: all;
 }
 
-.success { border-color: var(--vc-success-line, rgba(34, 197, 94, 0.28)); }
-.error { border-color: var(--vc-danger-line, rgba(239, 68, 68, 0.30)); }
-.warning { border-color: var(--vc-warning-line, rgba(245, 158, 11, 0.34)); }
-.info { border-color: var(--vc-accent-line, rgba(37, 99, 235, 0.24)); }
+.success { border-color: $success-border; }
+.error { border-color: $danger-border; }
+.warning { border-color: $warning-line; }
+.info { border-color: $accent-border; }
 
 .icon {
   flex-shrink: 0;
   margin-top: 1px;
   display: flex;
 
-  .success & { color: var(--vc-success-text, #15803d); }
-  .error & { color: var(--vc-danger-text, #b91c1c); }
-  .warning & { color: var(--vc-warning-text, #92400e); }
-  .info & { color: var(--vc-accent, #2563eb); }
+  .success & { color: $success-label; }
+  .error & { color: $danger-text; }
+  .warning & { color: $warning-text; }
+  .info & { color: $accent; }
 }
 
 .content {
@@ -54,14 +54,14 @@
 }
 
 .title {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 13px;
   font-weight: 720;
   line-height: 1.35;
 }
 
 .message {
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -77,13 +77,13 @@
   height: 22px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: $radius-xs;
   background: transparent;
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   cursor: pointer;
 
   &:hover {
-    background: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
-    color: var(--vc-text, #111827);
+    background: $control-hover;
+    color: $text;
   }
 }

@@ -1,16 +1,18 @@
+@use "@/styles/variables" as *;
+
 .root {
   min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: clamp(16px, 2vw, 20px);
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
-  border-radius: var(--vc-radius-xl, 24px);
+  gap: $space-4;
+  padding: $space-5;
+  border: 1px solid $line;
+  border-radius: $radius-xl;
   background:
-    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--vc-accent, #2563eb) 12%, transparent), transparent 20rem),
-    var(--vc-surface, #ffffff);
-  box-shadow: var(--vc-shadow-sm, 0 12px 34px rgba(15, 23, 42, 0.06));
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, $accent 12%, transparent), transparent 20rem),
+    $surface;
+  box-shadow: $shadow-sm;
 }
 
 .copy {
@@ -20,8 +22,8 @@
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--vc-muted, #64748b);
+  gap: $space-2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
@@ -36,7 +38,7 @@
 
 .title {
   margin: 7px 0 6px;
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: clamp(28px, 3.8vw, 46px);
   font-weight: 920;
   line-height: 0.96;
@@ -46,7 +48,7 @@
 .description {
   max-width: 840px;
   margin: 0;
-  color: var(--vc-muted, #64748b);
+  color: $text-sub;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -55,7 +57,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: $space-2;
 }
 
 @media (max-width: 900px) {

@@ -5,6 +5,9 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: $surface;
+  color: $text;
 }
 
 .header {
@@ -13,7 +16,8 @@
   justify-content: space-between;
   gap: $space-3;
   padding: $space-3 $space-4 $space-2;
-  border-bottom: 1px solid $line-soft;
+  border-bottom: 1px solid $line;
+  background: $surface;
 }
 
 .headerText {
@@ -23,7 +27,7 @@
 }
 
 .eyebrow {
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-micro;
   font-weight: $fw-semibold;
   text-transform: uppercase;
@@ -46,11 +50,12 @@
 
 .body {
   min-height: 0;
-  overflow-y: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: $space-2 $space-3 $space-3;
+  background: $surface;
 }
-
 
 .groups {
   display: grid;
@@ -65,7 +70,7 @@
 }
 
 .group + .group {
-  border-top: 1px solid $line-soft;
+  border-top: 1px solid $line;
 }
 
 .groupHead {
@@ -109,7 +114,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-small;
   line-height: 1;
   text-decoration: none;
@@ -125,7 +130,7 @@
   gap: 0;
   margin-left: 6px;
   padding-left: 15px;
-  border-left: 1px solid $line-soft;
+  border-left: 1px solid $line;
 }
 
 .groupLeaf {
@@ -137,8 +142,13 @@
   min-width: 0;
   margin: 1px 0;
   padding: 3px 6px 3px 0;
+  border-radius: $radius-control;
   color: $text;
   cursor: pointer;
+
+  &:hover {
+    background: $surface2;
+  }
 
   &::before {
     content: "";
@@ -146,7 +156,7 @@
     left: -15px;
     top: 50%;
     width: 10px;
-    border-top: 1px solid $line-soft;
+    border-top: 1px solid $line;
     transform: translateY(-50%);
   }
 }
@@ -174,7 +184,7 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid $line-soft;
 }
 
 .colorDotMuted {
@@ -203,64 +213,4 @@
   .groupHead {
     align-items: flex-start;
   }
-}
-
-/* v32 inspect panel bounded class selector */
-.root {
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.body {
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-/* v43 inspect strict panel */
-.root {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--vc-surface, #ffffff);
-  color: var(--vc-text, #101114);
-}
-
-.header {
-  border-bottom-color: var(--vc-line, rgba(127, 127, 127, 0.18));
-  background: var(--vc-surface, #ffffff);
-}
-
-.eyebrow,
-.groupToggle {
-  color: var(--vc-muted, #6f737b);
-}
-
-.title,
-.groupName,
-.itemName {
-  color: var(--vc-text, #101114);
-}
-
-.body {
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  background: var(--vc-surface, #ffffff);
-}
-
-.group + .group,
-.groupBranch,
-.groupLeaf::before {
-  border-color: var(--vc-line, rgba(127, 127, 127, 0.18));
-}
-
-.groupLeaf {
-  border-radius: 10px;
-}
-
-.groupLeaf:hover {
-  background: var(--vc-surface-2, #f6f7f8);
 }

@@ -4,7 +4,7 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: var(--vc-space-3, 12px);
+  gap: $space-3;
   min-width: 0;
   min-height: 0;
 }
@@ -23,13 +23,13 @@
   gap: 3px;
   min-width: 0;
   padding: 11px;
-  border: 1px solid var(--vc-border, #dfe3e8);
-  border-radius: var(--vc-radius-md, 14px);
-  background: var(--vc-surface-2, #f7f8fa);
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  background: $surface2;
 }
 
 .summaryLabel {
-  color: var(--vc-text-soft, #7a8493);
+  color: $text-hint;
   font-size: 10px;
   font-weight: 820;
   text-transform: uppercase;
@@ -37,7 +37,7 @@
 }
 
 .summaryValue {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 13px;
   font-weight: 850;
   overflow-wrap: anywhere;
@@ -46,21 +46,21 @@
 .messageBox,
 .errorBox {
   padding: 11px 12px;
-  border-radius: var(--vc-radius-md, 14px);
+  border-radius: $radius-md;
   font-size: 12px;
   line-height: 1.5;
 }
 
 .messageBox {
-  border: 1px solid var(--vc-border, #dfe3e8);
-  color: var(--vc-text-muted, #667085);
-  background: var(--vc-surface-2, #f7f8fa);
+  border: 1px solid $line;
+  color: $text-sub;
+  background: $surface2;
 }
 
 .errorBox {
-  border: 1px solid color-mix(in srgb, var(--vc-danger, #ef4444) 34%, transparent);
-  color: var(--vc-danger-text, #b91c1c);
-  background: color-mix(in srgb, var(--vc-danger, #ef4444) 10%, transparent);
+  border: 1px solid color-mix(in srgb, $danger 34%, transparent);
+  color: $danger-text;
+  background: color-mix(in srgb, $danger 10%, transparent);
 }
 
 @media (max-width: 900px) {

@@ -7,11 +7,12 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
-  padding: 14px;
-  overflow: auto;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  color: var(--vc-text, #101114);
+  color: $text;
 }
 
 .page[data-page="group"] {
@@ -35,10 +36,10 @@
 .referenceCard,
 .blockedPanel,
 .panelInner {
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
-  background: var(--vc-surface, #ffffff);
-  color: var(--vc-text, #101114);
-  box-shadow: var(--vc-shadow-sm, 0 14px 36px rgba(15, 23, 42, 0.055));
+  border: 1px solid $line;
+  background: $surface;
+  color: $text;
+  box-shadow: $shadow-sm;
 }
 
 .hero,
@@ -54,8 +55,8 @@
   align-items: end;
   padding: 20px;
   background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--vc-accent, #0b39ff) 10%, transparent), transparent 260px),
-    var(--vc-surface, #ffffff);
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, $accent 10%, transparent), transparent 260px),
+    $surface;
 }
 
 .headerMain,
@@ -72,7 +73,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 11px;
   font-weight: 850;
   line-height: 1;
@@ -88,7 +89,7 @@
 .projectTitle strong,
 .referenceTitle strong {
   margin: 0;
-  color: var(--vc-text, #101114);
+  color: $text;
   letter-spacing: -0.045em;
 }
 
@@ -106,7 +107,7 @@
 .blockedPanel p,
 .panelHead small {
   margin: 8px 0 0;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 13px;
   font-weight: 520;
   line-height: 1.5;
@@ -124,19 +125,19 @@
   display: grid;
   gap: 5px;
   padding: 12px;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border: 1px solid $line;
   border-radius: 16px;
-  background: var(--vc-surface-2, #f6f7f8);
+  background: $surface2;
 }
 
 .metric svg {
   width: 17px;
   height: 17px;
-  color: var(--vc-accent, #0b39ff);
+  color: $accent;
 }
 
 .metric b {
-  color: var(--vc-text, #101114);
+  color: $text;
   font-size: 22px;
   font-weight: 900;
   line-height: 0.95;
@@ -144,7 +145,7 @@
 }
 
 .metric span {
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 11px;
   font-weight: 760;
   white-space: nowrap;
@@ -172,24 +173,24 @@
 
 .modeCard:hover,
 .modeCard[data-active="true"] {
-  border-color: color-mix(in srgb, var(--vc-accent, #0b39ff) 38%, var(--vc-line, #d4d7dd));
+  border-color: color-mix(in srgb, $accent 38%, $line);
   transform: translateY(-1px);
 }
 
 .modeCard[data-active="true"] {
-  background: color-mix(in srgb, var(--vc-accent, #0b39ff) 8%, var(--vc-surface, #ffffff));
+  background: color-mix(in srgb, $accent 8%, $surface);
 }
 
 .modeCard svg {
   grid-row: 1 / span 2;
   width: 20px;
   height: 20px;
-  color: var(--vc-accent, #0b39ff);
+  color: $accent;
 }
 
 .modeCard strong {
   min-width: 0;
-  color: var(--vc-text, #101114);
+  color: $text;
   font-size: 13px;
   font-weight: 900;
   overflow: hidden;
@@ -199,7 +200,7 @@
 
 .modeCard span {
   min-width: 0;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 12px;
   font-weight: 560;
   line-height: 1.42;
@@ -228,7 +229,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 16px 18px 12px;
-  border-bottom: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border-bottom: 1px solid $line;
 }
 
 .sectionHeading {
@@ -244,7 +245,7 @@
 
 .sectionCount {
   flex-shrink: 0;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 12px;
   font-weight: 760;
 }
@@ -290,7 +291,7 @@
 
 .projectCard:hover,
 .referenceCard:hover {
-  border-color: color-mix(in srgb, var(--vc-accent, #0b39ff) 34%, var(--vc-line, #d4d7dd));
+  border-color: color-mix(in srgb, $accent 34%, $line);
   transform: translateY(-1px);
 }
 
@@ -324,10 +325,10 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border: 1px solid $line;
   border-radius: 14px;
-  background: var(--vc-surface-2, #f6f7f8);
-  color: var(--vc-accent, #0b39ff);
+  background: $surface2;
+  color: $accent;
   font-size: 15px;
   font-weight: 900;
 }
@@ -373,10 +374,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f6f7f8);
-  color: var(--vc-muted, #6f737b);
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 820;
   line-height: 1;
@@ -394,15 +395,15 @@
 }
 
 .statusPillGood {
-  color: var(--vc-success-text, #13834b);
-  background: color-mix(in srgb, var(--vc-success, #19a35b) 10%, var(--vc-surface, #ffffff));
-  border-color: color-mix(in srgb, var(--vc-success, #19a35b) 22%, var(--vc-line, #d4d7dd));
+  color: $success-text;
+  background: color-mix(in srgb, $success 10%, $surface);
+  border-color: color-mix(in srgb, $success 22%, $line);
 }
 
 .statusPillBad {
-  color: var(--vc-danger-text, #ce1f2e);
-  background: color-mix(in srgb, var(--vc-danger, #ff4d5a) 9%, var(--vc-surface, #ffffff));
-  border-color: color-mix(in srgb, var(--vc-danger, #ff4d5a) 22%, var(--vc-line, #d4d7dd));
+  color: $danger-text;
+  background: color-mix(in srgb, $danger 9%, $surface);
+  border-color: color-mix(in srgb, $danger 22%, $line);
 }
 
 .statusPill svg,
@@ -432,8 +433,8 @@
   min-height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f6f7f8);
-  color: var(--vc-muted, #6f737b);
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 760;
 }
@@ -452,22 +453,22 @@
 }
 
 .readinessIcon[data-state="ready"] {
-  color: var(--vc-success-text, #13834b);
+  color: $success-text;
 }
 
 .readinessIcon[data-state="blocked"] {
-  color: var(--vc-danger-text, #ce1f2e);
+  color: $danger-text;
 }
 
 .readinessCard strong {
-  color: var(--vc-text, #101114);
+  color: $text;
   font-size: 18px;
   font-weight: 900;
   line-height: 1;
 }
 
 .readinessCard span {
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 11px;
   font-weight: 820;
   text-transform: uppercase;
@@ -476,7 +477,7 @@
 
 .readinessCard p {
   margin: 0;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.38;
 }
@@ -515,7 +516,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 11px;
   font-weight: 860;
   text-transform: uppercase;
@@ -534,13 +535,13 @@
 }
 
 .stationStatus b[data-state="ready"] {
-  color: var(--vc-success-text, #13834b);
-  border-color: color-mix(in srgb, var(--vc-success, #19a35b) 24%, var(--vc-line, #d4d7dd));
+  color: $success-text;
+  border-color: color-mix(in srgb, $success 24%, $line);
 }
 
 .stationStatus b[data-state="setup"] {
-  color: var(--vc-danger-text, #ce1f2e);
-  border-color: color-mix(in srgb, var(--vc-danger, #ff4d5a) 22%, var(--vc-line, #d4d7dd));
+  color: $danger-text;
+  border-color: color-mix(in srgb, $danger 22%, $line);
 }
 
 .modePills {
@@ -548,9 +549,9 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f6f7f8);
+  background: $surface2;
 }
 
 .modePills button {
@@ -559,7 +560,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font: inherit;
   font-size: 12px;
   font-weight: 850;
@@ -567,8 +568,8 @@
 }
 
 .modePills button[data-active="true"] {
-  background: var(--vc-text, #101114);
-  color: var(--vc-surface, #ffffff);
+  background: $text;
+  color: $surface;
 }
 
 .stationTopbar {
@@ -590,13 +591,13 @@
 }
 
 .stationCrumbs strong {
-  color: var(--vc-text, #101114);
+  color: $text;
   font-size: 14px;
   font-weight: 900;
 }
 
 .stationCrumbs span {
-  color: var(--vc-muted, #6f737b);
+  color: $text-sub;
   font-size: 12px;
   font-weight: 760;
 }
@@ -604,7 +605,7 @@
 .stationCrumbs span::before {
   content: "/";
   margin-right: 7px;
-  color: var(--vc-faint, #a6aab2);
+  color: $text-hint;
 }
 
 .stationHints span,
@@ -614,15 +615,15 @@
 }
 
 .stationHints span[data-state="ready"] {
-  color: var(--vc-success-text, #13834b);
+  color: $success-text;
 }
 
 .stationHints span[data-state="setup"] {
-  color: var(--vc-danger-text, #ce1f2e);
+  color: $danger-text;
 }
 
 .stationHints a {
-  color: var(--vc-accent, #0b39ff);
+  color: $accent;
   text-decoration: none;
   font-size: 11px;
   font-weight: 840;
@@ -642,8 +643,8 @@
   min-height: 0;
   display: grid;
   overflow: hidden;
-  background: var(--vc-surface, #ffffff);
-  color: var(--vc-text, #101114);
+  background: $surface;
+  color: $text;
 }
 
 .panelInner {
@@ -661,7 +662,7 @@
   display: grid;
   gap: 3px;
   padding: 14px;
-  border-bottom: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
+  border-bottom: 1px solid $line;
 }
 
 .panelHead span {
@@ -680,13 +681,13 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  background: var(--vc-surface, #ffffff);
+  background: $surface;
 }
 
 .blockedPanel > svg {
   width: 32px;
   height: 32px;
-  color: var(--vc-accent, #0b39ff);
+  color: $accent;
 }
 
 .blockedPanel h3 {
@@ -696,7 +697,7 @@
 
 .blockedPanel a {
   width: fit-content;
-  color: var(--vc-accent, #0b39ff);
+  color: $accent;
   font-size: 12px;
   font-weight: 850;
   text-decoration: none;
@@ -745,7 +746,7 @@
 
 @media (max-width: 820px) {
   .page {
-    padding: 10px;
+    padding: 0;
   }
 
   .modeGrid,

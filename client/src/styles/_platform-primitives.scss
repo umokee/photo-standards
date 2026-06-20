@@ -1,29 +1,30 @@
 
+@use "variables" as *;
 /*
   Platform primitives foundation.
   New pages should use these classes instead of inventing page-local surfaces.
-  Existing pages are bridged from platform-pages.module.scss until migrated.
+  Route-specific CSS modules own page layout; shared primitives stay here.
 */
 html,
 body,
 #root {
   min-height: 100%;
-  background: var(--vc-app-bg);
-  color: var(--vc-text);
+  background: $app-bg;
+  color: $text;
 }
 
 body {
-  font-family: var(--vc-font-ui);
+  font-family: $font-ui;
 }
 
 ::selection {
-  color: var(--vc-accent-contrast);
-  background: color-mix(in srgb, var(--vc-accent) 72%, transparent);
+  color: $accent-contrast;
+  background: color-mix(in srgb, $accent 72%, transparent);
 }
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vc-accent) 18%, transparent);
+  box-shadow: $focus-ring;
 }
 
 button,
@@ -36,16 +37,16 @@ textarea {
 input,
 select,
 textarea {
-  min-height: var(--vc-control-h);
-  border: 1px solid var(--vc-border);
-  border-radius: var(--vc-radius-md, 14px);
-  background: var(--vc-surface);
-  color: var(--vc-text);
+  min-height: $control-h;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $surface;
+  color: $text;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--vc-text-subtle);
+  color: $text-subtle;
 }
 
 button:disabled,
@@ -57,7 +58,7 @@ button:disabled,
 .vc-page {
   min-width: 0;
   min-height: 0;
-  color: var(--vc-text);
+  color: $text;
 }
 
 .vc-panel,
@@ -65,25 +66,25 @@ button:disabled,
 .vc-toolbar,
 .vc-rail,
 .vc-inspector {
-  border: 1px solid var(--vc-border);
-  background: var(--vc-surface);
-  color: var(--vc-text);
-  box-shadow: var(--vc-shadow-xs);
+  border: 1px solid $border;
+  background: $surface;
+  color: $text;
+  box-shadow: $shadow-xs;
 }
 
 .vc-panel,
 .vc-card {
-  border-radius: var(--vc-radius-lg, 18px);
+  border-radius: $radius-lg;
 }
 
 .vc-toolbar {
   min-height: 52px;
-  border-radius: var(--vc-radius-lg, 18px);
+  border-radius: $radius-lg;
 }
 
 .vc-rail,
 .vc-inspector {
-  border-radius: var(--vc-radius-lg, 18px);
+  border-radius: $radius-lg;
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
@@ -96,43 +97,43 @@ button:disabled,
   scrollbar-gutter: stable;
 }
 
-.vc-muted { color: var(--vc-text-muted); }
-.vc-subtle { color: var(--vc-text-subtle); }
-.vc-accent { color: var(--vc-accent); }
+.vc-muted { color: $text-muted; }
+.vc-subtle { color: $text-subtle; }
+.vc-accent { color: $accent; }
 
 .vc-button {
-  min-height: var(--vc-control-h);
+  min-height: $control-h;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1px solid var(--vc-border);
-  border-radius: var(--vc-radius-md, 14px);
-  background: var(--vc-surface);
-  color: var(--vc-text);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $surface;
+  color: $text;
   font-weight: 750;
 }
 
 .vc-button:hover {
-  border-color: var(--vc-border-strong);
-  background: var(--vc-surface-2);
+  border-color: $border-strong;
+  background: $surface2;
 }
 
 .vc-button-primary {
-  border-color: var(--vc-accent);
-  background: var(--vc-accent);
-  color: var(--vc-accent-contrast);
+  border-color: $accent;
+  background: $accent;
+  color: $accent-contrast;
 }
 
 .vc-button-primary:hover {
-  border-color: var(--vc-accent-hover);
-  background: var(--vc-accent-hover);
+  border-color: $accent-hover;
+  background: $accent-hover;
 }
 
 .vc-grid-bg {
   background-image:
-    linear-gradient(var(--vc-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--vc-grid-line) 1px, transparent 1px);
+    linear-gradient($grid-line 1px, transparent 1px),
+    linear-gradient(90deg, $grid-line 1px, transparent 1px);
   background-size: 40px 40px;
 }

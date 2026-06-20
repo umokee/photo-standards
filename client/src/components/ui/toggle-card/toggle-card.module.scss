@@ -8,9 +8,9 @@
   gap: 12px;
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
-  border-radius: var(--vc-radius, 14px);
-  background: var(--vc-surface-2, #f8fafc);
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  background: $surface2;
 }
 
 .content {
@@ -21,13 +21,13 @@
 }
 
 .title {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 13px;
   font-weight: 720;
 }
 
 .hint {
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.45;
 }

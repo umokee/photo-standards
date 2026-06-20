@@ -4,8 +4,8 @@
   width: 100%;
   flex: 1;
   min-height: 0;
-  background: #121415;
-  color: #f6f2ea;
+  background: color-mix(in srgb, #{$text} 92%, black);
+  color: $surface2;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -19,7 +19,7 @@
   &.classes {
     flex: 1.18 1 0;
     min-height: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   }
 
   &.anns {
@@ -45,12 +45,12 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(246, 242, 234, 0.56);
+  color: color-mix(in srgb, #{$surface2} 56%, transparent);
 }
 
 .sectionMeta {
   font-size: 11px;
-  color: rgba(246, 242, 234, 0.48);
+  color: color-mix(in srgb, #{$surface2} 48%, transparent);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -70,10 +70,10 @@
 .errorText {
   margin: 8px 6px;
   padding: 10px;
-  border: 1px solid rgba(255, 77, 90, 0.24);
+  border: 1px solid color-mix(in srgb, #{$danger} 24%, transparent);
   border-radius: 10px;
-  background: rgba(255, 77, 90, 0.1);
-  color: #ff9aa3;
+  background: color-mix(in srgb, #{$danger} 10%, transparent);
+  color: color-mix(in srgb, #{$danger} 42%, #{$surface});
   font-size: 12px;
   line-height: 1.4;
 }
@@ -89,7 +89,7 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(246, 242, 234, 0.42);
+  color: color-mix(in srgb, #{$surface2} 42%, transparent);
 }
 
 .groupColor {
@@ -109,18 +109,18 @@
   border-radius: 10px;
   cursor: pointer;
   border: 1px solid transparent;
-  color: rgba(246, 242, 234, 0.76);
+  color: color-mix(in srgb, #{$surface2} 76%, transparent);
   transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.14s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    background: color-mix(in srgb, #{$surface} 6%, transparent);
+    color: $text-white;
   }
 
   &.selected {
-    background: rgba(225, 255, 37, 0.12);
-    border-color: rgba(225, 255, 37, 0.28);
-    color: #fff;
+    background: color-mix(in srgb, #{$accent-2} 12%, transparent);
+    border-color: color-mix(in srgb, #{$accent-2} 28%, transparent);
+    color: $text-white;
   }
 }
 
@@ -129,7 +129,7 @@
   height: 10px;
   border-radius: 999px;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px color-mix(in srgb, #{$surface} 5%, transparent);
 }
 
 .classLabel {
@@ -151,14 +151,14 @@
   justify-content: center;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(246, 242, 234, 0.46);
+  background: color-mix(in srgb, #{$surface} 6%, transparent);
+  color: color-mix(in srgb, #{$surface2} 46%, transparent);
   font-size: 10px;
   font-family: $font-mono;
   font-weight: 800;
   white-space: nowrap;
 
-  &.has { color: #08110b; background: #e1ff25; }
+  &.has { color: color-mix(in srgb, #{$success} 12%, black); background: $accent-2; }
 }
 
 .anns {
@@ -171,10 +171,10 @@
   margin: 8px;
   padding: 22px 12px;
   text-align: center;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed color-mix(in srgb, #{$surface} 12%, transparent);
   border-radius: 12px;
   font-size: 12px;
-  color: rgba(246, 242, 234, 0.42);
+  color: color-mix(in srgb, #{$surface2} 42%, transparent);
   line-height: 1.5;
 }
 
@@ -194,11 +194,11 @@
   width: 22px;
   height: 22px;
   border-radius: 8px;
-  color: rgba(246, 242, 234, 0.46);
+  color: color-mix(in srgb, #{$surface2} 46%, transparent);
   cursor: pointer;
   opacity: 0;
 
-  &:hover { background: rgba(255, 77, 90, 0.12); color: #ff7f89; }
+  &:hover { background: color-mix(in srgb, #{$danger} 12%, transparent); color: color-mix(in srgb, #{$danger} 54%, #{$surface}); }
   .annItem:hover & { opacity: 1; }
   svg { width: 12px; height: 12px; }
 }
@@ -208,17 +208,17 @@
   grid-template-columns: 1fr 1fr;
   flex-shrink: 0;
   padding: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   gap: 8px;
 }
 
 .actions button {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #f6f2ea;
+  background: color-mix(in srgb, #{$surface} 7%, transparent);
+  border-color: color-mix(in srgb, #{$surface} 10%, transparent);
+  color: $surface2;
 
-  &:hover { background: rgba(255, 255, 255, 0.12); }
-  &:first-child { background: #e1ff25; border-color: #e1ff25; color: #071006; }
+  &:hover { background: color-mix(in srgb, #{$surface} 12%, transparent); }
+  &:first-child { background: $accent-2; border-color: $accent-2; color: color-mix(in srgb, #{$success} 10%, black); }
 }
 
 @media (max-width: 767px) {
@@ -229,7 +229,6 @@
 }
 
 
-/* v6 editor panel polish */
 .classSearch {
   position: relative;
   margin: 0 8px 8px;
@@ -237,9 +236,9 @@
   align-items: center;
   min-height: 36px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(255, 253, 246, 0.5);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  background: color-mix(in srgb, #{$surface} 4%, transparent);
+  color: color-mix(in srgb, #{$surface} 50%, transparent);
   flex-shrink: 0;
 }
 
@@ -265,7 +264,7 @@
 }
 
 .classSearch input::placeholder {
-  color: rgba(255, 253, 246, 0.42);
+  color: color-mix(in srgb, #{$surface} 42%, transparent);
 }
 
 .sectionHeader {
@@ -290,29 +289,28 @@
 
 .classItem.selected,
 .annItem.selected {
-  box-shadow: inset 0 0 0 1px rgba(225, 255, 37, 0.14);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #{$accent-2} 14%, transparent);
 }
 
 .classCount.has {
-  box-shadow: 0 0 0 2px rgba(225, 255, 37, 0.12);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #{$accent-2} 12%, transparent);
 }
 
 .actions {
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in srgb, #{$surface} 2%, transparent);
 }
 
 
-/* v7 segment panel polish */
 .root {
   background:
-    radial-gradient(circle at 88% 0%, rgba(225, 255, 37, 0.045), transparent 28%),
-    rgba(18, 20, 21, 0.98);
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, #{$accent-2} 5%, transparent), transparent 28%),
+    color-mix(in srgb, #{$text} 98%, transparent);
 }
 
 .classSearch:focus-within {
-  border-color: rgba(225, 255, 37, 0.28);
-  background: rgba(255, 255, 255, 0.065);
-  box-shadow: 0 0 0 3px rgba(225, 255, 37, 0.06);
+  border-color: color-mix(in srgb, #{$accent-2} 28%, transparent);
+  background: color-mix(in srgb, #{$surface} 6%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, #{$accent-2} 6%, transparent);
 }
 
 .classItem,
@@ -328,7 +326,7 @@
   inset: 1px;
   z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(225, 255, 37, 0.08), transparent 58%);
+  background: linear-gradient(90deg, color-mix(in srgb, #{$accent-2} 8%, transparent), transparent 58%);
   opacity: 0;
   transition: opacity 0.14s ease;
 }
@@ -364,23 +362,22 @@
   position: sticky;
   bottom: 0;
   z-index: 4;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -18px 28px rgba(18, 20, 21, 0.82);
+  border-top: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
+  box-shadow: 0 -18px 28px color-mix(in srgb, #{$text} 82%, transparent);
 }
 
 .actions button:first-child:not(:disabled) {
-  background: #e1ff25;
-  color: #071006;
+  background: $accent-2;
+  color: color-mix(in srgb, #{$success} 10%, black);
 }
 
 
-/* v8 right inspector tabs */
 .panelTabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   padding: 10px 10px 0;
-  background: rgba(18, 20, 21, 0.98);
+  background: color-mix(in srgb, #{$text} 98%, transparent);
 }
 
 .panelTab {
@@ -390,10 +387,10 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.075);
+  border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(246, 242, 234, 0.72);
+  background: color-mix(in srgb, #{$surface} 4%, transparent);
+  color: color-mix(in srgb, #{$surface2} 72%, transparent);
   font-size: 12px;
   font-weight: 900;
   cursor: pointer;
@@ -402,8 +399,8 @@
 
 .panelTab:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 253, 246, 0.88);
+  background: color-mix(in srgb, #{$surface} 7%, transparent);
+  color: color-mix(in srgb, #{$surface} 88%, transparent);
 }
 
 .panelTab span {
@@ -414,27 +411,27 @@
   justify-content: center;
   padding: 0 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
-  color: rgba(246, 242, 234, 0.68);
+  background: color-mix(in srgb, #{$surface} 9%, transparent);
+  color: color-mix(in srgb, #{$surface2} 68%, transparent);
   font-size: 10px;
   font-family: $font-mono;
   font-weight: 950;
 }
 
 .panelTabActive {
-  background: #e1ff25;
-  border-color: #e1ff25;
-  color: #071006;
-  box-shadow: 0 12px 26px rgba(225, 255, 37, 0.12);
+  background: $accent-2;
+  border-color: $accent-2;
+  color: color-mix(in srgb, #{$success} 10%, black);
+  box-shadow: 0 12px 26px color-mix(in srgb, #{$accent-2} 12%, transparent);
 }
 
 .panelTabActive span {
-  background: rgba(7, 16, 6, 0.13);
-  color: #071006;
+  background: color-mix(in srgb, #{$text} 13%, transparent);
+  color: color-mix(in srgb, #{$success} 10%, black);
 }
 
 .hiddenSection {
-  display: none !important;
+  display: none;
 }
 
 .section.classes,
@@ -447,8 +444,8 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 0%, rgba(225, 255, 37, 0.045), transparent 38%),
-    rgba(255, 255, 255, 0.025);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, #{$accent-2} 5%, transparent), transparent 38%),
+    color-mix(in srgb, #{$surface} 2%, transparent);
 }
 
 .actions button {

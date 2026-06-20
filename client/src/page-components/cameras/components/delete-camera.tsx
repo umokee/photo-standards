@@ -11,10 +11,14 @@ interface Props {
   name: string;
 }
 
-export const DeleteCamera = ({ id, name }: Props) => (
+type DeleteCameraTriggerProps = Props & {
+  triggerClassName?: string;
+};
+
+export const DeleteCamera = ({ id, name, triggerClassName }: DeleteCameraTriggerProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="danger">Удалить</Button>
+      <Button className={triggerClassName} variant="danger">Удалить</Button>
     </Modal.Trigger>
     <Modal.Content>
       <DeleteCameraModal id={id} name={name} />

@@ -1,3 +1,5 @@
+@use "@/styles/variables" as *;
+
 .root {
   display: inline-flex;
   align-items: center;
@@ -6,10 +8,10 @@
   max-width: 100%;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid var(--chip-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--chip-bg, var(--vc-surface-2, #f8fafc));
-  color: var(--chip-fg, var(--vc-muted, #64748b));
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 850;
   line-height: 1;
@@ -28,31 +30,31 @@
 }
 
 .neutral {
-  --chip-bg: var(--vc-surface-2, #f8fafc);
-  --chip-fg: var(--vc-muted, #64748b);
-  --chip-border: var(--vc-line, rgba(15, 23, 42, 0.12));
+  border-color: $line;
+  background: $surface2;
+  color: $text-sub;
 }
 
 .accent {
-  --chip-bg: color-mix(in srgb, var(--vc-accent, #0b46ff) 10%, var(--vc-surface, #ffffff));
-  --chip-fg: var(--vc-accent, #0b46ff);
-  --chip-border: color-mix(in srgb, var(--vc-accent, #0b46ff) 30%, transparent);
+  border-color: color-mix(in srgb, #{$accent} 30%, transparent);
+  background: color-mix(in srgb, #{$accent} 10%, #{$surface});
+  color: $accent;
 }
 
 .success {
-  --chip-bg: color-mix(in srgb, var(--vc-success, #16a34a) 9%, var(--vc-surface, #ffffff));
-  --chip-fg: var(--vc-success, #16a34a);
-  --chip-border: color-mix(in srgb, var(--vc-success, #16a34a) 28%, transparent);
+  border-color: color-mix(in srgb, #{$success} 28%, transparent);
+  background: color-mix(in srgb, #{$success} 9%, #{$surface});
+  color: $success;
 }
 
 .warning {
-  --chip-bg: color-mix(in srgb, var(--vc-warning, #d97706) 10%, var(--vc-surface, #ffffff));
-  --chip-fg: var(--vc-warning, #d97706);
-  --chip-border: color-mix(in srgb, var(--vc-warning, #d97706) 28%, transparent);
+  border-color: color-mix(in srgb, #{$warning} 28%, transparent);
+  background: color-mix(in srgb, #{$warning} 10%, #{$surface});
+  color: $warning;
 }
 
 .danger {
-  --chip-bg: color-mix(in srgb, var(--vc-danger, #dc2626) 9%, var(--vc-surface, #ffffff));
-  --chip-fg: var(--vc-danger, #dc2626);
-  --chip-border: color-mix(in srgb, var(--vc-danger, #dc2626) 28%, transparent);
+  border-color: color-mix(in srgb, #{$danger} 28%, transparent);
+  background: color-mix(in srgb, #{$danger} 9%, #{$surface});
+  color: $danger;
 }

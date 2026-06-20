@@ -5,7 +5,7 @@ import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import type { GroupListItem } from "@/types/contracts";
 import { Brain, CheckCircle2, Database, Image, ListChecks, Tags, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import p from "../platform-pages.module.scss";
+import p from "./_training-index.module.scss";
 
 function getReadiness(group: GroupListItem) {
   const checks = [
@@ -35,17 +35,16 @@ export function Component() {
       <header className={p.trainHeaderV27}>
         <div className={p.trainHeaderIconV27}><Brain /></div>
         <div>
-          <span className={p.eyebrow}><Brain /> Train</span>
-          <h1>Model workspace</h1>
-          <p>Обучение привязано к изделию: сначала Assets готовят references/classes/annotations, затем Train управляет моделями и training jobs.</p>
+          <h1>Модели</h1>
+          <p>Готовность данных и модели по изделиям.</p>
         </div>
       </header>
 
       <section className={p.trainMetricGridV27}>
-        <MetricCard className={p.trainMetricV27} icon={Database} value={groups.length} label="Projects" hint={`${trainingReady} train-ready`} />
-        <MetricCard className={p.trainMetricV27} icon={Image} value={totalImages} label="Images" hint={`${percent(totalLabeled, totalImages)}% labeled`} />
-        <MetricCard className={p.trainMetricV27} icon={Tags} value={groups.reduce((sum, group) => sum + group.stats.segment_classes_count, 0)} label="Classes" hint="segment labels" />
-        <MetricCard className={p.trainMetricV27} icon={Brain} value={totalModels} label="Models" hint="weights" />
+        <MetricCard className={p.trainMetricV27} icon={Database} value={groups.length} label="Изделия" hint={`${trainingReady} готово`} />
+        <MetricCard className={p.trainMetricV27} icon={Image} value={totalImages} label="Фото" hint={`${percent(totalLabeled, totalImages)}% размечено`} />
+        <MetricCard className={p.trainMetricV27} icon={Tags} value={groups.reduce((sum, group) => sum + group.stats.segment_classes_count, 0)} label="Классы" hint="детали" />
+        <MetricCard className={p.trainMetricV27} icon={Brain} value={totalModels} label="Модели" hint="веса" />
       </section>
 
       <QueryState
@@ -53,34 +52,34 @@ export function Component() {
         isLoading={groupsQuery.isLoading}
         isError={groupsQuery.isError}
         isEmpty={!groups.length}
-        emptyTitle="No projects"
-        emptyDescription="Создай project, добавь references/classes в Assets и вернись к Train."
+        emptyTitle="Нет изделий"
+        emptyDescription="Создай изделие и подготовь данные в Assets."
       >
         <details className={p.collapsiblePanelV28} open>
-          <summary><span><Brain /> Project queue</span><b>{groups.length}</b></summary>
+          <summary><span><Brain /> Изделия</span><b>{groups.length}</b></summary>
           <div className={`${p.trainProjectQueueV27} ${p.scrollListV28}`}>
           {groups.map((group) => {
             const readiness = getReadiness(group);
             const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
             const nextAction =
-              group.stats.standards_count === 0 ? "Create reference" :
-              group.stats.segment_classes_count === 0 ? "Create classes" :
-              group.stats.annotated_images_count === 0 ? "Annotate images" :
-              group.stats.models_count === 0 ? "Train first model" :
-              "Open model lab";
+              group.stats.standards_count === 0 ? "Добавить эталон" :
+              group.stats.segment_classes_count === 0 ? "Настроить классы" :
+              group.stats.annotated_images_count === 0 ? "Разметить фото" :
+              group.stats.models_count === 0 ? "Обучить модель" :
+              "Открыть модели";
 
             return (
               <Link key={group.id} to={paths.trainingOverview(group.id)} className={p.trainProjectCardV27}>
                 <div className={p.trainProjectAvatarV27}>{group.name.slice(0, 1).toUpperCase()}</div>
                 <div>
                   <strong>{group.name}</strong>
-                  <span>{group.description || "Quality-control project"}</span>
+                  <span>{group.description || "Изделие для контроля качества"}</span>
                 </div>
                 <div className={p.trainProjectMetaV27}>
-                  <small><Image /> {group.stats.images_count} images</small>
-                  <small><Tags /> {group.stats.segment_classes_count} classes</small>
-                  <small><Brain /> {group.stats.models_count} models</small>
-                  <small><ListChecks /> {labeled}% labeled</small>
+                  <small><Image /> {group.stats.images_count} фото</small>
+                  <small><Tags /> {group.stats.segment_classes_count} классов</small>
+                  <small><Brain /> {group.stats.models_count} моделей</small>
+                  <small><ListChecks /> {labeled}% разметки</small>
                 </div>
                 <div className={p.trainProjectProgressV27}>
                   <span style={{ width: `${readiness}%` }} />

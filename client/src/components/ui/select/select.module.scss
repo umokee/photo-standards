@@ -4,20 +4,20 @@
 .root {
   width: 100%;
   min-width: 0;
-  height: var(--vc-control-height-lg, 40px);
+  height: $control-height-lg;
   padding: 0 36px 0 12px;
-  border: 1px solid var(--vc-control-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
-  border-radius: var(--vc-radius-control, 10px);
-  background-color: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
+  border: 1px solid $control-border;
+  border-radius: $radius-control;
+  background-color: $control-bg;
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--vc-text-muted, #6b7280) 50%),
-    linear-gradient(135deg, var(--vc-text-muted, #6b7280) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, $text-sub 50%),
+    linear-gradient(135deg, $text-sub 50%, transparent 50%);
   background-position:
     calc(100% - 17px) 17px,
     calc(100% - 12px) 17px;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  color: var(--vc-text, #111827);
+  color: $text;
   font: inherit;
   font-size: 13px;
   line-height: 1;
@@ -32,14 +32,14 @@
     color 140ms ease;
 
   &:hover {
-    border-color: var(--vc-control-border-hover, var(--vc-line-strong, rgba(15, 23, 42, 0.2)));
+    border-color: $control-border-hover;
   }
 
   &:focus,
   &:focus-visible {
-    border-color: var(--vc-accent, #2563eb);
-    background-color: var(--vc-control-bg-focus, var(--vc-surface, #ffffff));
-    box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.16));
+    border-color: $accent;
+    background-color: $control-bg-focus;
+    box-shadow: $focus-ring;
   }
 
   &:disabled {
@@ -49,11 +49,11 @@
 }
 
 .fieldError {
-  border-color: var(--vc-danger, #dc2626);
+  border-color: $danger;
 
   &:focus,
   &:focus-visible {
-    border-color: var(--vc-danger, #dc2626);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+    border-color: $danger;
+    box-shadow: $danger-focus-ring;
   }
 }

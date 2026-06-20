@@ -10,7 +10,7 @@
     "facts components";
   gap: 12px;
   min-width: 0;
-  color: var(--vc-text, #111318);
+  color: $text;
 }
 
 .detailSection {
@@ -19,9 +19,9 @@
   min-width: 0;
   min-height: 0;
   padding: 12px;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 18px;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 .detailSection:nth-child(1) { grid-area: summary; }
@@ -38,7 +38,7 @@
 }
 
 .sectionTitle {
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.075em;
@@ -63,15 +63,15 @@
   gap: 4px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: 14px;
-  background: var(--vc-surface, #fff);
+  background: $surface;
 }
 
 .summaryItem span {
   min-width: 0;
   overflow: hidden;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -81,7 +81,7 @@
 }
 
 .summaryItem strong {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 18px;
   font-weight: 850;
   line-height: 1;
@@ -89,16 +89,16 @@
 
 .summaryNote {
   padding: 10px 12px;
-  border: 1px solid var(--vc-warning-border, #f0d4a0);
+  border: 1px solid $warning-border;
   border-radius: 14px;
-  background: var(--vc-warning-soft, #fff7e8);
-  color: var(--vc-text-muted, #586173);
+  background: $warning-soft;
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.45;
 }
 
 .summaryNote strong {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-weight: 800;
 }
 
@@ -121,13 +121,13 @@
   justify-content: space-between;
   gap: 12px;
   min-height: 24px;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 12px;
   font-weight: 820;
 }
 
 .componentGroupHead span:last-child {
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-weight: 750;
 }
 
@@ -142,20 +142,20 @@
   display: grid;
   gap: 4px;
   padding: 11px 12px;
-  border: 1px solid var(--vc-ok-border, #b7e7c7);
+  border: 1px solid $ok-border;
   border-radius: 14px;
-  background: var(--vc-ok-soft, #ecfdf3);
+  background: $ok-soft;
 }
 
 .componentSuccessTitle {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 13px;
   font-weight: 820;
 }
 
 .componentSuccessText,
 .collapsedSummary {
-  color: var(--vc-text-muted, #586173);
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -180,19 +180,19 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 16px;
-  background: var(--vc-surface, #fff);
+  background: $surface;
 }
 
 .imageHead {
   padding: 9px 11px;
-  border-bottom: 1px solid var(--vc-border-soft, #ebeff5);
-  background: var(--vc-surface-2, #f9fafc);
+  border-bottom: 1px solid $line-soft;
+  background: $surface2;
 }
 
 .imageHead strong {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 12px;
   font-weight: 820;
 }
@@ -203,7 +203,7 @@
   justify-content: center;
   min-height: 160px;
   flex: 1;
-  background: #080a0b;
+  background: $text;
 }
 
 .imageCardLarge .imageLink {
@@ -224,14 +224,14 @@
   gap: 8px;
   min-height: 160px;
   padding: 18px;
-  color: var(--vc-text-subtle, #7a8497);
-  background: var(--vc-surface-3, #f2f5fa);
+  color: $text-hint;
+  background: $surface3;
   font-size: 12px;
   text-align: center;
 }
 
 .imageEmpty svg {
-  color: var(--vc-text-disabled, #a8b1c0);
+  color: $text-off;
 }
 
 .factGrid {
@@ -245,13 +245,13 @@
   gap: 4px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: 14px;
-  background: var(--vc-surface, #fff);
+  background: $surface;
 }
 
 .factItem span {
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -262,7 +262,7 @@
 .factItem strong {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 12px;
   font-weight: 760;
   line-height: 1.4;

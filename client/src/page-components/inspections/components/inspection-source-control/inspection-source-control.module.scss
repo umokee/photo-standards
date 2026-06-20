@@ -1,10 +1,18 @@
+@use "@/styles/variables" as *;
+
 .root {
-  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: $space-2;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  min-width: min(560px, 100%);
-  max-width: 680px;
+  padding: $space-2;
+  border: 1px solid $line;
+  border-radius: $radius-lg;
+  background: $surface2;
+  color: $text;
 }
 
 .sourceMeta {
@@ -27,7 +35,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #756d61;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 950;
   line-height: 1;
@@ -36,14 +44,14 @@
 }
 
 .sourceMeta b {
-  color: #17130d;
+  color: $text;
   font-size: 13px;
   font-weight: 950;
   line-height: 1.1;
 }
 
 .sourceMeta small {
-  color: #8b8377;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 750;
   line-height: 1.2;
@@ -53,11 +61,11 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  color: #0b39ff;
+  color: $accent;
 }
 
 .cameraField {
-  width: min(300px, 34vw);
+  width: min(320px, 30vw);
   min-width: 220px;
 }
 
@@ -65,15 +73,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-width: 132px;
-  height: 42px;
-  padding: 0 16px;
-  color: #fff;
+  gap: $space-2;
+  min-width: 126px;
+  height: 38px;
+  padding: 0 $space-4;
   border: 0;
-  border-radius: 15px;
-  background: #0b39ff;
-  box-shadow: 0 14px 32px rgba(11, 57, 255, 0.18);
+  border-radius: $radius;
+  background: $text;
+  color: $surface;
+  box-shadow: none;
   font: inherit;
   font-size: 13px;
   font-weight: 950;
@@ -91,71 +99,10 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 980px) {
-  .root {
-    align-items: stretch;
-    flex-direction: column;
-    min-width: 0;
-    max-width: none;
-    width: 100%;
-  }
-
-  .cameraField,
-  .sourceButton {
-    width: 100%;
-  }
-}
-
-/* v43 inspect strict source control */
-.root {
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  padding: 8px;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
-  border-radius: 18px;
-  background: var(--vc-surface-2, #f6f7f8);
-  color: var(--vc-text, #101114);
-}
-
-.sourceMeta span {
-  color: var(--vc-muted, #6f737b);
-}
-
-.sourceMeta b {
-  color: var(--vc-text, #101114);
-}
-
-.sourceMeta small {
-  color: var(--vc-muted, #6f737b);
-}
-
-.sourceMeta svg {
-  color: var(--vc-accent, #0b39ff);
-}
-
-.cameraField {
-  width: min(320px, 30vw);
-  min-width: 220px;
-}
-
-.sourceButton {
-  min-width: 126px;
-  height: 38px;
-  border-radius: 13px;
-  background: var(--vc-text, #101114);
-  color: var(--vc-surface, #ffffff);
-  box-shadow: none;
-}
-
 :global([data-theme="dark"]) .sourceButton,
 :global(.dark) .sourceButton {
-  background: var(--vc-accent, #8ab4ff);
-  color: #061016;
+  background: $accent;
+  color: $accent-contrast;
 }
 
 @media (max-width: 1180px) {

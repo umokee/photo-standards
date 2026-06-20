@@ -1,113 +1,9 @@
-
 /*
-  Design tokens for the platform shell.
-  Sass variables stay in _variables.scss for legacy modules, while runtime theme
-  switching is driven by these CSS custom properties.
+  Compatibility bridge.
+  Runtime theme tokens live in _theme-runtime.scss.
+  This file intentionally does not redefine color tokens.
 */
-:root,
-html[data-theme="light"] {
-  color-scheme: light;
 
-  --vc-app-bg: #f6f7fb;
-  --vc-app-bg-soft: #eef1f6;
-  --vc-surface: #ffffff;
-  --vc-surface-2: #f9fafc;
-  --vc-surface-3: #f2f5fa;
-  --vc-elevated: rgba(255, 255, 255, 0.92);
-
-  --vc-border: #dfe5ee;
-  --vc-border-soft: #ebeff5;
-  --vc-border-strong: #cbd5e1;
-
-  --vc-text: #111318;
-  --vc-text-muted: #586173;
-  --vc-text-subtle: #7a8497;
-  --vc-text-disabled: #a8b1c0;
-  --vc-text-inverse: #ffffff;
-
-  --vc-accent: #0a38ff;
-  --vc-accent-hover: #082ed1;
-  --vc-accent-soft: #eef3ff;
-  --vc-accent-border: #cfdcff;
-  --vc-accent-contrast: #ffffff;
-
-  --vc-ok: #16a34a;
-  --vc-ok-soft: #ecfdf3;
-  --vc-ok-border: #b7e7c7;
-  --vc-warning: #d88a00;
-  --vc-warning-soft: #fff7e8;
-  --vc-warning-border: #f0d4a0;
-  --vc-danger: #dc2626;
-  --vc-danger-soft: #fff1f1;
-  --vc-danger-border: #ffd0d0;
-  --vc-purple: #7c3aed;
-  --vc-purple-soft: #f3edff;
-  --vc-purple-border: #ded0ff;
-
-  --vc-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --vc-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --vc-shadow-md: 0 18px 48px rgba(15, 23, 42, 0.09);
-  --vc-shadow-focus: 0 0 0 3px rgba(10, 56, 255, 0.14);
-
-  --vc-radius-sm: 10px;
-  --vc-radius-md: 14px;
-  --vc-radius-lg: 18px;
-  --vc-radius-xl: 24px;
-
-  --vc-scroll-thumb: #cbd5e1;
-  --vc-grid-line: rgba(15, 23, 42, 0.06);
-}
-
-html[data-theme="dark"] {
-  color-scheme: dark;
-
-  /* Dark base is intentionally close to the editor. */
-  --vc-app-bg: #080a0b;
-  --vc-app-bg-soft: #0d1011;
-  --vc-surface: #101315;
-  --vc-surface-2: #151717;
-  --vc-surface-3: #1a1e20;
-  --vc-elevated: rgba(16, 19, 21, 0.92);
-
-  --vc-border: rgba(255, 255, 255, 0.10);
-  --vc-border-soft: rgba(255, 255, 255, 0.075);
-  --vc-border-strong: rgba(255, 255, 255, 0.16);
-
-  --vc-text: #f7f7f2;
-  --vc-text-muted: rgba(255, 253, 246, 0.72);
-  --vc-text-subtle: rgba(255, 253, 246, 0.52);
-  --vc-text-disabled: rgba(255, 253, 246, 0.34);
-  --vc-text-inverse: #071006;
-
-  --vc-accent: #e1ff25;
-  --vc-accent-hover: #d2ef19;
-  --vc-accent-soft: rgba(225, 255, 37, 0.10);
-  --vc-accent-border: rgba(225, 255, 37, 0.24);
-  --vc-accent-contrast: #071006;
-
-  --vc-ok: #45d483;
-  --vc-ok-soft: rgba(69, 212, 131, 0.10);
-  --vc-ok-border: rgba(69, 212, 131, 0.24);
-  --vc-warning: #f5c451;
-  --vc-warning-soft: rgba(245, 196, 81, 0.11);
-  --vc-warning-border: rgba(245, 196, 81, 0.24);
-  --vc-danger: #ff6572;
-  --vc-danger-soft: rgba(255, 101, 114, 0.11);
-  --vc-danger-border: rgba(255, 101, 114, 0.25);
-  --vc-purple: #b47cff;
-  --vc-purple-soft: rgba(180, 124, 255, 0.12);
-  --vc-purple-border: rgba(180, 124, 255, 0.26);
-
-  --vc-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --vc-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.26);
-  --vc-shadow-md: 0 20px 60px rgba(0, 0, 0, 0.36);
-  --vc-shadow-focus: 0 0 0 3px rgba(225, 255, 37, 0.14);
-
-  --vc-scroll-thumb: rgba(255, 255, 255, 0.18);
-  --vc-grid-line: rgba(255, 255, 255, 0.055);
-}
-
-/* v37 strict primitive token additions */
 :root,
 html[data-theme="light"] {
   --vc-space-1: 4px;
@@ -118,8 +14,7 @@ html[data-theme="light"] {
   --vc-control-h: 38px;
   --vc-topbar-h: 54px;
   --vc-sidebar-w: 244px;
-  --vc-font-ui: "Inter", "Geist", "Segoe UI", system-ui, sans-serif;
-  --vc-font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --vc-font-ui: var(--vc-font-sans);
 }
 
 html[data-theme="dark"] {
@@ -131,6 +26,5 @@ html[data-theme="dark"] {
   --vc-control-h: 38px;
   --vc-topbar-h: 54px;
   --vc-sidebar-w: 244px;
-  --vc-font-ui: "Inter", "Geist", "Segoe UI", system-ui, sans-serif;
-  --vc-font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --vc-font-ui: var(--vc-font-sans);
 }

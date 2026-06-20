@@ -14,6 +14,8 @@ type Props = {
   titleClassName?: string;
   actionsClassName?: string;
   bodyClassName?: string;
+  clipped?: boolean;
+  bodyScroll?: boolean;
 };
 
 export const RoutePanel = ({
@@ -28,9 +30,11 @@ export const RoutePanel = ({
   titleClassName,
   actionsClassName,
   bodyClassName,
+  clipped = false,
+  bodyScroll = false,
 }: Props) => {
   return (
-    <section className={clsx(s.root, className)}>
+    <section className={clsx(s.root, clipped && s.rootClipped, className)}>
       {(kicker || title || actions) ? (
         <div className={clsx(s.header, headerClassName)}>
           {(kicker || title) ? (
@@ -42,7 +46,7 @@ export const RoutePanel = ({
           {actions ? <div className={clsx(s.actions, actionsClassName)}>{actions}</div> : null}
         </div>
       ) : null}
-      <div className={clsx(s.body, bodyClassName)}>{children}</div>
+      <div className={clsx(s.body, bodyScroll && s.bodyScroll, bodyClassName)}>{children}</div>
     </section>
   );
 };

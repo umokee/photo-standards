@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import { getCurrentTheme, setAppTheme, subscribeTheme, type AppTheme } from "@/lib/theme";
 import { getGroupsQueryOptions } from "@/page-components/groups/api/get-groups";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -135,9 +136,7 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
   const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = React.useState(false);
   const [manualProjectId, setManualProjectId] = React.useState<string | null>(null);
   const [projectMenuPosition, setProjectMenuPosition] = React.useState({ top: 0, left: 0 });
-  const [theme, setTheme] = React.useState<"light" | "dark">(() =>
-    document.documentElement.dataset.theme === "light" ? "light" : "dark"
-  );
+  const [theme, setThemeState] = React.useState<AppTheme>(() => getCurrentTheme());
   const [expandedSections, setExpandedSections] = React.useState<Record<SectionId, boolean>>({
     assets: true,
     train: true,
@@ -181,10 +180,15 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
     if (projectIdFromPath) setManualProjectId(projectIdFromPath);
   }, [projectIdFromPath]);
 
-  React.useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("vc-theme", theme);
-  }, [theme]);
+  React.useEffect(() => subscribeTheme(setThemeState), []);
+
+  const toggleTheme = React.useCallback(() => {
+    setThemeState((current) => {
+      const nextTheme = current === "dark" ? "light" : "dark";
+      setAppTheme(nextTheme);
+      return nextTheme;
+    });
+  }, []);
 
   const updateProjectMenuPosition = React.useCallback(() => {
     const button = projectSwitcherRef.current;
@@ -429,7 +433,13 @@ export const PlatformShell = ({ navigation: _navigation }: Props) => {
           <div className={s.topbarActions}>
             <Link className={s.pillButton} to={paths.groups()}><FolderKanban />Projects</Link>
             <Link className={s.darkButton} to={selectedProjectId ? paths.inspectionGroup("photo", selectedProjectId) : paths.inspection()}>Inspect</Link>
-            <button type="button" aria-label="Сменить тему" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}>
+            <button
+              type="button"
+              aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"}
+              aria-pressed={theme === "dark"}
+              title={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"}
+              onClick={toggleTheme}
+            >
               {theme === "dark" ? <Sun /> : <Moon />}
             </button>
           </div>

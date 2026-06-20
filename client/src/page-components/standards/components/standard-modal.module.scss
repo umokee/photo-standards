@@ -1,0 +1,58 @@
+@use "@/styles/variables" as *;
+
+/* Standard modal local styles. */
+
+.modalFormGrid {
+  display: grid;
+  gap: $space-3;
+}
+
+.modalError {
+  padding: $space-2 $space-3;
+  border: 1px solid $danger-soft;
+  border-radius: $radius-md;
+  background: $surface;
+  color: $danger;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.uploadSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.uploadSummaryCard {
+  min-width: 0;
+  display: grid;
+  gap: $space-1;
+  padding: $space-3;
+  border: 1px solid $line-soft;
+  border-radius: $radius-lg;
+  background: var(--vc-surface);
+}
+
+.uploadSummaryCard svg {
+  width: 17px;
+  height: 17px;
+  color: $accent;
+}
+
+.uploadSummaryCard span {
+  color: $text-hint;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.uploadSummaryCard strong {
+  color: $text;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+@media (max-width: 760px) {
+  .uploadSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

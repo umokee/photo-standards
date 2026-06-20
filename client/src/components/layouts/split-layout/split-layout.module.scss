@@ -23,7 +23,7 @@
   background: $surface;
   border: 1px solid $line-soft;
   border-radius: 18px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.055);
+  box-shadow: 0 16px 36px color-mix(in srgb, #{$text} 6%, transparent);
   overflow: hidden;
   transition: transform 0.25s ease;
 }
@@ -38,7 +38,7 @@
   background: $surface;
   border: 1px solid $line-soft;
   border-radius: 18px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.055);
+  box-shadow: 0 16px 36px color-mix(in srgb, #{$text} 6%, transparent);
   overflow: hidden;
 }
 
@@ -71,8 +71,8 @@
   padding: $space-3 $space-4;
   border: 1px solid $line-soft;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
+  background: color-mix(in srgb, #{$surface} 86%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, #{$text} 4%, transparent);
   flex-shrink: 0;
   backdrop-filter: blur(16px);
 }
@@ -101,7 +101,7 @@
   border: 1px solid $line-soft;
   border-radius: 18px;
   background: $surface;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
+  box-shadow: 0 12px 28px color-mix(in srgb, #{$text} 4%, transparent);
   flex-shrink: 0;
 }
 
@@ -139,7 +139,7 @@
     margin: 0;
     opacity: 0;
     pointer-events: none;
-    background: rgba(15, 23, 42, 0.42);
+    background: color-mix(in srgb, #{$text} 42%, transparent);
   }
 
   .backdropVisible {
@@ -186,7 +186,7 @@
     border-right: 0;
     border-bottom: 0;
     border-radius: 18px 18px 0 0;
-    box-shadow: 0 -18px 44px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 -18px 44px color-mix(in srgb, #{$text} 18%, transparent);
     transform: translateY(calc(100% + env(safe-area-inset-bottom)));
     pointer-events: none;
     overscroll-behavior: contain;

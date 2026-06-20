@@ -1,37 +1,55 @@
 @use "@/styles/variables" as *;
-.root { min-width: 0; min-height: 0; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); background: #060811; color: #fff; }
-.header { min-height: 0; display: none; }
-.info { display: grid; gap: 2px; }
-.title { font-weight: 800; }
-.subtitle { color: rgba(255,255,255,.62); font-size: 12px; }
-.actions { display: flex; gap: 8px; }
-.viewer { position: relative; min-height: 0; display: grid; overflow: hidden; background: radial-gradient(circle at 70% 20%, #18246b, #060811 60%); }
-.imageViewer, .video { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
-.imageViewer { display: grid; place-items: center; }
-.image { max-width: 100%; max-height: 100%; object-fit: contain; }
-.centerState { position: absolute; inset: 26px; z-index: 4; display: grid; place-items: center; padding: 0; }
-.emptyCard { max-width: 420px; padding: 24px; border: 1px solid rgba(255,255,255,.12); border-radius: 18px; background: rgba(255,255,255,.08); text-align: center; }
-.emptyTitle { display: block; margin-bottom: 8px; font-size: 18px; font-weight: 800; }
-.emptyText { color: rgba(255,255,255,.68); }
-.referenceThumbDock { position: absolute; right: 16px; bottom: 16px; z-index: 15; width: 120px; }
-.overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(6,8,17,.72); backdrop-filter: blur(8px); }
-.streamError { position: absolute; left: 16px; right: 16px; bottom: 16px; padding: 12px; border-radius: 12px; background: rgba(255,77,90,.16); color: #fff; }
-.deviceCaptureVideo { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
-
-/* v9 inspection workspace polish */
 .root {
-  position: relative;
-  border-radius: 0 0 18px 18px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-  background:
-    radial-gradient(circle at 74% 18%, rgba(4, 42, 255, 0.24), transparent 26%),
-    radial-gradient(circle at 25% 78%, rgba(225, 255, 37, 0.1), transparent 30%),
-    #050712;
+  border: 1px solid $line;
+  border-radius: $radius-xl;
+  background: $inspection-canvas;
+  color: $text-white;
+}
+
+.header {
+  min-height: 0;
+  display: none;
+  flex-shrink: 0;
+}
+
+.info {
+  display: grid;
+  gap: 2px;
+}
+
+.title {
+  font-weight: $fw-extrabold;
+}
+
+.subtitle {
+  color: color-mix(in srgb, #{$text-white} 62%, transparent);
+  font-size: $text-small;
+}
+
+.actions {
+  display: flex;
+  gap: $space-2;
 }
 
 .viewer {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  overflow: hidden;
   isolation: isolate;
+  background:
+    linear-gradient(color-mix(in srgb, #{$text-white} 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, #{$text-white} 3%, transparent) 1px, transparent 1px),
+    radial-gradient(circle at 68% 18%, color-mix(in srgb, #{$accent} 16%, transparent), transparent 32%),
+    $inspection-canvas;
+  background-size: 44px 44px, 44px 44px, auto, auto;
 }
 
 .viewer::before {
@@ -41,11 +59,11 @@
   z-index: 1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, #{$text-white} 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, #{$text-white} 3%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
-  mask-image: radial-gradient(circle at 50% 50%, black, transparent 78%);
-  opacity: 0.5;
+  mask-image: radial-gradient(circle at 50% 50%, #{$text-white}, transparent 78%);
+  opacity: 0.28;
 }
 
 .viewer::after {
@@ -55,224 +73,120 @@
   z-index: 2;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.28)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 110px, transparent calc(100% - 110px), rgba(0, 0, 0, 0.34));
+    linear-gradient(90deg, color-mix(in srgb, #{$inspection-canvas} 18%, transparent), transparent 120px, transparent calc(100% - 120px), color-mix(in srgb, #{$inspection-canvas} 16%, transparent)),
+    linear-gradient(180deg, color-mix(in srgb, #{$inspection-canvas} 15%, transparent), transparent 120px, transparent calc(100% - 120px), color-mix(in srgb, #{$inspection-canvas} 22%, transparent));
 }
 
 .imageViewer,
-.video,
-.centerState,
-.overlay,
-.streamError,
-.referenceThumbDock {
+.video {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+
+.imageViewer {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+}
+
+.video {
   position: relative;
   z-index: 3;
 }
 
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.centerState {
+  position: absolute;
+  inset: 18px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
 .emptyCard {
   width: min(460px, calc(100% - 32px));
+  max-width: 420px;
   padding: 28px;
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(9, 11, 17, 0.76);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+  border: 1px solid color-mix(in srgb, #{$text-white} 12%, transparent);
+  border-radius: $radius-xl;
+  background: color-mix(in srgb, #{$inspection-canvas-soft} 82%, transparent);
+  box-shadow: 0 24px 72px color-mix(in srgb, #{$inspection-canvas} 34%, transparent);
+  text-align: center;
   backdrop-filter: blur(18px);
 }
 
 .emptyTitle {
-  font-size: 22px;
-  letter-spacing: -0.04em;
+  display: block;
+  margin-bottom: $space-2;
+  font-size: 24px;
+  font-weight: $fw-extrabold;
+  letter-spacing: -0.055em;
 }
 
 .emptyText {
+  color: color-mix(in srgb, #{$text-white} 68%, transparent);
   line-height: 1.55;
 }
 
 .referenceThumbDock {
-  width: 138px;
-  right: 18px;
+  position: absolute;
+  left: 18px;
+  right: auto;
   bottom: 18px;
+  z-index: 15;
+  width: 168px;
+  max-width: calc(100% - 36px);
+  max-height: 132px;
   padding: 5px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.46);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+  border: 1px solid color-mix(in srgb, #{$text-white} 16%, transparent);
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: color-mix(in srgb, #{$inspection-canvas} 82%, transparent);
+  box-shadow: 0 18px 42px color-mix(in srgb, #{$inspection-canvas} 34%, transparent);
   backdrop-filter: blur(16px);
 }
 
 .overlay {
+  position: absolute;
+  inset: 0;
   z-index: 10;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, #{$inspection-canvas} 72%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .streamError {
+  position: absolute;
   left: 18px;
   right: auto;
+  bottom: 16px;
+  z-index: 3;
   max-width: 520px;
-  border: 1px solid rgba(255, 77, 90, 0.26);
-  background: rgba(48, 10, 14, 0.78);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.3);
+  padding: $space-3;
+  border: 1px solid color-mix(in srgb, #{$danger} 32%, transparent);
+  border-radius: $radius;
+  background: color-mix(in srgb, #{$danger} 18%, #{$inspection-canvas});
+  color: $text-white;
+  box-shadow: 0 16px 42px color-mix(in srgb, #{$inspection-canvas} 30%, transparent);
   backdrop-filter: blur(14px);
 }
 
-/* v13 inspection viewer maturity polish */
-.workspace,
-.viewer,
-.panel,
-.preview,
-.resultImage,
-.referenceCard {
-  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease, transform .14s ease;
-}
-
-.viewer:hover,
-.panel:hover,
-.preview:hover,
-.referenceCard:hover {
-  border-color: rgba(4, 42, 255, .16);
-  box-shadow: 0 18px 48px rgba(55, 42, 16, .07);
-}
-
-.resultImage img,
-.preview img,
-.referenceCard img {
-  transition: transform .22s ease, filter .22s ease;
-}
-
-.resultImage:hover img,
-.preview:hover img,
-.referenceCard:hover img {
-  transform: scale(1.015);
-  filter: saturate(1.04) contrast(1.02);
-}
-
-.statusBadge,
-.resultBadge,
-.metricBadge {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
-}
-/* v17 inspect station canvas polish */
-.root {
-  min-height: 100%;
-  background:
-    radial-gradient(circle at 60% 18%, rgba(4, 42, 255, 0.28), transparent 28%),
-    radial-gradient(circle at 24% 78%, rgba(225, 255, 37, 0.08), transparent 32%),
-    #050712;
-}
-
-.viewer {
-  min-height: 100%;
-  background:
-    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
-    radial-gradient(circle at center, rgba(255,255,255,0.08), transparent 48%),
-    #050712;
-  background-size: 42px 42px, 42px 42px, auto, auto;
-}
-
-.viewer::before {
-  opacity: 0.75;
-}
-
-.emptyCard {
-  border-radius: 22px;
-  background: rgba(8, 10, 18, 0.74);
-  border-color: rgba(255,255,255,0.14);
-  box-shadow: 0 28px 90px rgba(0,0,0,0.42);
-}
-
-.emptyTitle {
-  font-size: 24px;
-  letter-spacing: -0.055em;
-}
-
-.referenceThumbDock {
-  width: 150px;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-/* v32 inspect station scroll hardening */
-.root {
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.header {
-  flex-shrink: 0;
-}
-
-.viewer {
-  min-height: 0;
-  isolation: isolate;
-}
-
-.referenceThumbDock {
-  max-height: calc(100% - 24px);
-  overflow: hidden;
-}
-
-@media (max-width: 900px) {
-  .root {
-    min-height: 560px;
-  }
-}
-
-/* v43 inspect strict viewer */
-.root {
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  border: 1px solid var(--vc-line, rgba(127, 127, 127, 0.18));
-  border-radius: 22px;
-  background: #080a0b;
-  color: #ffffff;
-}
-
-.viewer {
-  min-height: 0;
-  min-height: 420px;
-  background:
-    linear-gradient(rgba(255,255,255,0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.032) 1px, transparent 1px),
-    radial-gradient(circle at 68% 18%, rgba(76, 110, 255, 0.16), transparent 32%),
-    #080a0b;
-  background-size: 44px 44px, 44px 44px, auto, auto;
-}
-
-.viewer::before {
-  opacity: 0.28;
-}
-
-.viewer::after {
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 120px, transparent calc(100% - 120px), rgba(0, 0, 0, 0.16)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.15), transparent 120px, transparent calc(100% - 120px), rgba(0, 0, 0, 0.22));
-}
-
-.emptyCard {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(12, 14, 16, 0.82);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
-}
-
-.referenceThumbDock {
-  left: 18px;
-  right: auto;
-  bottom: 18px;
-  width: 168px;
-  max-width: calc(100% - 36px);
-  max-height: 132px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 16px;
-  background: rgba(8, 10, 11, 0.82);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
-}
-
-.streamError {
-  color: #fff;
-  border-color: rgba(255, 77, 90, 0.32);
-  background: rgba(48, 10, 14, 0.82);
+.deviceCaptureVideo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {

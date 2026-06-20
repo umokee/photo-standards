@@ -1,9 +1,11 @@
+@use "@/styles/variables" as *;
+
 .root {
   min-width: 0;
   display: grid;
-  gap: 10px;
+  gap: $space-2;
   align-items: center;
-  color: var(--vc-text, #111827);
+  color: $text;
 }
 
 .icon {
@@ -14,6 +16,7 @@
 
 .main {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .title,
@@ -28,7 +31,8 @@
 }
 
 .description {
-  color: var(--vc-muted, #64748b);
+  color: $text-sub;
+  line-height: 1.35;
 }
 
 .value {
@@ -39,6 +43,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
 }
 
 .row {

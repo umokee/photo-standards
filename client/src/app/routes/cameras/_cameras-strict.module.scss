@@ -4,14 +4,17 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--vc-space-4, 16px);
+  gap: $space-3;
   width: 100%;
   min-width: 0;
   min-height: 0;
   height: 100%;
-  padding: var(--vc-page-padding, 18px);
-  overflow: hidden;
-  background: var(--vc-canvas, #f6f7f8);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: $bg;
 }
 
 .hero,
@@ -22,11 +25,10 @@
 .diagnostics,
 .infoCard,
 .statCard,
-.emptyState,
-.sourceTypeGrid > div {
-  border: 1px solid var(--vc-border, #dfe3e8);
-  background: var(--vc-surface, #fff);
-  box-shadow: var(--vc-shadow-sm, 0 10px 32px rgba(15, 23, 42, 0.05));
+.emptyState {
+  border: 1px solid $line;
+  background: $surface;
+  box-shadow: $shadow-sm;
 }
 
 .hero {
@@ -36,7 +38,7 @@
   gap: 14px;
   flex: 0 0 auto;
   padding: 18px;
-  border-radius: var(--vc-radius-xl, 22px);
+  border-radius: $radius-xl;
 }
 
 .heroMain {
@@ -44,7 +46,7 @@
 
   h1 {
     margin: 4px 0 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: clamp(26px, 3.6vw, 42px);
     font-weight: 920;
     line-height: 0.98;
@@ -54,7 +56,7 @@
   p {
     max-width: 680px;
     margin: 8px 0 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 13px;
     line-height: 1.45;
   }
@@ -64,7 +66,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--vc-text-soft, #7a8493);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -73,13 +75,12 @@
   svg {
     width: 14px;
     height: 14px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 }
 
 .heroStats,
-.railSummary,
-.emptySteps {
+.railSummary {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -90,10 +91,10 @@
     gap: 6px;
     min-height: 30px;
     padding: 6px 9px;
-    border: 1px solid var(--vc-border, #dfe3e8);
+    border: 1px solid $line;
     border-radius: 999px;
-    background: var(--vc-surface-2, #f7f8fa);
-    color: var(--vc-text-muted, #667085);
+    background: $surface2;
+    color: $text-sub;
     font-size: 11px;
     font-weight: 780;
     white-space: nowrap;
@@ -117,19 +118,20 @@
 .workspace {
   display: grid;
   grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
 }
 
 .rail,
 .detailSlot {
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  border-radius: var(--vc-radius-xl, 22px);
+  min-height: auto;
+  overflow: visible;
+  border-radius: $radius-xl;
 }
 
 .rail {
@@ -142,7 +144,7 @@
   gap: 10px;
   flex: 0 0 auto;
   padding: 12px;
-  border-bottom: 1px solid var(--vc-border, #dfe3e8);
+  border-bottom: 1px solid $line;
 }
 
 .railSummary {
@@ -150,11 +152,11 @@
 }
 
 .list {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
   padding: 8px;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  overflow-y: visible;
+  scrollbar-gutter: auto;
 }
 
 .item {
@@ -165,18 +167,18 @@
   min-height: 58px;
   padding: 9px;
   border: 1px solid transparent;
-  border-radius: var(--vc-radius-md, 14px);
-  color: var(--vc-text-muted, #667085);
+  border-radius: $radius-md;
+  color: $text-sub;
   text-decoration: none;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 
   &:hover {
-    border-color: var(--vc-border-strong, #cfd6df);
-    background: var(--vc-surface-2, #f7f8fa);
+    border-color: $line-strong;
+    background: $surface2;
   }
 
   b {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
     font-weight: 780;
     white-space: nowrap;
@@ -184,8 +186,8 @@
 }
 
 .itemActive {
-  border-color: var(--vc-accent-border, rgba(37, 99, 235, 0.34));
-  background: var(--vc-accent-soft, rgba(37, 99, 235, 0.08));
+  border-color: $accent-border;
+  background: $accent-soft;
 }
 
 .itemBody {
@@ -201,13 +203,13 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 13px;
     font-weight: 840;
   }
 
   small {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
   }
 }
@@ -216,12 +218,12 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--vc-text-disabled, #a7b0bd);
+  background: $text-off;
 }
 
-.statusOk { background: var(--vc-success, #10b981); }
-.statusWarning { background: var(--vc-warning, #f59e0b); }
-.statusError { background: var(--vc-danger, #ef4444); }
+.statusOk { background: $success; }
+.statusWarning { background: $warning; }
+.statusError { background: $danger; }
 
 .protocol {
   display: inline-flex;
@@ -230,10 +232,10 @@
   min-width: 44px;
   min-height: 24px;
   padding: 3px 7px;
-  border: 1px solid var(--vc-border, #dfe3e8);
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f7f8fa);
-  color: var(--vc-text-soft, #7a8493);
+  background: $surface2;
+  color: $text-hint;
   font-size: 10px;
   font-weight: 850;
 }
@@ -250,12 +252,12 @@
   gap: 12px;
   min-height: 100%;
   padding: 28px;
-  border-radius: var(--vc-radius-xl, 22px);
+  border-radius: $radius-xl;
   text-align: center;
 
   h3 {
     margin: 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: clamp(22px, 3vw, 34px);
     font-weight: 900;
     letter-spacing: -0.05em;
@@ -264,7 +266,7 @@
   p {
     max-width: 640px;
     margin: 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 13px;
     line-height: 1.55;
   }
@@ -275,10 +277,10 @@
   place-items: center;
   width: 58px;
   height: 58px;
-  border: 1px solid var(--vc-border, #dfe3e8);
+  border: 1px solid $line;
   border-radius: 18px;
-  background: var(--vc-surface-2, #f7f8fa);
-  color: var(--vc-accent, #2563eb);
+  background: $surface2;
+  color: $accent;
 
   svg {
     width: 28px;
@@ -286,49 +288,14 @@
   }
 }
 
-.sourceTypeGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  width: min(100%, 760px);
-  margin-top: 8px;
-
-  > div {
-    display: grid;
-    gap: 6px;
-    justify-items: center;
-    min-width: 0;
-    padding: 14px;
-    border-radius: var(--vc-radius-lg, 18px);
-
-    svg {
-      width: 20px;
-      height: 20px;
-      color: var(--vc-accent, #2563eb);
-    }
-
-    strong {
-      color: var(--vc-text, #111827);
-      font-size: 13px;
-      font-weight: 840;
-    }
-
-    small {
-      color: var(--vc-text-soft, #7a8493);
-      font-size: 11px;
-      line-height: 1.4;
-    }
-  }
-}
-
 .detailSurface {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  border-radius: var(--vc-radius-xl, 22px);
+  min-height: auto;
+  height: auto;
+  overflow: visible;
+  border-radius: $radius-xl;
 }
 
 .detailHeader {
@@ -338,7 +305,7 @@
   gap: 12px;
   flex: 0 0 auto;
   padding: 14px;
-  border-bottom: 1px solid var(--vc-border, #dfe3e8);
+  border-bottom: 1px solid $line;
 }
 
 .sourceAvatar {
@@ -346,10 +313,10 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--vc-border, #dfe3e8);
+  border: 1px solid $line;
   border-radius: 16px;
-  background: var(--vc-surface-2, #f7f8fa);
-  color: var(--vc-accent, #2563eb);
+  background: $surface2;
+  color: $accent;
 
   svg {
     width: 21px;
@@ -362,7 +329,7 @@
 
   h3 {
     margin: 3px 0 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 19px;
     font-weight: 880;
     letter-spacing: -0.035em;
@@ -370,7 +337,7 @@
 
   p {
     margin: 5px 0 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 12px;
   }
 }
@@ -381,42 +348,43 @@
   justify-content: center;
   min-height: 30px;
   padding: 6px 10px;
-  border: 1px solid var(--vc-border, #dfe3e8);
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f7f8fa);
-  color: var(--vc-text-muted, #667085);
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 850;
   white-space: nowrap;
 }
 
 .statusBadgeOk {
-  border-color: color-mix(in srgb, var(--vc-success, #10b981) 35%, transparent);
-  background: color-mix(in srgb, var(--vc-success, #10b981) 10%, transparent);
-  color: var(--vc-success-text, #047857);
+  border-color: color-mix(in srgb, $success 35%, transparent);
+  background: color-mix(in srgb, $success 10%, transparent);
+  color: $success-text;
 }
 
 .statusBadgeWarning {
-  border-color: color-mix(in srgb, var(--vc-warning, #f59e0b) 35%, transparent);
-  background: color-mix(in srgb, var(--vc-warning, #f59e0b) 10%, transparent);
-  color: var(--vc-warning-text, #b45309);
+  border-color: color-mix(in srgb, $warning 35%, transparent);
+  background: color-mix(in srgb, $warning 10%, transparent);
+  color: $warning-text;
 }
 
 .statusBadgeError {
-  border-color: color-mix(in srgb, var(--vc-danger, #ef4444) 35%, transparent);
-  background: color-mix(in srgb, var(--vc-danger, #ef4444) 10%, transparent);
-  color: var(--vc-danger-text, #b91c1c);
+  border-color: color-mix(in srgb, $danger 35%, transparent);
+  background: color-mix(in srgb, $danger 10%, transparent);
+  color: $danger-text;
 }
 
 .detailBody {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
   gap: 14px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  min-height: 0;
+  min-height: auto;
   padding: 14px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .previewCard,
@@ -424,7 +392,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-radius: var(--vc-radius-lg, 18px);
+  border-radius: $radius-lg;
 }
 
 .previewCard {
@@ -443,14 +411,14 @@
 
   h3 {
     margin: 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 15px;
     font-weight: 860;
   }
 
   p {
     margin: 4px 0 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 12px;
   }
 
@@ -458,9 +426,9 @@
     display: inline-flex;
     min-height: 26px;
     padding: 5px 9px;
-    border: 1px solid var(--vc-border, #dfe3e8);
+    border: 1px solid $line;
     border-radius: 999px;
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 10px;
     font-weight: 850;
   }
@@ -486,16 +454,16 @@
   gap: 5px;
   min-width: 0;
   padding: 11px;
-  border-radius: var(--vc-radius-md, 14px);
+  border-radius: $radius-md;
 
   svg {
     width: 16px;
     height: 16px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 
   span {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 10px;
     font-weight: 820;
     letter-spacing: 0.06em;
@@ -503,7 +471,7 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 13px;
     font-weight: 850;
     overflow-wrap: anywhere;
@@ -515,11 +483,11 @@
   gap: 8px;
   min-width: 0;
   padding: 12px;
-  border-radius: var(--vc-radius-md, 14px);
+  border-radius: $radius-md;
 
   h3 {
     margin: 0 0 2px;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 13px;
     font-weight: 860;
   }
@@ -532,24 +500,24 @@
   gap: 8px;
   min-width: 0;
   padding-top: 8px;
-  border-top: 1px solid var(--vc-border, #dfe3e8);
+  border-top: 1px solid $line;
 
   svg {
     width: 14px;
     height: 14px;
     margin-top: 1px;
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
   }
 
   span {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
     font-weight: 760;
   }
 
   strong {
-    color: var(--vc-text, #111827);
-    font-family: var(--vc-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    color: $text;
+    font-family: $font-mono;
     font-size: 11px;
     font-weight: 700;
     overflow-wrap: anywhere;
@@ -565,8 +533,7 @@
   .diagnostics,
   .infoCard,
   .statCard,
-  .emptyState,
-  .sourceTypeGrid > div {
+  .emptyState {
     box-shadow: none;
   }
 }
@@ -610,11 +577,26 @@
 
 @media (max-width: 720px) {
   .page {
-    padding: 12px;
+    padding: 0;
   }
 
-  .sourceTypeGrid,
   .statGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.detailSecondaryAction {
+  min-height: 34px;
+  border-color: $line;
+  background: $surface2;
+  color: $text;
+  font-weight: 850;
+}
+
+.detailDangerAction {
+  min-height: 34px;
+  border-color: color-mix(in srgb, $danger 38%, transparent);
+  background: color-mix(in srgb, $danger 9%, $surface);
+  color: $danger-text;
+  font-weight: 850;
 }

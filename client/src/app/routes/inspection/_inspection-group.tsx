@@ -48,14 +48,14 @@ export function Component() {
         {group ? (
           <>
             <RouteHero
-              eyebrow={`Inspect / ${currentMode}`}
+              eyebrow="Inspect"
               icon={ShieldCheck}
               title={group.name}
-              description="Выбери эталонный вид. Классы, source и запуск проверки появятся уже на station-экране."
+              description="Выбери эталонный вид для проверки."
               actionsClassName={s.scopeActions}
               actions={(
                 <>
-                <Link to={paths.inspectionHistoryGroup(group.id)}><ListChecks /> Runs</Link>
+                <Link to={paths.inspectionHistoryGroup(group.id)}><ListChecks /> История</Link>
                 <Link to={paths.assetReferences(group.id)}><Layers3 /> Assets</Link>
                 </>
               )}
@@ -64,25 +64,25 @@ export function Component() {
             <section className={s.readinessGrid}>
               <ReadinessCard
                 ready={group.standards.length > 0}
-                title="References"
+                title="Эталоны"
                 value={group.standards.length}
-                hint="Нужен хотя бы один эталонный вид"
+                hint="минимум один вид"
               />
               <ReadinessCard
                 ready={group.stats.segment_classes_count > 0}
-                title="Classes"
+                title="Классы"
                 value={group.stats.segment_classes_count}
-                hint="Выбор деталей будет справа на station"
+                hint="детали для проверки"
               />
               <ReadinessCard
                 ready={group.stats.polygons_count > 0}
-                title="Polygons"
+                title="Полигоны"
                 value={group.stats.polygons_count}
-                hint="Ожидаемые зоны для контроля"
+                hint="ожидаемые зоны"
               />
               <ReadinessCard
                 ready={Boolean(group.active_model)}
-                title="Active model"
+                title="Модель"
                 value={group.active_model ? 1 : 0}
                 hint={
                   group.active_model
@@ -99,15 +99,15 @@ export function Component() {
               kickerClassName={s.eyebrow}
               titleClassName={s.sectionTitle}
               actionsClassName={s.sectionCount}
-              kicker={<><Image /> References</>}
-              title="Выбери reference"
-              actions={<>{group.standards.length} references</>}
+              kicker={<><Image /> Эталоны</>}
+              title="Выбери эталон"
+              actions={<>{group.standards.length}</>}
             >
               <QueryState
                 isEmpty={group.standards.length === 0}
                 size="block"
-                emptyTitle="Нет reference"
-                emptyDescription="Сначала добавь reference в Assets и разметь обязательные детали."
+                emptyTitle="Нет эталонов"
+                emptyDescription="Добавь эталон в Assets и разметь детали."
               >
                 <div className={s.referenceGrid}>
                   {group.standards.map((standard) => (
@@ -158,11 +158,11 @@ function ReferenceCard({ standard, groupId, mode }: { standard: GroupStandard; g
       </div>
       <p>{standard.angle || "Эталонный вид изделия без отдельного описания угла."}</p>
       <div className={s.referenceMeta}>
-        <span><Image /> {standard.images_count} images</span>
-        <span><ShieldCheck /> {standard.annotated_images_count} annotated</span>
+        <span><Image /> {standard.images_count} фото</span>
+        <span><ShieldCheck /> {standard.annotated_images_count} размечено</span>
         <span><Clock3 /> {new Date(standard.created_at).toLocaleDateString("ru-RU")}</span>
       </div>
-      <span className={s.statusPillMuted}>Открыть station <ArrowRight /></span>
+      <span className={s.statusPillMuted}>Открыть <ArrowRight /></span>
     </Link>
   );
 }

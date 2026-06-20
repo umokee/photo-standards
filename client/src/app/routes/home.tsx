@@ -8,7 +8,7 @@ import { formatDate } from "@/utils/formatDate";
 import { Activity, Camera, CheckCircle2, CircleDot, Database, FolderKanban, Image, ListChecks, Sparkles, type LucideIcon } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import p from "./platform-pages.module.scss";
+import p from "./home.module.scss";
 
 export function Component() {
   const { data: groups = [] } = useGetGroups();
@@ -40,9 +40,8 @@ export function Component() {
     <div className={`${p.page} ${p.homeCompactV18}`}>
       <section className={p.homeCockpitV18}>
         <div className={p.homeWelcomeV18}>
-          <span className={p.eyebrow}><FolderKanban /> Рабочее пространство</span>
-          <h1>Home</h1>
-          <p>Единый контур контроля: эталоны, классы, разметка, модели, камеры и проверки собраны вокруг конкретного изделия.</p>
+          <h1>Обзор</h1>
+          <p>Проекты, эталоны, модели и проверки.</p>
           <div className={p.homeActionRowV18}>
             <Link to={paths.groups()}><Button icon={FolderKanban}>Открыть проекты</Button></Link>
             <Link to={paths.inspection()}><Button variant="ghost" icon={ListChecks}>Запустить проверку</Button></Link>
@@ -50,19 +49,19 @@ export function Component() {
         </div>
 
         <div className={p.homeScoreCardV18}>
-          <span>Readiness</span>
+          <span>Разметка</span>
           <strong>{labelingPercent}%</strong>
-          <p>{totals.labeled}/{totals.images} images labeled</p>
+          <p>{totals.labeled}/{totals.images} размечено</p>
           <div className={p.homeScoreRingV18} style={{ "--value": `${Math.max(4, labelingPercent)}%` } as CSSProperties} />
         </div>
 
         <div className={p.homeKpiGridV18}>
-          <Stat icon={FolderKanban} value={groups.length} label="Projects" />
-          <Stat icon={Database} value={totals.references} label="References" />
-          <Stat icon={Image} value={totals.images} label="Images" />
-          <Stat icon={CircleDot} value={totals.classes} label="Classes" />
-          <Stat icon={Sparkles} value={totals.models} label="Models" />
-          <Stat icon={Activity} value={runs.length || totals.runs} label="Runs" />
+          <Stat icon={FolderKanban} value={groups.length} label="Проекты" />
+          <Stat icon={Database} value={totals.references} label="Эталоны" />
+          <Stat icon={Image} value={totals.images} label="Фото" />
+          <Stat icon={CircleDot} value={totals.classes} label="Классы" />
+          <Stat icon={Sparkles} value={totals.models} label="Модели" />
+          <Stat icon={Activity} value={runs.length || totals.runs} label="Проверки" />
         </div>
       </section>
 
@@ -70,10 +69,10 @@ export function Component() {
         <div className={p.homePanelV18}>
           <div className={p.homePanelHeadV18}>
             <div>
-              <span className={p.eyebrow}><FolderKanban /> Projects</span>
+              <span className={p.eyebrow}><FolderKanban /> Проекты</span>
               <h2>Изделия и эталоны</h2>
             </div>
-            <Link to={paths.groups()}>Все проекты →</Link>
+            <Link to={paths.groups()}>Все →</Link>
           </div>
           <div className={p.homeProjectListV18}>
             {topProjects.length ? topProjects.map((group) => {
@@ -98,21 +97,21 @@ export function Component() {
         <div className={p.homePanelV18}>
           <div className={p.homePanelHeadV18}>
             <div>
-              <span className={p.eyebrow}><ListChecks /> Проверка</span>
-              <h2>Последние проверки</h2>
+              <span className={p.eyebrow}><ListChecks /> История</span>
+              <h2>Проверки</h2>
             </div>
-            <Link to={paths.inspectionHistory()}>Runs →</Link>
+            <Link to={paths.inspectionHistory()}>История →</Link>
           </div>
           <div className={p.homeRunSummaryV18}>
-            <div><strong>{passedRuns}</strong><span>passed</span></div>
-            <div><strong>{failedRuns}</strong><span>review</span></div>
-            <div><strong>{recentRuns.length}</strong><span>latest</span></div>
+            <div><strong>{passedRuns}</strong><span>успешно</span></div>
+            <div><strong>{failedRuns}</strong><span>к проверке</span></div>
+            <div><strong>{recentRuns.length}</strong><span>последние</span></div>
           </div>
           <div className={p.homeRunListV18}>
             {recentRuns.length ? recentRuns.map((run) => (
               <Link className={p.homeRunRowV18} key={run.id} to={run.group_id ? paths.inspectionHistoryDetail(run.group_id, run.id) : paths.inspectionHistory()}>
                 <span className={run.status === "passed" ? p.homeRunOkV18 : p.homeRunBadV18} />
-                <strong>{run.standard_name ?? "Проверкаion"}</strong>
+                <strong>{run.standard_name ?? "Проверка"}</strong>
                 <small>{run.mode} · {formatDate(run.inspected_at)}</small>
               </Link>
             )) : (
@@ -124,8 +123,8 @@ export function Component() {
         <aside className={p.homePanelV18}>
           <div className={p.homePanelHeadV18}>
             <div>
-              <span className={p.eyebrow}><CheckCircle2 /> Next actions</span>
-              <h2>Что доделать</h2>
+              <span className={p.eyebrow}><CheckCircle2 /> Готовность</span>
+              <h2>Следующие шаги</h2>
             </div>
           </div>
           <div className={p.homeChecklistV18}>

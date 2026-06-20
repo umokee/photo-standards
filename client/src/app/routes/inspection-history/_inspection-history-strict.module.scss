@@ -9,10 +9,13 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: 12px;
-  overflow: auto;
-  background: var(--vc-app-bg, #f6f7fb);
-  color: var(--vc-text, #111318);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: $bg;
+  color: $text;
 }
 
 .heroPanel,
@@ -24,9 +27,9 @@
 .metricCard,
 .summaryCard,
 .scopeCard {
-  border: 1px solid var(--vc-border, #dfe5ee);
-  background: var(--vc-surface, #fff);
-  box-shadow: var(--vc-shadow-xs, 0 1px 2px rgba(15, 23, 42, 0.04));
+  border: 1px solid $line;
+  background: $surface;
+  box-shadow: $shadow-xs;
 }
 
 .heroPanel,
@@ -43,8 +46,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 88% 0%, var(--vc-accent-soft, rgba(10, 56, 255, 0.09)), transparent 26rem),
-    linear-gradient(135deg, transparent, var(--vc-surface-2, #f9fafc));
+    radial-gradient(circle at 88% 0%, $accent-soft, transparent 26rem),
+    linear-gradient(135deg, transparent, $surface2);
 }
 
 .heroContent,
@@ -85,7 +88,7 @@
   align-items: center;
   gap: 7px;
   width: fit-content;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -105,7 +108,7 @@
 .panelHead h2,
 .reportTitleBlock h2 {
   margin: 0;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-weight: 880;
   letter-spacing: -0.055em;
   line-height: 0.98;
@@ -130,7 +133,7 @@
 .scopeBody p,
 .latestStrip {
   margin: 0;
-  color: var(--vc-text-muted, #586173);
+  color: $text-sub;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -153,15 +156,15 @@
 }
 
 .primaryAction {
-  background: var(--vc-accent, #0a38ff);
-  color: var(--vc-accent-contrast, #fff);
+  background: $accent;
+  color: $accent-contrast;
 }
 
 .secondaryAction,
 .backLink {
-  border-color: var(--vc-border, #dfe5ee);
-  background: var(--vc-surface-2, #f9fafc);
-  color: var(--vc-text, #111318);
+  border-color: $line;
+  background: $surface2;
+  color: $text;
 }
 
 .backLink {
@@ -212,13 +215,13 @@
   grid-area: icon;
   width: 20px;
   height: 20px;
-  color: var(--vc-accent, #0a38ff);
+  color: $accent;
 }
 
 .metricCard b,
 .summaryCard b {
   grid-area: value;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 24px;
   font-weight: 850;
   letter-spacing: -0.05em;
@@ -228,7 +231,7 @@
 .metricCard span,
 .summaryCard span {
   grid-area: label;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 12px;
   font-weight: 760;
 }
@@ -236,19 +239,19 @@
 .metricCard small,
 .summaryCard small {
   grid-area: hint;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 650;
 }
 
 .summaryOk {
-  border-color: var(--vc-ok-border, #b7e7c7);
-  background: linear-gradient(135deg, var(--vc-ok-soft, #ecfdf3), var(--vc-surface, #fff));
+  border-color: $ok-border;
+  background: linear-gradient(135deg, $ok-soft, $surface);
 }
 
 .summaryWarn {
-  border-color: var(--vc-warning-border, #f0d4a0);
-  background: linear-gradient(135deg, var(--vc-warning-soft, #fff7e8), var(--vc-surface, #fff));
+  border-color: $warning-border;
+  background: linear-gradient(135deg, $warning-soft, $surface);
 }
 
 .scopeShell {
@@ -281,7 +284,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 700;
 }
@@ -316,8 +319,8 @@
 }
 
 .scopeCard:hover {
-  border-color: var(--vc-accent-border, #cfdcff);
-  background: var(--vc-surface-2, #f9fafc);
+  border-color: $accent-border;
+  background: $surface2;
   transform: translateY(-1px);
 }
 
@@ -326,10 +329,10 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  border: 1px solid var(--vc-accent-border, #cfdcff);
+  border: 1px solid $accent-border;
   border-radius: 15px;
-  background: var(--vc-accent-soft, #eef3ff);
-  color: var(--vc-accent, #0a38ff);
+  background: $accent-soft;
+  color: $accent;
   font-size: 15px;
   font-weight: 850;
 }
@@ -355,7 +358,7 @@
 .runTopline strong {
   min-width: 0;
   overflow: hidden;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 14px;
   font-weight: 820;
   line-height: 1.25;
@@ -384,11 +387,11 @@
   place-items: center;
   align-content: center;
   gap: 6px;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
 }
 
 .scopeOpen b {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 20px;
   letter-spacing: -0.04em;
 }
@@ -407,10 +410,10 @@
   justify-content: center;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 999px;
-  color: var(--vc-text-muted, #586173);
-  background: var(--vc-surface-2, #f9fafc);
+  color: $text-sub;
+  background: $surface2;
   font-size: 11px;
   font-weight: 780;
   white-space: nowrap;
@@ -418,16 +421,16 @@
 
 .statusReady,
 .statusOk {
-  border-color: var(--vc-ok-border, #b7e7c7);
-  background: var(--vc-ok-soft, #ecfdf3);
-  color: var(--vc-ok, #16a34a);
+  border-color: $ok-border;
+  background: $ok-soft;
+  color: $ok;
 }
 
 .statusEmpty,
 .statusWarn {
-  border-color: var(--vc-warning-border, #f0d4a0);
-  background: var(--vc-warning-soft, #fff7e8);
-  color: var(--vc-warning, #d88a00);
+  border-color: $warning-border;
+  background: $warning-soft;
+  color: $warning;
 }
 
 .filterPanel {
@@ -448,7 +451,7 @@
 .searchShell > svg {
   width: 17px;
   height: 17px;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
 }
 
 .filterRow {
@@ -469,7 +472,7 @@
   width: 1px;
   height: 24px;
   flex: 0 0 auto;
-  background: var(--vc-border, #dfe5ee);
+  background: $line;
 }
 
 .segmentButton {
@@ -479,18 +482,18 @@
   flex: 0 0 auto;
   min-height: 30px;
   padding: 0 11px;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f9fafc);
-  color: var(--vc-text-muted, #586173);
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 780;
 }
 
 .segmentButtonActive {
-  border-color: var(--vc-accent-border, #cfdcff);
-  background: var(--vc-accent-soft, #eef3ff);
-  color: var(--vc-accent, #0a38ff);
+  border-color: $accent-border;
+  background: $accent-soft;
+  color: $accent;
 }
 
 .latestStrip {
@@ -499,9 +502,9 @@
   gap: 8px;
   min-width: 0;
   padding: 9px 11px;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: 14px;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 .latestStrip svg {
@@ -513,29 +516,29 @@
 .historyWorkbench {
   display: grid;
   grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
   min-width: 0;
-  min-height: 0;
-  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 210px);
+  min-height: auto;
 }
 
 .timelinePanel,
 .reportPanel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   gap: 12px;
   min-width: 0;
-  min-height: calc(100svh - var(--vc-topbar-height, 56px) - 220px);
+  min-height: auto;
   max-height: none;
   padding: 14px;
   border-radius: 20px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .reportPanel {
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow: visible;
 }
 
 .reportPanelEmpty {
@@ -556,9 +559,9 @@
   display: grid;
   align-content: start;
   gap: 10px;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  min-height: auto;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .runCard {
@@ -569,9 +572,9 @@
   min-width: 0;
   min-height: 124px;
   padding: 10px;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 16px;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
   color: inherit;
   cursor: pointer;
   text-align: left;
@@ -580,24 +583,24 @@
 
 .runCard:hover,
 .runCardActive {
-  border-color: var(--vc-accent-border, #cfdcff);
-  background: var(--vc-surface, #fff);
+  border-color: $accent-border;
+  background: $surface;
 }
 
 .runCardActive {
-  box-shadow: inset 0 0 0 1px var(--vc-accent-border, #cfdcff);
+  box-shadow: inset 0 0 0 1px $accent-border;
 }
 
-.runCard_passed {
-  --run-progress: var(--vc-ok, #16a34a);
+.runCard_passed .runProgress span {
+  background: $ok;
 }
 
-.runCard_review {
-  --run-progress: var(--vc-warning, #d88a00);
+.runCard_review .runProgress span {
+  background: $warning;
 }
 
-.runCard_failed {
-  --run-progress: var(--vc-danger, #dc2626);
+.runCard_failed .runProgress span {
+  background: $danger;
 }
 
 .runThumb {
@@ -606,10 +609,10 @@
   place-items: center;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: 13px;
-  background: #090b0d;
-  color: rgba(255, 255, 255, 0.72);
+  background: $text;
+  color: color-mix(in srgb, #{$text-white} 72%, transparent);
 }
 
 .runThumb img {
@@ -632,8 +635,8 @@
   overflow: hidden;
   padding: 3px 6px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
+  background: color-mix(in srgb, #{$text} 62%, transparent);
+  color: $text-white;
   font-size: 10px;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -651,31 +654,31 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--vc-surface-3, #f2f5fa);
+  background: $surface3;
 }
 
 .runProgress span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--run-progress, var(--vc-accent, #0a38ff));
+  background: $accent;
 }
 
 .reportHero {
   flex: 0 0 auto;
   align-items: center;
   padding: 14px;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 18px;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 .reportHeroPassed {
-  border-color: var(--vc-ok-border, #b7e7c7);
+  border-color: $ok-border;
 }
 
 .reportHeroReview {
-  border-color: var(--vc-warning-border, #f0d4a0);
+  border-color: $warning-border;
 }
 
 .reportIcon {
@@ -684,22 +687,22 @@
   width: 42px;
   height: 42px;
   flex: 0 0 auto;
-  border: 1px solid var(--vc-border, #dfe5ee);
+  border: 1px solid $line;
   border-radius: 15px;
-  background: var(--vc-surface, #fff);
-  color: var(--vc-accent, #0a38ff);
+  background: $surface;
+  color: $accent;
 }
 
 .reportHeroPassed .reportIcon {
-  border-color: var(--vc-ok-border, #b7e7c7);
-  background: var(--vc-ok-soft, #ecfdf3);
-  color: var(--vc-ok, #16a34a);
+  border-color: $ok-border;
+  background: $ok-soft;
+  color: $ok;
 }
 
 .reportHeroReview .reportIcon {
-  border-color: var(--vc-warning-border, #f0d4a0);
-  background: var(--vc-warning-soft, #fff7e8);
-  color: var(--vc-warning, #d88a00);
+  border-color: $warning-border;
+  background: $warning-soft;
+  color: $warning;
 }
 
 .reportIcon svg {
@@ -726,17 +729,17 @@
   gap: 2px;
   min-width: 74px;
   padding: 8px 10px;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: 13px;
-  background: var(--vc-surface, #fff);
-  color: var(--vc-text-subtle, #7a8497);
+  background: $surface;
+  color: $text-hint;
   font-size: 10px;
   font-weight: 750;
   text-transform: uppercase;
 }
 
 .reportStats b {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 17px;
   line-height: 1;
 }
@@ -747,18 +750,18 @@
   gap: 10px;
   max-width: 360px;
   margin: auto;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   text-align: center;
 }
 
 .emptyReport svg {
   width: 30px;
   height: 30px;
-  color: var(--vc-text-disabled, #a8b1c0);
+  color: $text-off;
 }
 
 .emptyReport strong {
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: 16px;
   font-weight: 820;
 }
@@ -802,7 +805,7 @@
 
 @media (max-width: 760px) {
   .page {
-    padding: 12px;
+    padding: 0;
   }
 
   .titleRow,

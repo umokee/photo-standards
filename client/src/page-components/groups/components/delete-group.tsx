@@ -1,52 +1,53 @@
 import { paths } from "@/app/paths";
 import Button from "@/components/ui/button/button";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
-import { useEffect } from "react";
+import type { GroupDetail } from "@/types/contracts";
 import { useNavigate } from "react-router-dom";
 import { useDeleteGroup } from "../api/delete-group";
 
-interface Props {
-  id: string;
-  name: string;
-}
+type GroupActionTarget = Pick<GroupDetail, "id" | "name" | "description">;
 
-export const DeleteGroup = ({ id, name }: Props) => (
+type DeleteGroupProps = {
+  group: GroupActionTarget;
+  triggerClassName?: string;
+};
+
+export const DeleteGroup = ({ group, triggerClassName }: DeleteGroupProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="danger">Удалить</Button>
+      <Button className={triggerClassName} variant="danger" size="sm" aria-label={`Удалить изделие ${group.name}`}>Удалить</Button>
     </Modal.Trigger>
     <Modal.Content>
-      <DeleteGroupModal id={id} name={name} />
+      <DeleteGroupModal group={group} />
     </Modal.Content>
   </Modal>
 );
 
-const DeleteGroupModal = ({ id, name }: Props) => {
+const DeleteGroupModal = ({ group }: { group: GroupActionTarget }) => {
   const close = useModalClose();
   const navigate = useNavigate();
   const mutation = useDeleteGroup({
     mutationConfig: {
-      onSuccess: () => navigate(paths.groups()),
+      onSuccess: () => {
+        close();
+        navigate(paths.groups());
+      },
     },
   });
 
-  useEffect(() => {
-    if (mutation.isSuccess) {
-      close();
-    }
-  }, [mutation.isSuccess]);
-
   return (
     <>
-      <Modal.Header>Удалить группу</Modal.Header>
-      <Modal.Body>{`Вы уверены, что хотите удалить группу «${name}»?`}</Modal.Body>
+      <Modal.Header>Удалить изделие</Modal.Header>
+      <Modal.Body>
+        <p>
+          Изделие «{group.name}» будет удалено вместе с его эталонами, фото, разметкой и историей,
+          если это разрешено сервером.
+        </p>
+      </Modal.Body>
       <Modal.Footer>
-        <Button variant="ghost" onClick={close}>
-          Отмена
-        </Button>
-
-        <Button variant="danger" disabled={mutation.isPending} onClick={() => mutation.mutate(id)}>
-          Удалить
+        <Button variant="ghost" onClick={close}>Отмена</Button>
+        <Button variant="danger" disabled={mutation.isPending} onClick={() => mutation.mutate(group.id)}>
+          {mutation.isPending ? "Удаление..." : "Удалить"}
         </Button>
       </Modal.Footer>
     </>

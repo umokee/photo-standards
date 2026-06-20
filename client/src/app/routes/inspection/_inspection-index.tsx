@@ -26,18 +26,18 @@ function normalizeMode(value: string | undefined): InspectionModePath {
 
 const modeMeta: Record<InspectionModePath, { title: string; hint: string; icon: LucideIcon }> = {
   photo: {
-    title: "Photo check",
-    hint: "Один файл изображения, проверка по выбранному reference и сохранение результата.",
+    title: "Фото",
+    hint: "Проверка загруженного изображения.",
     icon: UploadCloud,
   },
   snapshot: {
-    title: "Camera snapshot",
-    hint: "Один кадр с выбранной камеры, затем обычная проверка изделия.",
+    title: "Snapshot",
+    hint: "Один кадр с камеры.",
     icon: Camera,
   },
   realtime: {
-    title: "Realtime station",
-    hint: "Live-поток с камеры и обновление результата без ручной загрузки файлов.",
+    title: "Realtime",
+    hint: "Проверка live-потока.",
     icon: Video,
   },
 };
@@ -55,21 +55,17 @@ export function Component() {
     <div className={s.page} data-page="index">
       <section className={s.hero}>
         <div className={s.heroMain}>
-          <span className={s.eyebrow}><ShieldCheck /> Inspect station</span>
           <h1>Проверка изделия</h1>
-          <p>
-            Сначала выбирается режим и изделие, затем reference. На station-экране остаётся только source,
-            классы и запуск проверки.
-          </p>
+          <p>Выбери режим и изделие.</p>
         </div>
         <div className={s.heroStats}>
-          <MetricCard className={s.metric} icon={ShieldCheck} value={readyGroups} label="ready projects" variant="valueFirst" />
-          <MetricCard className={s.metric} icon={Image} value={totalReferences} label="references" variant="valueFirst" />
-          <MetricCard className={s.metric} icon={ListChecks} value={totalRuns} label="runs" variant="valueFirst" />
+          <MetricCard className={s.metric} icon={ShieldCheck} value={readyGroups} label="готово" variant="valueFirst" />
+          <MetricCard className={s.metric} icon={Image} value={totalReferences} label="эталоны" variant="valueFirst" />
+          <MetricCard className={s.metric} icon={ListChecks} value={totalRuns} label="проверки" variant="valueFirst" />
         </div>
       </section>
 
-      <section className={s.modeGrid} aria-label="Inspection modes">
+      <section className={s.modeGrid} aria-label="Режимы проверки">
         {inspectionModePaths.map((modeItem) => {
           const meta = modeMeta[modeItem];
           const Icon = meta.icon;
@@ -91,10 +87,10 @@ export function Component() {
       <section className={s.queueShell}>
         <div className={s.sectionHeader}>
           <div>
-            <span className={s.eyebrow}><FileImage /> Projects</span>
+            <span className={s.eyebrow}><FileImage /> Изделия</span>
             <h2>Выбери изделие</h2>
           </div>
-          <span className={s.sectionCount}>{groups.length} projects</span>
+          <span className={s.sectionCount}>{groups.length}</span>
         </div>
 
         <QueryState
@@ -105,7 +101,7 @@ export function Component() {
           loadingText="Загружаем проекты"
           errorTitle="Не удалось загрузить проекты"
           emptyTitle="Нет проектов"
-          emptyDescription="Сначала создай изделие и добавь reference в Assets."
+          emptyDescription="Создай изделие и добавь эталон в Assets."
         >
           <div className={s.projectGrid}>
             {groups.map((group) => (
@@ -127,7 +123,7 @@ function isReadyForInspect(group: GroupListItem) {
 }
 
 function readinessLabel(group: GroupListItem) {
-  if (!group.stats.standards_count) return "Нет reference";
+  if (!group.stats.standards_count) return "Нет эталона";
   if (!group.stats.segment_classes_count) return "Нет классов";
   if (!group.stats.polygons_count) return "Нет разметки";
   return "Можно проверять";
@@ -147,12 +143,12 @@ function ProjectCard({ group, mode }: { group: GroupListItem; mode: InspectionMo
           </span>
         </div>
       </div>
-      <p>{group.description || "Inspection scope for this product."}</p>
+      <p>{group.description || "Изделие для проверки."}</p>
       <div className={s.cardMeta}>
-        <span>{group.stats.standards_count} references</span>
-        <span>{group.stats.segment_classes_count} classes</span>
-        <span>{group.stats.polygons_count} polygons</span>
-        <span>{group.stats.inspections_count} runs</span>
+        <span>{group.stats.standards_count} эталонов</span>
+        <span>{group.stats.segment_classes_count} классов</span>
+        <span>{group.stats.polygons_count} полигонов</span>
+        <span>{group.stats.inspections_count} проверок</span>
       </div>
     </Link>
   );

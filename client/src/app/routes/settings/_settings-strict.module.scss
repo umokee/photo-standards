@@ -4,14 +4,17 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--vc-space-4, 16px);
+  gap: $space-3;
   width: 100%;
   min-width: 0;
   min-height: 0;
   height: 100%;
-  padding: var(--vc-page-padding, 18px);
-  overflow: hidden;
-  background: var(--vc-canvas, #f6f7f8);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  background: $bg;
 }
 
 .hero,
@@ -21,9 +24,9 @@
 .resourceCard,
 .hostInfo,
 .storageTile {
-  border: 1px solid var(--vc-border, #dfe3e8);
-  background: var(--vc-surface, #fff);
-  box-shadow: var(--vc-shadow-sm, 0 10px 32px rgba(15, 23, 42, 0.05));
+  border: 1px solid $line;
+  background: $surface;
+  box-shadow: $shadow-sm;
 }
 
 .hero {
@@ -33,11 +36,11 @@
   gap: 16px;
   flex: 0 0 auto;
   padding: 18px;
-  border-radius: var(--vc-radius-xl, 22px);
+  border-radius: $radius-xl;
 
   h1 {
     margin: 4px 0 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: clamp(26px, 3.6vw, 42px);
     font-weight: 920;
     line-height: 0.98;
@@ -47,7 +50,7 @@
   p {
     max-width: 680px;
     margin: 8px 0 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 13px;
     line-height: 1.45;
   }
@@ -57,7 +60,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--vc-text-soft, #7a8493);
+  color: $text-hint;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -66,7 +69,7 @@
   svg {
     width: 14px;
     height: 14px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 }
 
@@ -74,19 +77,19 @@
   display: grid;
   min-width: 150px;
   padding: 14px;
-  border: 1px solid var(--vc-border, #dfe3e8);
-  border-radius: var(--vc-radius-lg, 18px);
-  background: var(--vc-surface-2, #f7f8fa);
+  border: 1px solid $line;
+  border-radius: $radius-lg;
+  background: $surface2;
 
   span,
   small {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
     font-weight: 780;
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 34px;
     font-weight: 930;
     line-height: 1;
@@ -97,11 +100,12 @@
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  align-items: start;
   gap: 14px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
 }
 
 .telemetryPanel,
@@ -109,7 +113,7 @@
 .storagePanel {
   min-width: 0;
   overflow: hidden;
-  border-radius: var(--vc-radius-xl, 22px);
+  border-radius: $radius-xl;
 }
 
 .telemetryPanel,
@@ -135,14 +139,14 @@
 
   h3 {
     margin: 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 15px;
     font-weight: 860;
   }
 
   p {
     margin: 4px 0 0;
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 12px;
   }
 }
@@ -152,10 +156,10 @@
   align-items: center;
   min-height: 26px;
   padding: 5px 9px;
-  border: 1px solid var(--vc-border, #dfe3e8);
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f7f8fa);
-  color: var(--vc-text-soft, #7a8493);
+  background: $surface2;
+  color: $text-hint;
   font-size: 10px;
   font-weight: 850;
   white-space: nowrap;
@@ -176,7 +180,7 @@
 .storageTile,
 .hostInfo {
   min-width: 0;
-  border-radius: var(--vc-radius-lg, 18px);
+  border-radius: $radius-lg;
 }
 
 .resourceCard,
@@ -195,11 +199,11 @@
   svg {
     width: 17px;
     height: 17px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 
   span {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
     font-weight: 820;
     text-transform: uppercase;
@@ -207,14 +211,14 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 15px;
     font-weight: 860;
     overflow-wrap: anywhere;
   }
 
   small {
-    color: var(--vc-text-muted, #667085);
+    color: $text-sub;
     font-size: 11px;
   }
 
@@ -239,17 +243,17 @@
   svg {
     width: 16px;
     height: 16px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 
   span {
-    color: var(--vc-text-soft, #7a8493);
+    color: $text-hint;
     font-size: 11px;
     font-weight: 780;
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 12px;
     font-weight: 820;
     text-align: right;
@@ -262,13 +266,13 @@
   height: 7px;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--vc-surface-3, #edf0f3);
+  background: $surface3;
 
   span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--vc-accent, #2563eb);
+    background: $accent;
   }
 }
 
@@ -305,7 +309,7 @@
 
 @media (max-width: 760px) {
   .page {
-    padding: 12px;
+    padding: 0;
     overflow-y: auto;
   }
 

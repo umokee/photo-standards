@@ -31,9 +31,9 @@ export function Component() {
     <div className={s.page}>
       <header className={s.hero}>
         <div className={s.heroMain}>
-          <span className={s.eyebrow}><Camera /> Image sources</span>
-          <h1>Cameras</h1>
-          <p>Единый реестр IP/RTSP/HTTP/USB источников для snapshot и realtime-проверки.</p>
+          <span className={s.eyebrow}><Camera /> Камеры</span>
+          <h1>Камеры</h1>
+          <p>IP/RTSP/HTTP/USB источники для snapshot и realtime.</p>
         </div>
 
         <div className={s.heroStats}>
@@ -48,7 +48,7 @@ export function Component() {
       <div className={s.workspace}>
         <aside className={s.rail}>
           <div className={s.railHeader}>
-            <Input noMargin placeholder="Поиск по камере, адресу, статусу..." value={search} onChange={setSearch} />
+            <Input noMargin placeholder="Поиск камер..." value={search} onChange={setSearch} />
             <div className={s.railSummary}>
               <span><MonitorDot /> {filtered.length} sources</span>
               <span>{onlineCount}/{cameras.length} online</span>

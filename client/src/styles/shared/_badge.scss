@@ -7,10 +7,10 @@
   gap: 4px;
   max-width: 100%;
   padding: 2px 7px;
-  border: 1px solid var(--badge-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--badge-bg, var(--vc-surface-2, #f8fafc));
-  color: var(--badge-fg, var(--vc-text-muted, #6b7280));
+  background: $surface2;
+  color: $text-sub;
   font-size: 12px;
   font-weight: 650;
   line-height: 18px;
@@ -19,32 +19,32 @@
   text-overflow: ellipsis;
 
   &--success {
-    --badge-bg: var(--vc-success-soft, rgba(34, 197, 94, 0.10));
-    --badge-border: var(--vc-success-line, rgba(34, 197, 94, 0.25));
-    --badge-fg: var(--vc-success-text, #15803d);
+    border-color: $success-border;
+    background: $success-soft;
+    color: $success-label;
   }
 
   &--ml {
-    --badge-bg: var(--vc-accent-soft, rgba(37, 99, 235, 0.10));
-    --badge-border: var(--vc-accent-line, rgba(37, 99, 235, 0.22));
-    --badge-fg: var(--vc-accent-text, var(--vc-accent, #2563eb));
+    border-color: $accent-border;
+    background: $accent-soft;
+    color: $accent;
   }
 
   &--amber {
-    --badge-bg: var(--vc-warning-soft, rgba(245, 158, 11, 0.12));
-    --badge-border: var(--vc-warning-line, rgba(245, 158, 11, 0.30));
-    --badge-fg: var(--vc-warning-text, #92400e);
+    border-color: $warning-line;
+    background: $warning-soft;
+    color: $warning-text;
   }
 
   &--danger {
-    --badge-bg: var(--vc-danger-soft, rgba(239, 68, 68, 0.10));
-    --badge-border: var(--vc-danger-line, rgba(239, 68, 68, 0.28));
-    --badge-fg: var(--vc-danger-text, #b91c1c);
+    border-color: $danger-border;
+    background: $danger-soft;
+    color: $danger-text;
   }
 
   &--ghost {
-    --badge-bg: var(--vc-surface-2, #f8fafc);
-    --badge-border: var(--vc-line, rgba(15, 23, 42, 0.12));
-    --badge-fg: var(--vc-text-muted, #6b7280);
+    border-color: $line;
+    background: $surface2;
+    color: $text-sub;
   }
 }

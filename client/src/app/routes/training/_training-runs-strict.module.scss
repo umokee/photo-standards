@@ -1,7 +1,9 @@
+@use "@/styles/variables" as *;
+
 .page {
-  --runs-radius-xl: var(--vc-radius-xl, 28px);
-  --runs-radius-lg: var(--vc-radius-lg, 22px);
-  --runs-radius-md: var(--vc-radius-md, 16px);
+  --runs-radius-xl: #{$radius-xl};
+  --runs-radius-lg: #{$radius-lg};
+  --runs-radius-md: #{$radius-md};
 
   display: flex;
   flex-direction: column;
@@ -9,10 +11,13 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: clamp(14px, 2vw, 22px);
-  color: var(--vc-text, #111827);
-  background: var(--vc-bg, #f6f7f8);
-  overflow: hidden;
+  padding: 0;
+  color: $text;
+  background: $bg;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .metricCard,
@@ -24,14 +29,14 @@
 .previewSection,
 .linkedModel,
 .messageBox {
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
-  background: var(--vc-surface, #ffffff);
-  box-shadow: var(--vc-shadow-sm, 0 12px 34px rgba(15, 23, 42, 0.06));
+  border: 1px solid $line;
+  background: $surface;
+  box-shadow: $shadow-sm;
 }
 
 .listPanel h2 {
   margin: 7px 0 0;
-  color: var(--vc-text, #111827);
+  color: $text;
   font-weight: 920;
   letter-spacing: -0.055em;
 }
@@ -48,10 +53,10 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f8fafc);
-  color: var(--vc-text, #111827);
+  background: $surface2;
+  color: $text;
   font-size: 12px;
   font-weight: 850;
   text-decoration: none;
@@ -63,8 +68,8 @@
   }
 
   &:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--vc-accent, #2563eb) 42%, var(--vc-line, rgba(15, 23, 42, 0.1)));
-    background: color-mix(in srgb, var(--vc-accent, #2563eb) 8%, var(--vc-surface-2, #f8fafc));
+    border-color: color-mix(in srgb, $accent 42%, $line);
+    background: color-mix(in srgb, $accent 8%, $surface2);
   }
 
   &:disabled {
@@ -98,12 +103,12 @@
     grid-row: span 2;
     width: 20px;
     height: 20px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 
   span {
     display: block;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
@@ -113,7 +118,7 @@
   strong {
     display: block;
     margin-top: 1px;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 26px;
     font-weight: 920;
     line-height: 1;
@@ -122,30 +127,31 @@
 
   small {
     grid-column: 2;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     font-weight: 700;
   }
 
   &[data-tone="danger"] > svg {
-    color: var(--vc-danger, #dc2626);
+    color: $danger;
   }
 
   &[data-tone="success"] > svg {
-    color: var(--vc-success, #16a34a);
+    color: $success;
   }
 
   &[data-tone="warning"] > svg {
-    color: var(--vc-warning, #d97706);
+    color: $warning;
   }
 }
 
 .workbench {
   display: grid;
   grid-template-columns: minmax(230px, 280px) minmax(0, 1.5fr) minmax(300px, 370px);
+  align-items: start;
   gap: 12px;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
 }
 
 .filterPanel,
@@ -153,8 +159,8 @@
 .inspector {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
   border-radius: var(--runs-radius-xl);
 }
 
@@ -177,7 +183,7 @@
 
   strong,
   b {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 12px;
     font-weight: 900;
   }
@@ -188,10 +194,10 @@
   align-items: center;
   min-height: 26px;
   padding: 0 9px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px solid $line;
   border-radius: 999px;
-  color: var(--vc-muted, #64748b);
-  background: var(--vc-surface-2, #f8fafc);
+  color: $text-sub;
+  background: $surface2;
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
@@ -204,14 +210,14 @@
   gap: 8px;
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface-2, #f8fafc);
+  background: $surface2;
 
   svg {
     width: 16px;
     height: 16px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
   }
 
   input {
@@ -220,7 +226,7 @@
     border: 0;
     outline: 0;
     background: transparent;
-    color: var(--vc-text, #111827);
+    color: $text;
     font: inherit;
     font-size: 13px;
     font-weight: 700;
@@ -236,7 +242,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
@@ -257,17 +263,17 @@
 }
 
 .filterActive {
-  border-color: color-mix(in srgb, var(--vc-accent, #2563eb) 46%, var(--vc-line, rgba(15, 23, 42, 0.1))) !important;
-  background: color-mix(in srgb, var(--vc-accent, #2563eb) 12%, var(--vc-surface-2, #f8fafc)) !important;
-  color: var(--vc-text, #111827) !important;
+  border-color: color-mix(in srgb, $accent 46%, $line);
+  background: color-mix(in srgb, $accent 12%, $surface2);
+  color: $text;
 }
 
 .jobsScroller,
 .inspectorScroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 4px;
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .jobsScroller {
@@ -281,7 +287,7 @@
   gap: 10px;
   padding: 12px;
   border-radius: var(--runs-radius-lg);
-  background: var(--vc-surface-2, #f8fafc);
+  background: $surface2;
   box-shadow: none;
 
   > header {
@@ -294,7 +300,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      color: var(--vc-text, #111827);
+      color: $text;
       font-size: 12px;
       font-weight: 920;
       text-transform: uppercase;
@@ -304,7 +310,7 @@
     svg {
       width: 15px;
       height: 15px;
-      color: var(--vc-muted, #64748b);
+      color: $text-sub;
     }
 
     b {
@@ -315,19 +321,19 @@
       height: 24px;
       padding: 0 7px;
       border-radius: 999px;
-      background: var(--vc-surface, #ffffff);
-      color: var(--vc-muted, #64748b);
+      background: $surface;
+      color: $text-sub;
       font-size: 11px;
       font-weight: 900;
     }
   }
 
   &[data-tone="warning"] > header svg {
-    color: var(--vc-warning, #d97706);
+    color: $warning;
   }
 
   &[data-tone="danger"] > header svg {
-    color: var(--vc-danger, #dc2626);
+    color: $danger;
   }
 }
 
@@ -340,9 +346,9 @@
   min-height: 52px;
   display: grid;
   place-items: center;
-  border: 1px dashed var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px dashed $line;
   border-radius: var(--runs-radius-md);
-  color: var(--vc-muted, #64748b);
+  color: $text-sub;
   font-size: 13px;
   font-weight: 750;
 }
@@ -355,11 +361,11 @@
 
   &:hover,
   &.taskCardSelected {
-    border-color: color-mix(in srgb, var(--vc-accent, #2563eb) 42%, var(--vc-line, rgba(15, 23, 42, 0.1)));
+    border-color: color-mix(in srgb, $accent 42%, $line);
   }
 
   &.taskCardSelected {
-    background: color-mix(in srgb, var(--vc-accent, #2563eb) 7%, var(--vc-surface, #ffffff));
+    background: color-mix(in srgb, $accent 7%, $surface);
   }
 }
 
@@ -383,8 +389,8 @@
   width: 34px;
   height: 34px;
   border-radius: 13px;
-  background: var(--vc-surface-2, #f8fafc);
-  color: var(--vc-accent, #2563eb);
+  background: $surface2;
+  color: $accent;
 
   svg {
     width: 18px;
@@ -393,15 +399,15 @@
 }
 
 .taskCard[data-tone="danger"] .taskIcon {
-  color: var(--vc-danger, #dc2626);
+  color: $danger;
 }
 
 .taskCard[data-tone="success"] .taskIcon {
-  color: var(--vc-success, #16a34a);
+  color: $success;
 }
 
 .taskCard[data-tone="warning"] .taskIcon {
-  color: var(--vc-warning, #d97706);
+  color: $warning;
 }
 
 .taskMain {
@@ -418,21 +424,21 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 14px;
     font-weight: 920;
   }
 
   span {
     margin-top: 3px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     font-weight: 750;
   }
 
   small {
     margin-top: 6px;
-    color: var(--vc-muted-2, var(--vc-muted, #64748b));
+    color: $text-hint;
     font-size: 12px;
     line-height: 1.35;
   }
@@ -444,7 +450,7 @@
   gap: 8px;
 
   b {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 18px;
     font-weight: 920;
     letter-spacing: -0.05em;
@@ -453,27 +459,27 @@
 
 .progressTrack {
   height: 5px;
-  background: color-mix(in srgb, var(--vc-line, rgba(15, 23, 42, 0.1)) 52%, transparent);
+  background: color-mix(in srgb, $line 52%, transparent);
   overflow: hidden;
 
   span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--vc-accent, #2563eb);
+    background: $accent;
   }
 }
 
 .taskCard[data-tone="danger"] .progressTrack span {
-  background: var(--vc-danger, #dc2626);
+  background: $danger;
 }
 
 .taskCard[data-tone="success"] .progressTrack span {
-  background: var(--vc-success, #16a34a);
+  background: $success;
 }
 
 .taskCard[data-tone="warning"] .progressTrack span {
-  background: var(--vc-warning, #d97706);
+  background: $warning;
 }
 
 .taskFooter {
@@ -490,7 +496,7 @@
     align-items: center;
     gap: 6px;
     min-height: 26px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 11px;
     font-weight: 850;
     text-decoration: none;
@@ -520,7 +526,7 @@
 }
 
 .dangerButton {
-  color: var(--vc-danger, #dc2626) !important;
+  color: $danger;
 }
 
 .inspectorScroll {
@@ -536,9 +542,9 @@
   gap: 8px;
   flex: 1;
   min-height: 0;
-  border: 1px dashed var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px dashed $line;
   border-radius: var(--runs-radius-lg);
-  color: var(--vc-muted, #64748b);
+  color: $text-sub;
   text-align: center;
   padding: 20px;
 
@@ -548,7 +554,7 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 14px;
   }
 
@@ -566,7 +572,7 @@
   align-items: center;
   padding: 12px;
   border-radius: var(--runs-radius-lg);
-  background: var(--vc-surface-2, #f8fafc);
+  background: $surface2;
 
   strong,
   span {
@@ -578,14 +584,14 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 15px;
     font-weight: 920;
   }
 
   span {
     margin-top: 3px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     font-weight: 750;
   }
@@ -598,8 +604,8 @@
   width: 42px;
   height: 42px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--vc-accent, #2563eb) 11%, var(--vc-surface, #ffffff));
-  color: var(--vc-accent, #2563eb);
+  background: color-mix(in srgb, $accent 11%, $surface);
+  color: $accent;
 
   svg {
     width: 20px;
@@ -611,9 +617,9 @@
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px solid $line;
   border-radius: var(--runs-radius-lg);
-  background: var(--vc-surface, #ffffff);
+  background: $surface;
 
   > div:first-child {
     display: flex;
@@ -623,7 +629,7 @@
   }
 
   span {
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
@@ -631,7 +637,7 @@
   }
 
   b {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 22px;
     font-weight: 920;
     letter-spacing: -0.05em;
@@ -654,12 +660,12 @@
   gap: 4px;
   min-height: 60px;
   padding: 10px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.1));
+  border: 1px solid $line;
   border-radius: var(--runs-radius-md);
-  background: var(--vc-surface-2, #f8fafc);
+  background: $surface2;
 
   span {
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 10px;
     font-weight: 900;
     text-transform: uppercase;
@@ -669,7 +675,7 @@
   strong {
     min-width: 0;
     overflow: hidden;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 12px;
     font-weight: 850;
     text-overflow: ellipsis;
@@ -690,7 +696,7 @@
   > svg {
     width: 18px;
     height: 18px;
-    color: var(--vc-accent, #2563eb);
+    color: $accent;
   }
 
   strong,
@@ -703,14 +709,14 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 13px;
     font-weight: 920;
   }
 
   span {
     margin-top: 3px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     font-weight: 750;
   }
@@ -722,16 +728,16 @@
   gap: 10px;
   padding: 12px;
   border-radius: var(--runs-radius-lg);
-  background: var(--vc-surface-2, #f8fafc);
+  background: $surface2;
 
   > svg {
     width: 18px;
     height: 18px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
   }
 
   &[data-error="true"] > svg {
-    color: var(--vc-danger, #dc2626);
+    color: $danger;
   }
 
   strong,
@@ -740,14 +746,14 @@
   }
 
   strong {
-    color: var(--vc-text, #111827);
+    color: $text;
     font-size: 12px;
     font-weight: 920;
   }
 
   span {
     margin-top: 4px;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     line-height: 1.45;
   }
@@ -770,7 +776,7 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      color: var(--vc-text, #111827);
+      color: $text;
       font-size: 12px;
       font-weight: 920;
       text-transform: uppercase;
@@ -780,11 +786,11 @@
     svg {
       width: 14px;
       height: 14px;
-      color: var(--vc-muted, #64748b);
+      color: $text-sub;
     }
 
     b {
-      color: var(--vc-muted, #64748b);
+      color: $text-sub;
       font-size: 11px;
       font-weight: 900;
     }
@@ -804,7 +810,7 @@
     min-height: 30px;
     padding: 7px 8px;
     border-radius: 12px;
-    background: var(--vc-surface-2, #f8fafc);
+    background: $surface2;
   }
 
   dt,
@@ -817,19 +823,19 @@
   }
 
   dt {
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-weight: 900;
   }
 
   dd {
     margin: 0;
-    color: var(--vc-text, #111827);
+    color: $text;
     font-weight: 800;
   }
 
   p {
     margin: 0;
-    color: var(--vc-muted, #64748b);
+    color: $text-sub;
     font-size: 12px;
     font-weight: 750;
   }
@@ -845,7 +851,7 @@
   .previewSection,
   .linkedModel,
   .progressLarge {
-    background: var(--vc-surface, #0f1113);
+    background: $surface;
   }
 
   .taskGroup,
@@ -857,7 +863,7 @@
   .queueBadge,
   .taskIcon,
   .previewSection dl > div {
-    background: var(--vc-surface-2, #151719);
+    background: $surface2;
   }
 }
 
@@ -868,7 +874,7 @@
 
   .inspector {
     grid-column: 1 / -1;
-    min-height: 280px;
+    min-height: auto;
   }
 }
 
@@ -900,7 +906,7 @@
 
 @media (max-width: 620px) {
   .page {
-    padding: 10px;
+    padding: 0;
   }
 
   .metricsGrid,

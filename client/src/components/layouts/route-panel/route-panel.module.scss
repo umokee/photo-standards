@@ -1,7 +1,16 @@
+@use "@/styles/variables" as *;
+
 .root {
   min-width: 0;
-  min-height: 0;
+  min-height: auto;
   display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  overflow: visible;
+}
+
+.rootClipped {
+  min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
@@ -11,7 +20,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: $space-3;
 }
 
 .heading {
@@ -21,7 +31,7 @@
 }
 
 .kicker {
-  color: var(--vc-muted, #64748b);
+  color: $text-sub;
   font-size: 11px;
   font-weight: 850;
   text-transform: uppercase;
@@ -30,7 +40,7 @@
 
 .title {
   margin: 0;
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 18px;
   font-weight: 900;
   line-height: 1.08;
@@ -38,9 +48,17 @@
 }
 
 .actions {
+  min-width: 0;
   flex-shrink: 0;
 }
 
 .body {
+  min-width: 0;
   min-height: 0;
+  overflow: visible;
+}
+
+.bodyScroll {
+  overflow: auto;
+  scrollbar-gutter: stable;
 }

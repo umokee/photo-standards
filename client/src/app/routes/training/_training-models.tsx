@@ -1,5 +1,4 @@
 import { paths } from "@/app/paths";
-import { RouteHero } from "@/components/layouts/route-hero/route-hero";
 import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { StatusChip, type StatusChipTone } from "@/components/ui/status-chip/status-chip";
@@ -46,7 +45,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { Link, useLoaderData, useNavigate } from "react-router-dom";
 import s from "./_training-models-strict.module.scss";
 import { useTrainingModelOutletContext } from "./_training-detail";
@@ -210,18 +209,89 @@ function seriesForChart(model: MlModel | null, history: TrainingMetricsHistoryRe
   return null;
 }
 
-function chartPath(values: number[], width = 420, height = 150, pad = 16) {
-  if (values.length < 2) return "";
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+type ChartPoint = {
+  value: number;
+  epoch: number;
+  x: number;
+  y: number;
+};
+
+const chartBox = {
+  width: 460,
+  height: 190,
+  padLeft: 42,
+  padRight: 18,
+  padTop: 18,
+  padBottom: 32,
+};
+
+function chartDomain(values: number[], chart: ChartDefinition) {
+  if (chart.family === "metrics") {
+    return { min: 0, max: 1 };
+  }
+
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const span = rawMax - rawMin || Math.max(Math.abs(rawMax), 1);
+  const padding = span * 0.08;
+
+  return {
+    min: Math.max(0, rawMin - padding),
+    max: rawMax + padding,
+  };
+}
+
+function chartValueLabel(chart: ChartDefinition, value: number) {
+  if (chart.family === "metrics") return formatPercent(value);
+  if (chart.family === "lr") return value < 0.001 ? value.toExponential(2) : value.toFixed(5).replace(/0+$/, "").replace(/\.$/, "");
+  if (value >= 10) return value.toFixed(2);
+  return value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function chartPoints(series: SeriesBundle, chart: ChartDefinition): ChartPoint[] {
+  const { min, max } = chartDomain(series.values, chart);
   const span = max - min || 1;
-  return values
-    .map((value, index) => {
-      const x = pad + (index / (values.length - 1)) * (width - pad * 2);
-      const y = pad + (1 - (value - min) / span) * (height - pad * 2);
-      return `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const plotWidth = chartBox.width - chartBox.padLeft - chartBox.padRight;
+  const plotHeight = chartBox.height - chartBox.padTop - chartBox.padBottom;
+
+  return series.values.map((value, index) => ({
+    value,
+    epoch: series.epochs[index] ?? index + 1,
+    x: chartBox.padLeft + (index / Math.max(series.values.length - 1, 1)) * plotWidth,
+    y: chartBox.padTop + (1 - (value - min) / span) * plotHeight,
+  }));
+}
+
+function linePath(points: ChartPoint[]) {
+  return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+}
+
+function areaPath(points: ChartPoint[]) {
+  if (points.length < 2) return "";
+  const baseY = chartBox.height - chartBox.padBottom;
+  return `${linePath(points)} L${points[points.length - 1].x.toFixed(1)} ${baseY} L${points[0].x.toFixed(1)} ${baseY} Z`;
+}
+
+function yTicks(values: number[], chart: ChartDefinition) {
+  const { min, max } = chartDomain(values, chart);
+  return [0, 0.5, 1].map((ratio) => {
+    const value = min + (max - min) * ratio;
+    const y = chartBox.padTop + (1 - ratio) * (chartBox.height - chartBox.padTop - chartBox.padBottom);
+    return { value, y };
+  });
+}
+
+function nearestPointIndex(points: ChartPoint[], x: number) {
+  let nearest = 0;
+  let distance = Number.POSITIVE_INFINITY;
+  points.forEach((point, index) => {
+    const nextDistance = Math.abs(point.x - x);
+    if (nextDistance < distance) {
+      nearest = index;
+      distance = nextDistance;
+    }
+  });
+  return nearest;
 }
 
 function sourceLabel(source: SeriesSource | null | undefined) {
@@ -272,30 +342,95 @@ function CollapsibleBlock({
 
 function ChartCard({ model, history, chart }: { model: MlModel | null; history?: TrainingMetricsHistoryResponse; chart: ChartDefinition }) {
   const series = seriesForChart(model, history, chart);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const points = series ? chartPoints(series, chart) : [];
+  const activeIndex = points.length ? hoverIndex ?? points.length - 1 : null;
+  const activePoint = activeIndex === null ? null : points[activeIndex] ?? null;
+  const firstPoint = points[0] ?? null;
+  const lastPoint = points[points.length - 1] ?? null;
+  const gradientId = `chartFill-${chart.key.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+
+  const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
+    if (!points.length) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width) * chartBox.width;
+    setHoverIndex(nearestPointIndex(points, x));
+  };
 
   return (
     <article className={s.chartCard}>
       <header className={s.chartTop}>
         <div>
           <strong>{chart.title}</strong>
-          <span>{series ? `${series.values.length} points` : "No curve data"}</span>
+          <span>{series ? `${series.values.length} точек · ${sourceLabel(series.source)}` : "Нет данных кривой"}</span>
         </div>
         <SourcePill source={series?.source ?? "empty"} />
       </header>
 
       {series ? (
-        <svg className={s.chartSvg} viewBox="0 0 420 150" role="img" aria-label={chart.title}>
-          <path d={chartPath(series.values)} fill="none" stroke="var(--train-accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="16" cy="134" r="2" fill="var(--train-muted)" opacity="0.35" />
-          <circle cx="404" cy="16" r="2" fill="var(--train-muted)" opacity="0.35" />
+        <svg
+          className={s.chartSvg}
+          viewBox={`0 0 ${chartBox.width} ${chartBox.height}`}
+          role="img"
+          tabIndex={0}
+          aria-label={`${chart.title}: ${activePoint ? chartValueLabel(chart, activePoint.value) : "нет значения"}`}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setHoverIndex(null)}
+          onFocus={() => setHoverIndex(points.length - 1)}
+          onBlur={() => setHoverIndex(null)}
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--train-accent)" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="var(--train-accent)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+
+          {yTicks(series.values, chart).map((tick) => (
+            <g key={tick.y}>
+              <line className={s.chartGridLine} x1={chartBox.padLeft} x2={chartBox.width - chartBox.padRight} y1={tick.y} y2={tick.y} />
+              <text className={s.chartAxisLabel} x={chartBox.padLeft - 8} y={tick.y + 4} textAnchor="end">
+                {chartValueLabel(chart, tick.value)}
+              </text>
+            </g>
+          ))}
+
+          <line className={s.chartAxisLine} x1={chartBox.padLeft} x2={chartBox.width - chartBox.padRight} y1={chartBox.height - chartBox.padBottom} y2={chartBox.height - chartBox.padBottom} />
+          <text className={s.chartAxisLabel} x={chartBox.padLeft} y={chartBox.height - 10}>ep. {firstPoint?.epoch ?? 1}</text>
+          <text className={s.chartAxisLabel} x={chartBox.width - chartBox.padRight} y={chartBox.height - 10} textAnchor="end">ep. {lastPoint?.epoch ?? points.length}</text>
+
+          <path className={s.chartArea} d={areaPath(points)} fill={`url(#${gradientId})`} />
+          <path className={s.chartLine} d={linePath(points)} />
+
+          {points.map((point, index) => (
+            <circle
+              key={`${point.epoch}-${index}`}
+              className={`${s.chartPoint} ${index === activeIndex ? s.chartPointActive : ""}`}
+              cx={point.x}
+              cy={point.y}
+              r={index === activeIndex ? 4 : 2.4}
+            />
+          ))}
+
+          {activePoint ? (
+            <g className={s.chartFocus}>
+              <line x1={activePoint.x} x2={activePoint.x} y1={chartBox.padTop} y2={chartBox.height - chartBox.padBottom} />
+              <circle cx={activePoint.x} cy={activePoint.y} r="5" />
+              <g transform={`translate(${Math.min(Math.max(activePoint.x - 62, chartBox.padLeft), chartBox.width - 142)}, ${Math.max(activePoint.y - 46, chartBox.padTop)})`}>
+                <rect width="124" height="38" rx="9" />
+                <text x="10" y="15">epoch {activePoint.epoch}</text>
+                <text x="10" y="30">{chartValueLabel(chart, activePoint.value)}</text>
+              </g>
+            </g>
+          ) : null}
         </svg>
       ) : (
-        <div className={s.todoChart}>Метрика не пришла от backend. Блок оставлен под real-time/checkpoint data, а не под фейковый график.</div>
+        <div className={s.todoChart}>Метрика не пришла от backend. Здесь появится интерактивная кривая после live/checkpoint data.</div>
       )}
 
       <div className={s.chartLegend}>
         <span className={s.legendItem}><i className={s.legendSwatch} /> {model ? modelName(model) : "model"}</span>
-        {series ? <span>epoch {series.epochs[0]} → {series.epochs[series.epochs.length - 1]}</span> : null}
+        {activePoint ? <span>epoch {activePoint.epoch} · {chartValueLabel(chart, activePoint.value)}</span> : null}
       </div>
     </article>
   );
@@ -454,30 +589,36 @@ export function Component() {
 
   return (
     <div className={s.page}>
-      <RouteHero
-        eyebrow="Train / Models"
-        icon={Brain}
-        title="Model laboratory"
-        description="Строгая страница анализа модели: список моделей слева, метрики и графики справа. История метрик запрашивается при открытии модели и может обновляться во время обучения."
-        actions={(
-          <>
+      <header className={s.header}>
+        <div className={s.headerCopy}>
+          <span className={s.eyebrow}><Brain /> Train / Models</span>
+          <h1>Модели</h1>
+          <p>Выбор активной модели, запуск обучения и анализ качества по live/checkpoint метрикам.</p>
+        </div>
+
+        <div className={s.headerStats}>
+          <div><span>Всего</span><strong>{models.length}</strong></div>
+          <div><span>Активная</span><strong>{models.some((model) => model.is_active) ? "есть" : "нет"}</strong></div>
+          <div><span>Задания</span><strong>{tasks.filter((task) => isActiveTaskStatus(task.status)).length}</strong></div>
+        </div>
+
+        <div className={s.headerActions}>
           <ImportModel groupId={group.id} />
           <ExportModel models={models} />
           <TrainModel groupId={group.id} canTrain={canTrain} isTrainingLocked={hasActiveTrainingTask} />
-          </>
-        )}
-      />
+        </div>
+      </header>
 
       <section className={s.shell}>
         <aside className={`${s.rail} ${railOpen ? "" : s.railCollapsed}`}>
           <div className={s.railTop}>
             <label className={s.search}>
               <Search />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search model..." />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск модели..." />
             </label>
             <div className={s.railControls}>
-              <button className={s.collapseButton} type="button" onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Collapse" : "Models"}</button>
-              {compareIds.length ? <button className={s.softButton} type="button" onClick={() => setCompareIds([])}>Clear compare</button> : null}
+              <button className={s.collapseButton} type="button" onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Скрыть" : "Модели"}</button>
+              {compareIds.length ? <button className={s.softButton} type="button" onClick={() => setCompareIds([])}>Сбросить</button> : null}
             </div>
           </div>
 
@@ -487,7 +628,7 @@ export function Component() {
                 <Filter />
                 {(["all", "active", "trained", "draft", "withTask"] as FilterMode[]).map((value) => (
                   <button key={value} className={`${s.filterButton} ${filter === value ? s.filterActive : ""}`} type="button" onClick={() => setFilter(value)}>
-                    {value === "withTask" ? "jobs" : value}
+                    {value === "all" ? "Все" : value === "active" ? "Активные" : value === "trained" ? "Обученные" : value === "draft" ? "Черновики" : "Задания"}
                   </button>
                 ))}
               </div>
@@ -495,18 +636,18 @@ export function Component() {
               <div className={s.sortBar}>
                 <SlidersHorizontal />
                 {(["created", "score", "name"] as SortMode[]).map((value) => (
-                  <button key={value} className={`${s.sortButton} ${sort === value ? s.sortActive : ""}`} type="button" onClick={() => setSort(value)}>{value}</button>
+                  <button key={value} className={`${s.sortButton} ${sort === value ? s.sortActive : ""}`} type="button" onClick={() => setSort(value)}>{value === "created" ? "Новые" : value === "score" ? "Качество" : "Имя"}</button>
                 ))}
               </div>
 
               <div className={s.railSummary}>
-                <div className={s.miniStat}><span>Total</span><strong>{models.length}</strong></div>
-                <div className={s.miniStat}><span>Active</span><strong>{models.filter((model) => model.is_active).length}</strong></div>
-                <div className={s.miniStat}><span>Compare</span><strong>{compareIds.length}</strong></div>
+                <div className={s.miniStat}><span>Всего</span><strong>{models.length}</strong></div>
+                <div className={s.miniStat}><span>Активные</span><strong>{models.filter((model) => model.is_active).length}</strong></div>
+                <div className={s.miniStat}><span>Сравнение</span><strong>{compareIds.length}</strong></div>
               </div>
 
               <div className={s.railBody}>
-                <QueryState size="block" isEmpty={!filteredModels.length} emptyTitle="No models" emptyDescription="Train/import a model or clear filters.">
+                <QueryState size="block" isEmpty={!filteredModels.length} emptyTitle="Нет моделей" emptyDescription="Обучи или импортируй модель либо сбрось фильтры.">
                   <div className={s.modelList}>
                     {groupedModels.map(([family, items]) => (
                       <section className={s.family} key={family}>
@@ -549,7 +690,7 @@ export function Component() {
         </aside>
 
         <main className={s.main}>
-          <QueryState size="block" isEmpty={!selectedModel} emptyTitle="No model selected" emptyDescription="Выбери модель слева или импортируй веса.">
+          <QueryState size="block" isEmpty={!selectedModel} emptyTitle="Модель не выбрана" emptyDescription="Выбери модель слева или импортируй веса.">
             {selectedModel ? (
               <>
                 <section className={s.modelHeader}>
@@ -570,33 +711,33 @@ export function Component() {
                     </div>
                   </div>
                   <div className={s.modelActions}>
-                    {!selectedModel.is_active ? <button className={s.primaryButton} type="button" onClick={() => activateModel.mutate(selectedModel.id)}><ShieldCheck /> Make active</button> : null}
-                    <button className={s.softButton} type="button" onClick={() => metricsQuery.refetch()}><RefreshCw /> Refresh metrics</button>
-                    <button className={s.dangerButton} type="button" onClick={() => window.confirm("Удалить модель?") && deleteModel.mutate(selectedModel.id)}><Trash2 /> Delete</button>
+                    {!selectedModel.is_active ? <button className={s.primaryButton} type="button" onClick={() => activateModel.mutate(selectedModel.id)}><ShieldCheck /> Сделать активной</button> : null}
+                    <button className={s.softButton} type="button" onClick={() => metricsQuery.refetch()}><RefreshCw /> Обновить метрики</button>
+                    <button className={s.dangerButton} type="button" onClick={() => window.confirm("Удалить модель?") && deleteModel.mutate(selectedModel.id)}><Trash2 /> Удалить</button>
                   </div>
                 </section>
 
                 <div className={s.contentScroll}>
                   <section className={s.metricGrid}>
-                    <MetricCard className={s.metricCard} label="mAP50-95" value={formatPercent(metricValue(selectedModel, "mAP50_95"))} hint="primary quality metric" />
-                    <MetricCard className={s.metricCard} label="mAP50" value={formatPercent(metricValue(selectedModel, "mAP50"))} hint="object matching quality" />
-                    <MetricCard className={s.metricCard} label="Precision" value={formatPercent(metricValue(selectedModel, "precision"))} hint="false positives control" />
-                    <MetricCard className={s.metricCard} label="Recall" value={formatPercent(metricValue(selectedModel, "recall"))} hint="missed detections control" />
+                    <MetricCard className={s.metricCard} label="mAP50-95" value={formatPercent(metricValue(selectedModel, "mAP50_95"))} hint="главная метрика качества" />
+                    <MetricCard className={s.metricCard} label="mAP50" value={formatPercent(metricValue(selectedModel, "mAP50"))} hint="качество обнаружения" />
+                    <MetricCard className={s.metricCard} label="Precision" value={formatPercent(metricValue(selectedModel, "precision"))} hint="контроль ложных срабатываний" />
+                    <MetricCard className={s.metricCard} label="Recall" value={formatPercent(metricValue(selectedModel, "recall"))} hint="контроль пропусков" />
                   </section>
 
-                  <CollapsibleBlock id="metrics" title="Metrics" description="Live/checkpoint curves from backend" icon={Activity} open={openBlocks.metrics} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="metrics" title="Метрики" description="Интерактивные live/checkpoint кривые" icon={Activity} open={openBlocks.metrics} onToggle={toggleBlock}>
                     <div className={s.chartGrid}>{metricCharts.map((chart) => <ChartCard key={chart.key} model={selectedModel} history={metricHistory} chart={chart} />)}</div>
                   </CollapsibleBlock>
 
-                  <CollapsibleBlock id="loss" title="Loss" description="Training and validation losses" icon={BarChart3} open={openBlocks.loss} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="loss" title="Loss" description="Ошибки обучения и валидации" icon={BarChart3} open={openBlocks.loss} onToggle={toggleBlock}>
                     <div className={s.chartGrid}>{lossCharts.map((chart) => <ChartCard key={chart.key} model={selectedModel} history={metricHistory} chart={chart} />)}</div>
                   </CollapsibleBlock>
 
-                  <CollapsibleBlock id="lr" title="Learning rate" description="Optimizer learning-rate schedule" icon={GitBranch} open={openBlocks.lr} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="lr" title="Learning rate" description="Расписание learning rate оптимизатора" icon={GitBranch} open={openBlocks.lr} onToggle={toggleBlock}>
                     <div className={s.chartGrid}>{lrCharts.map((chart) => <ChartCard key={chart.key} model={selectedModel} history={metricHistory} chart={chart} />)}</div>
                   </CollapsibleBlock>
 
-                  <CollapsibleBlock id="metadata" title="Dataset & model metadata" description="What was used to train or import this model" icon={Database} open={openBlocks.metadata} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="metadata" title="Данные и параметры" description="Что использовалось для обучения или импорта" icon={Database} open={openBlocks.metadata} onToggle={toggleBlock}>
                     <div className={s.metaGrid}>
                       <MetaCard label="Architecture" value={selectedModel.architecture} />
                       <MetaCard label="Epochs" value={selectedModel.epochs ?? "—"} />
@@ -619,7 +760,7 @@ export function Component() {
                     <JobPanel task={selectedTask} groupId={group.id} />
                   </CollapsibleBlock>
 
-                  <CollapsibleBlock id="classes" title="Model classes" description="Native/imported classes mapped to project classes" icon={Tags} open={openBlocks.classes} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="classes" title="Классы модели" description="Native/imported классы и связь с проектом" icon={Tags} open={openBlocks.classes} onToggle={toggleBlock}>
                     {selectedModel.class_meta?.length ? (
                       <div className={s.classGrid}>
                         {selectedModel.class_meta.map((item) => (
@@ -637,7 +778,7 @@ export function Component() {
                     )}
                   </CollapsibleBlock>
 
-                  <CollapsibleBlock id="compare" title="Compare selected models" description="Quick comparison of up to four models" icon={Boxes} open={openBlocks.compare} onToggle={toggleBlock}>
+                  <CollapsibleBlock id="compare" title="Сравнение" description="Сравнение до четырёх выбранных моделей" icon={Boxes} open={openBlocks.compare} onToggle={toggleBlock}>
                     <CompareBlock models={selectedCompareModels} />
                   </CollapsibleBlock>
                 </div>

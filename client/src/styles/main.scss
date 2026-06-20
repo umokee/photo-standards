@@ -10,10 +10,5 @@
 @use "shared/table";
 @use "shared/scrollbar";
 @use "pages/page";
-@use "platform-hardening";
-@use "theme-strict-v39";
-@use "platform-legacy-bridge-v39";
+@use "theme-strict";
 @use "ui-components-strict";
-@use "v47-regression-hotfix";
-@use "v49-regression-hardfix";
-@use "legacy-color-cleanup";

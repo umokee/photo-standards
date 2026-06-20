@@ -4,6 +4,8 @@ import { RoutePanel } from "@/components/layouts/route-panel/route-panel";
 import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import { ReadinessItem } from "@/components/ui/readiness-item/readiness-item";
 import QueryState from "@/components/ui/query-state/query-state";
+import { DeleteGroup } from "@/page-components/groups/components/delete-group";
+import { UpdateGroup } from "@/page-components/groups/components/update-group";
 import { CreateStandard } from "@/page-components/standards/components/create-standard";
 import { ArrowRight, CircleAlert, Image, Images, ListChecks, Plus, Sparkles, Tags } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -49,9 +51,11 @@ export function Component() {
         actionsClassName={s.headerActions}
         actions={(
           <>
-          <CreateStandard groupId={group.id} />
-          <Link to={paths.assetReferences(group.id)}>References</Link>
-          <Link to={paths.assetClasses(group.id)}>Classes</Link>
+            <CreateStandard groupId={group.id} triggerClassName={s.detailPrimaryAction} />
+            <Link className={s.detailSecondaryAction} to={paths.assetReferences(group.id)}>References</Link>
+            <Link className={s.detailSecondaryAction} to={paths.assetClasses(group.id)}>Classes</Link>
+            <UpdateGroup group={group} triggerClassName={s.detailSecondaryAction} />
+            <DeleteGroup group={group} triggerClassName={s.detailDangerAction} />
           </>
         )}
       />

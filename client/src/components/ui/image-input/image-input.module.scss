@@ -9,7 +9,7 @@
 }
 
 .label {
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
   font-weight: 680;
 }
@@ -25,51 +25,51 @@
   justify-content: center;
   gap: 10px;
   overflow: hidden;
-  border: 1px dashed var(--vc-line-strong, rgba(15, 23, 42, 0.20));
-  border-radius: 18px;
-  background: var(--vc-surface-2, #f8fafc);
-  color: var(--vc-text-muted, #6b7280);
+  border: 1px dashed $line-strong;
+  border-radius: $radius-lg;
+  background: $surface2;
+  color: $text-sub;
   cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 
   &:hover {
-    border-color: var(--vc-accent, #2563eb);
-    background: var(--vc-accent-soft, rgba(37, 99, 235, 0.06));
-    box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.12));
+    border-color: $accent;
+    background: $accent-soft;
+    box-shadow: $focus-ring;
     transform: translateY(-1px);
   }
 }
 
 .zoneDragging {
-  border-color: var(--vc-accent, #2563eb);
-  background: var(--vc-accent-soft, rgba(37, 99, 235, 0.08));
-  box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.16));
+  border-color: $accent;
+  background: $accent-soft;
+  box-shadow: $focus-ring;
 }
 
 .zoneError {
-  border-color: var(--vc-danger, #dc2626);
-  background: var(--vc-danger-soft, rgba(239, 68, 68, 0.06));
+  border-color: $danger;
+  background: $danger-soft;
 }
 
 .icon {
-  width: 42px !important;
-  height: 42px !important;
+  width: 42px;
+  height: 42px;
   padding: 10px;
-  border-radius: 14px;
-  background: var(--vc-accent, #2563eb);
-  color: var(--vc-on-accent, #fff);
+  border-radius: $radius-md;
+  background: $accent;
+  color: $on-accent;
   box-shadow: none;
 }
 
 .title {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 15px;
   font-weight: 760;
   letter-spacing: -0.02em;
 }
 
 .subtitle {
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
 }
 
@@ -77,7 +77,7 @@
   position: relative;
   z-index: 1;
   max-width: 85%;
-  color: var(--vc-danger-text, #b91c1c);
+  color: $danger-text;
   text-align: center;
   font-size: 13px;
   font-weight: 680;
@@ -99,10 +99,10 @@
   min-height: 32px;
   max-width: 86%;
   padding: 0 12px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--vc-surface, #fff);
-  color: var(--vc-text, #111827);
+  background: $surface;
+  color: $text;
   font-weight: 700;
   text-align: center;
   overflow: hidden;
@@ -122,16 +122,16 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
-  border-radius: 10px;
-  background: var(--vc-surface, #fff);
-  color: var(--vc-text-muted, #6b7280);
+  border: 1px solid $line;
+  border-radius: $radius-control;
+  background: $surface;
+  color: $text-sub;
   cursor: pointer;
   pointer-events: auto;
 
   &:hover {
-    background: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
-    color: var(--vc-text, #111827);
+    background: $control-hover;
+    color: $text;
   }
 }
 

@@ -1,0 +1,36 @@
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
+}
+
+body {
+  accent-color: var(--vc-accent);
+}
+
+::selection {
+  color: var(--vc-accent-contrast);
+  background: var(--vc-accent);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--vc-accent) 62%, transparent);
+  outline-offset: 2px;
+}
+
+:where(input, select, textarea) {
+  color: var(--vc-text);
+  background: var(--vc-control-bg);
+  border-color: var(--vc-control-border);
+}

@@ -1,17 +1,15 @@
 import clsx from "clsx";
 import { LucideIcon } from "lucide-react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import styles from "./button.module.scss";
 
-interface Props {
-  children?: React.ReactNode;
+interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: ReactNode;
   icon?: LucideIcon;
   iconPosition?: "left" | "right";
   size?: "sm" | "md" | "lg" | "icon";
   variant?: "primary" | "ghost" | "warning" | "danger" | "ml";
   full?: boolean;
-  disabled?: boolean;
-  type?: "button" | "submit" | "reset";
-  onClick?: () => void;
 }
 
 export default function Button({
@@ -24,11 +22,14 @@ export default function Button({
   disabled = false,
   type = "button",
   onClick,
+  className,
+  ...buttonProps
 }: Props) {
   return (
     <button
+      {...buttonProps}
       type={type}
-      className={clsx(styles.button, styles[size], styles[variant], full && styles.full)}
+      className={clsx(styles.button, styles[size], styles[variant], full && styles.full, className)}
       disabled={disabled}
       onClick={onClick}
     >

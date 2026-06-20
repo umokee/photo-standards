@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.5);
+  background: color-mix(in srgb, #{$text} 50%, transparent);
 }
 
 .card {
@@ -17,10 +17,10 @@
   gap: 12px;
   max-width: 360px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--vc-radius-md, 14px);
-  background: rgba(16, 18, 20, 0.84);
-  color: #f4f6f8;
+  border: 1px solid color-mix(in srgb, #{$surface} 12%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #{$text} 84%, transparent);
+  color: $text-white;
   pointer-events: auto;
   backdrop-filter: blur(12px);
 }
@@ -33,13 +33,13 @@
 }
 
 .title {
-  color: #f4f6f8;
+  color: $text-white;
   font-size: 13px;
   font-weight: 850;
 }
 
 .message {
-  color: rgba(244, 246, 248, 0.72);
+  color: color-mix(in srgb, #{$text-white} 72%, transparent);
   font-size: 12px;
   line-height: 1.4;
   word-break: break-word;

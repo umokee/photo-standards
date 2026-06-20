@@ -29,35 +29,37 @@ $sidebar-width: 256px;
 $panel-width: 360px;
 $content-max: 1280px;
 
-$primary: var(--vc-accent-strong);
-$primary-hover: var(--vc-accent);
-$primary-active: var(--vc-accent-strong);
+$primary: var(--vc-accent);
+$primary-hover: var(--vc-accent-hover);
+$primary-active: var(--vc-accent-hover);
 $primary-text: var(--vc-accent);
 $primary-bg: var(--vc-accent-bg);
-$primary-bd: var(--vc-accent-soft);
+$primary-bd: var(--vc-accent-border);
 
 $ml: var(--vc-ml);
 $ml-hover: var(--vc-ml);
-$ml-text: var(--vc-ml);
+$ml-text: var(--vc-ml-text);
 $ml-bg: var(--vc-ml-bg);
-$ml-bd: var(--vc-ml-bg);
+$ml-bd: var(--vc-ml-line);
 
 $warning: var(--vc-warning);
 $warning-hover: var(--vc-warning);
-$warning-text: var(--vc-warning);
+$warning-text: var(--vc-warning-text);
 $warning-bg: var(--vc-warning-bg);
-$warning-bd: var(--vc-warning-bg);
+$warning-bd: var(--vc-warning-line);
 
 $danger: var(--vc-danger);
 $danger-hover: var(--vc-danger);
-$danger-text: var(--vc-danger);
+$danger-text: var(--vc-danger-text);
 $danger-bg: var(--vc-danger-bg);
-$danger-bd: var(--vc-danger-bg);
+$danger-bd: var(--vc-danger-line);
 
 $page: var(--vc-page);
 $page2: var(--vc-page-2);
 $surface: var(--vc-surface);
 $surface2: var(--vc-surface-2);
+$modal: var(--vc-modal);
+$overlay: var(--vc-overlay);
 $card-hover: var(--vc-hover);
 
 $line: var(--vc-line);
@@ -67,7 +69,36 @@ $text: var(--vc-text);
 $text-sub: var(--vc-muted);
 $text-hint: var(--vc-faint);
 $text-off: var(--vc-disabled);
-$text-white: #fff;
+$shadow-xs: var(--vc-shadow-xs);
+$shadow-sm: var(--vc-shadow-sm);
+$shadow-md: var(--vc-shadow-md);
+$shadow-lg: var(--vc-shadow-lg);
+$focus-ring: var(--vc-shadow-focus);
+
+// Shared UI component aliases without fallback colors.
+$control-bg: var(--vc-control-bg);
+$control-hover: var(--vc-control-hover);
+$control-height: var(--vc-control-height);
+$radius-xs: var(--vc-radius-xs);
+$radius-control: var(--vc-radius-control);
+$accent-hover: var(--vc-accent-hover);
+$on-accent: var(--vc-on-accent);
+$popover-shadow: var(--vc-shadow-popover);
+
+$bg: $page;
+$surface3: var(--vc-surface-3);
+$accent: var(--vc-accent);
+$accent-2: $primary-hover;
+$accent-contrast: var(--vc-accent-contrast);
+$success: var(--vc-success);
+$success-text: var(--vc-success-text);
+$radius-md: var(--vc-radius-md);
+$radius-lg: var(--vc-radius-lg);
+$radius-xl: var(--vc-radius-xl);
+$radius-pill: 999px;
+$text-white: var(--vc-static-white);
+$inspection-canvas: var(--vc-inspection-canvas);
+$inspection-canvas-soft: var(--vc-inspection-canvas-soft);
 
 $nav-bg: var(--vc-sidebar);
 $nav-border: var(--vc-line);
@@ -78,3 +109,45 @@ $nav-active-text: var(--vc-accent);
 $nav-avatar-bg: var(--vc-accent-bg);
 $nav-avatar-text: var(--vc-accent);
 $nav-meta: var(--vc-faint);
+
+$accent-border: var(--vc-accent-border);
+$accent-soft: var(--vc-accent-soft);
+$warning-soft: var(--vc-warning-soft);
+$warning-border: var(--vc-warning-border);
+$ok: var(--vc-ok);
+$ok-soft: var(--vc-ok-soft);
+$ok-border: var(--vc-ok-border);
+$page-padding: var(--vc-page-padding);
+$topbar-height: var(--vc-topbar-height);
+$page-pad-y: var(--vc-page-pad-y);
+$control-height-lg: var(--vc-control-height-lg);
+$control-border: var(--vc-control-border);
+$control-border-hover: var(--vc-control-border-hover);
+$control-bg-focus: var(--vc-control-bg-focus);
+$danger-focus-ring: 0 0 0 3px var(--vc-danger-soft);
+
+$success-soft: var(--vc-success-soft);
+$success-border: var(--vc-success-line);
+$success-label: var(--vc-success-text);
+$warning-line: var(--vc-warning-line);
+$danger-soft: var(--vc-danger-soft);
+$danger-border: var(--vc-danger-line);
+$shell-sidebar-width: var(--vc-sidebar-width);
+$text2: var(--vc-text-2);
+$text-inverse: var(--vc-text-inverse);
+$elevated: var(--vc-elevated);
+$shadow: var(--vc-shadow);
+$project-avatar: var(--vc-project-avatar);
+$profile-avatar: var(--vc-profile-avatar);
+
+// Layout/platform aliases without fallback colors.
+$shell: var(--vc-shell);
+$app-bg: var(--vc-app-bg);
+$font-ui: var(--vc-font-ui);
+$border: var(--vc-border);
+$border-strong: var(--vc-border-strong);
+$text-muted: var(--vc-text-muted);
+$text-subtle: var(--vc-text-subtle);
+$control-h: var(--vc-control-h);
+$grid-line: var(--vc-grid-line);
+

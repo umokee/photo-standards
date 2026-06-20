@@ -1,4 +1,3 @@
-
 @use "@/styles/variables" as *;
 
 .root {
@@ -10,10 +9,10 @@
   max-width: 100%;
   width: fit-content;
   padding: 2px 8px;
-  border: 1px solid var(--badge-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
+  border: 1px solid $line;
   border-radius: 999px;
-  background: var(--badge-bg, var(--vc-surface-2, #ffffff));
-  color: var(--badge-fg, var(--vc-text-muted, #6b7280));
+  background: $surface2;
+  color: $text-sub;
   font-size: 11px;
   font-weight: 760;
   line-height: 16px;
@@ -24,27 +23,27 @@
   box-shadow: none;
 
   &.info {
-    --badge-bg: var(--vc-surface-2, #ffffff);
-    --badge-fg: var(--vc-text-muted, #6b7280);
-    --badge-border: var(--vc-line, rgba(15, 23, 42, 0.12));
+    background: $surface2;
+    color: $text-sub;
+    border-color: $line;
   }
 
   &.success {
-    --badge-bg: var(--vc-success-soft, rgba(34, 197, 94, 0.10));
-    --badge-fg: var(--vc-success-text, #15803d);
-    --badge-border: var(--vc-success-line, rgba(34, 197, 94, 0.25));
+    background: $success-soft;
+    color: $success-label;
+    border-color: $success-border;
   }
 
   &.warning {
-    --badge-bg: var(--vc-warning-soft, rgba(245, 158, 11, 0.12));
-    --badge-fg: var(--vc-warning-text, #92400e);
-    --badge-border: var(--vc-warning-line, rgba(245, 158, 11, 0.30));
+    background: $warning-soft;
+    color: $warning-text;
+    border-color: $warning-line;
   }
 
   &.danger {
-    --badge-bg: var(--vc-danger-soft, rgba(239, 68, 68, 0.10));
-    --badge-fg: var(--vc-danger-text, #b91c1c);
-    --badge-border: var(--vc-danger-line, rgba(239, 68, 68, 0.28));
+    background: $danger-soft;
+    color: $danger-text;
+    border-color: $danger-border;
   }
 }
 
@@ -53,5 +52,5 @@
   height: 7px;
   border-radius: 999px;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px var(--vc-surface, #fff);
+  box-shadow: 0 0 0 2px $surface;
 }

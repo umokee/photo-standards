@@ -97,7 +97,7 @@
   display: block;
   width: 14px;
   height: 14px;
-  border: 1px solid rgba(#000, 0.08);
+  border: 1px solid color-mix(in srgb, #{$text} 8%, transparent);
   border-radius: 4px;
 }
 
@@ -175,7 +175,6 @@
   }
 }
 
-/* v23: inline class editor for Assets / Classes */
 .workspace {
   display: grid;
   gap: 12px;
@@ -192,14 +191,14 @@
 
 .workspaceToolbar {
   padding: 10px 12px;
-  border: 1px solid rgba(238, 232, 221, 0.9);
+  border: 1px solid color-mix(in srgb, #{$surface2} 90%, transparent);
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(255, 253, 246, 0.96), rgba(255, 250, 235, 0.72));
+  background: linear-gradient(135deg, color-mix(in srgb, #{$surface} 96%, transparent), color-mix(in srgb, #{$surface2} 72%, transparent));
 }
 
 .workspaceToolbar strong {
   display: block;
-  color: #17130f;
+  color: $text;
   font-weight: 900;
 }
 
@@ -207,7 +206,7 @@
 .workspaceFooter span {
   display: block;
   margin-top: 2px;
-  color: #80776c;
+  color: $text-hint;
   font-size: 12px;
   font-weight: 700;
 }
@@ -230,7 +229,7 @@
 }
 
 .workspace .group {
-  border-color: #eee8dd;
+  border-color: $surface2;
   border-radius: 14px;
   overflow: hidden;
   background: var(--vc-surface);
@@ -244,16 +243,16 @@
 .workspace .segmentRow {
   min-height: 40px;
   padding: 8px 10px 8px 42px;
-  background: rgba(251, 246, 236, 0.72);
+  background: color-mix(in srgb, #{$surface} 72%, transparent);
 }
 
 .workspaceFooter {
   position: sticky;
   bottom: 0;
   padding: 12px;
-  border: 1px solid #eee8dd;
+  border: 1px solid $surface2;
   border-radius: 14px;
-  background: rgba(255, 253, 246, 0.92);
+  background: color-mix(in srgb, #{$surface} 92%, transparent);
   backdrop-filter: blur(12px);
 }
 

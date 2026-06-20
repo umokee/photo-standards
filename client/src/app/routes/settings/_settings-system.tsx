@@ -68,56 +68,55 @@ export function Component() {
     <QueryState isLoading={isLoading} isError={isError} size="page">
       <section className={s.hero}>
         <div>
-          <span className={s.eyebrow}><Server /> System command center</span>
-          <h1>Monitoring</h1>
-          <p>Живое состояние backend, ресурсов, диска, GPU и файлов проекта.</p>
+          <h1>Система</h1>
+          <p>Ресурсы, GPU и хранилище.</p>
         </div>
         <div className={s.healthCard}>
-          <span>Health score</span>
+          <span>Состояние</span>
           <strong>{healthScore}</strong>
-          <small>Updated {formatTime(data.updated_at)}</small>
+          <small>обновлено {formatTime(data.updated_at)}</small>
         </div>
       </section>
 
       <div className={s.grid}>
         <section className={s.telemetryPanel}>
           <div className={s.cardHead}>
-            <div><h3>Live telemetry</h3><p>CPU, RAM, disk and GPU load.</p></div>
+            <div><h3>Ресурсы</h3><p>CPU, RAM, диск и GPU.</p></div>
             <span className={s.softBadge}>live</span>
           </div>
           <div className={s.metricGrid}>
-            <ResourceCard icon={Cpu} label="CPU" value={`${Math.round(cpuPercent)}%`} hint={`${formatCount(data.resources.cpu_count_logical)} logical threads`} percent={cpuPercent} />
-            <ResourceCard icon={MemoryStick} label="RAM" value={`${formatBytes(data.resources.memory_used_bytes)} / ${formatBytes(data.resources.memory_total_bytes)}`} hint={`${ramPercent}% used`} percent={ramPercent} />
-            <ResourceCard icon={HardDrive} label="Disk" value={`${formatBytes(data.resources.disk_used_bytes)} / ${formatBytes(data.resources.disk_total_bytes)}`} hint={`${diskPercent}% used`} percent={diskPercent} />
-            <ResourceCard icon={Zap} label="GPU" value={data.gpu.name ?? "Unavailable"} hint={data.gpu.available ? `${gpuPercent}% · ${data.gpu.temperature_c ?? "—"}°C` : "Server does not expose GPU"} percent={gpuPercent} muted={!data.gpu.available} />
+            <ResourceCard icon={Cpu} label="CPU" value={`${Math.round(cpuPercent)}%`} hint={`${formatCount(data.resources.cpu_count_logical)} потоков`} percent={cpuPercent} />
+            <ResourceCard icon={MemoryStick} label="RAM" value={`${formatBytes(data.resources.memory_used_bytes)} / ${formatBytes(data.resources.memory_total_bytes)}`} hint={`${ramPercent}% занято`} percent={ramPercent} />
+            <ResourceCard icon={HardDrive} label="Disk" value={`${formatBytes(data.resources.disk_used_bytes)} / ${formatBytes(data.resources.disk_total_bytes)}`} hint={`${diskPercent}% занято`} percent={diskPercent} />
+            <ResourceCard icon={Zap} label="GPU" value={data.gpu.name ?? "нет GPU"} hint={data.gpu.available ? `${gpuPercent}% · ${data.gpu.temperature_c ?? "—"}°C` : "GPU недоступен"} percent={gpuPercent} muted={!data.gpu.available} />
           </div>
         </section>
 
         <aside className={s.hostPanel}>
           <div className={s.cardHead}>
-            <div><h3>Host</h3><p>Machine and process state.</p></div>
+            <div><h3>Хост</h3></div>
           </div>
-          <HostInfo icon={Server} label="Hostname" value={data.system.hostname} />
-          <HostInfo icon={Timer} label="Uptime" value={formatUptime(data.system.uptime_sec)} />
-          <HostInfo icon={Gauge} label="GPU memory" value={data.gpu.memory_used_mb != null && data.gpu.memory_total_mb != null ? `${formatMegabytes(data.gpu.memory_used_mb)} / ${formatMegabytes(data.gpu.memory_total_mb)} (${gpuMemoryPercent}%)` : "—"} />
-          <HostInfo icon={Thermometer} label="Temperature" value={data.gpu.temperature_c != null ? `${data.gpu.temperature_c}°C` : "—"} />
+          <HostInfo icon={Server} label="Имя хоста" value={data.system.hostname} />
+          <HostInfo icon={Timer} label="Время работы" value={formatUptime(data.system.uptime_sec)} />
+          <HostInfo icon={Gauge} label="Память GPU" value={data.gpu.memory_used_mb != null && data.gpu.memory_total_mb != null ? `${formatMegabytes(data.gpu.memory_used_mb)} / ${formatMegabytes(data.gpu.memory_total_mb)} (${gpuMemoryPercent}%)` : "—"} />
+          <HostInfo icon={Thermometer} label="Температура" value={data.gpu.temperature_c != null ? `${data.gpu.temperature_c}°C` : "—"} />
         </aside>
       </div>
 
       <section className={s.storagePanel}>
         <div className={s.cardHead}>
           <div>
-            <h3>Storage usage</h3>
-            <p>Эталоны, результаты проверок, веса моделей и логи.</p>
+            <h3>Хранилище</h3>
+            <p>Файлы проекта.</p>
           </div>
           <span className={s.softBadge}>{formatBytes(data.storage.used_bytes)}</span>
         </div>
         <div className={s.storageGrid}>
-          <StorageTile icon={ShieldCheck} label="Standards" value={data.storage.categories.standards_bytes} total={data.storage.used_bytes} />
-          <StorageTile icon={Activity} label="Inspections" value={data.storage.categories.inspections_bytes} total={data.storage.used_bytes} />
-          <StorageTile icon={Zap} label="Models" value={data.storage.categories.models_bytes} total={data.storage.used_bytes} />
-          <StorageTile icon={Server} label="Logs" value={data.storage.categories.logs_bytes} total={data.storage.used_bytes} />
-          <StorageTile icon={HardDrive} label="Other" value={data.storage.categories.other_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={ShieldCheck} label="Эталоны" value={data.storage.categories.standards_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Activity} label="Проверки" value={data.storage.categories.inspections_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Zap} label="Модели" value={data.storage.categories.models_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={Server} label="Логи" value={data.storage.categories.logs_bytes} total={data.storage.used_bytes} />
+          <StorageTile icon={HardDrive} label="Другое" value={data.storage.categories.other_bytes} total={data.storage.used_bytes} />
         </div>
       </section>
     </QueryState>
@@ -143,7 +142,7 @@ function StorageTile({ icon: Icon, label, value, total }: { icon: LucideIcon; la
       <span>{label}</span>
       <strong>{formatBytes(value)}</strong>
       <div className={s.track}><span style={{ width: `${percent}%` }} /></div>
-      <small>{percent}% of project storage</small>
+      <small>{percent}% хранилища</small>
     </div>
   );
 }

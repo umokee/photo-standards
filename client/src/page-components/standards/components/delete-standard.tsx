@@ -12,10 +12,14 @@ interface Props {
   name: string;
 }
 
-export const DeleteStandard = ({ groupId, id, name }: Props) => (
+type DeleteStandardTriggerProps = Props & {
+  triggerClassName?: string;
+};
+
+export const DeleteStandard = ({ groupId, id, name, triggerClassName }: DeleteStandardTriggerProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="danger" size="sm">Удалить</Button>
+      <Button className={triggerClassName} variant="danger" size="sm">Удалить</Button>
     </Modal.Trigger>
     <Modal.Content>
       <DeleteStandardModal groupId={groupId} id={id} name={name} />

@@ -1,15 +1,14 @@
-
 @use "@/styles/variables" as *;
 
 .root {
   width: 100%;
   min-width: 0;
-  height: var(--vc-control-height-lg, 40px);
+  height: $control-height-lg;
   padding: 0 12px;
-  border: 1px solid var(--vc-control-border, var(--vc-line, rgba(15, 23, 42, 0.12)));
-  border-radius: var(--vc-radius-control, 10px);
-  background: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
-  color: var(--vc-text, #111827);
+  border: 1px solid $control-border;
+  border-radius: $radius-control;
+  background: $control-bg;
+  color: $text;
   font: inherit;
   font-size: 13px;
   line-height: 1;
@@ -21,17 +20,20 @@
     background-color 140ms ease,
     color 140ms ease;
 
-  &::placeholder { color: var(--vc-text-faint, #9ca3af); }
+  &::placeholder {
+    color: $text-hint;
+  }
 
   &:hover {
-    border-color: var(--vc-control-border-hover, var(--vc-line-strong, rgba(15, 23, 42, 0.2)));
+    background: $control-hover;
+    border-color: $control-border;
   }
 
   &:focus,
   &:focus-visible {
-    border-color: var(--vc-accent, #2563eb);
-    background: var(--vc-control-bg-focus, var(--vc-surface, #ffffff));
-    box-shadow: 0 0 0 3px var(--vc-focus-ring, rgba(37, 99, 235, 0.16));
+    border-color: $control-border-hover;
+    background: $control-bg-focus;
+    box-shadow: $focus-ring;
   }
 
   &:disabled {
@@ -41,11 +43,11 @@
 }
 
 .fieldError {
-  border-color: var(--vc-danger, #dc2626);
+  border-color: $danger;
 
   &:focus,
   &:focus-visible {
-    border-color: var(--vc-danger, #dc2626);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+    border-color: $danger;
+    box-shadow: $danger-focus-ring;
   }
 }

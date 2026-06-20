@@ -7,9 +7,9 @@
   gap: 10px;
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--vc-line, rgba(15, 23, 42, 0.12));
-  border-radius: var(--vc-radius, 14px);
-  background: var(--vc-surface, #ffffff);
+  border: 1px solid $line;
+  border-radius: $radius-md;
+  background: $surface;
 
   &.transparent {
     background: transparent;
@@ -40,14 +40,14 @@
 }
 
 .title {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 13px;
   font-weight: 740;
   letter-spacing: -0.01em;
 }
 
 .hint {
-  color: var(--vc-text-muted, #6b7280);
+  color: $text-sub;
   font-size: 12px;
   line-height: 1.5;
 }

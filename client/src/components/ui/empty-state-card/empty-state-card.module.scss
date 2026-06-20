@@ -1,15 +1,30 @@
+@use "@/styles/variables" as *;
+
 .root {
   min-width: 0;
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 12px;
+  gap: $space-3;
+  color: $text;
   text-align: center;
 }
 
 .icon {
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
+  border: 1px solid $line;
+  border-radius: $radius-xl;
+  background: color-mix(in srgb, #{$surface2} 74%, #{$surface});
+  color: $text-sub;
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
 }
 
 .eyebrow,
@@ -19,22 +34,60 @@
 }
 
 .eyebrow {
+  min-height: 22px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: $space-2;
+  padding: $space-1 $space-2;
+  border: 1px solid $line;
+  border-radius: $radius-pill;
+  background: $surface2;
+  color: $text-sub;
+  font-size: $text-micro;
+  font-weight: $fw-extrabold;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 14px;
+  height: 14px;
 }
 
 .title {
+  max-width: 36rem;
   margin: 0;
+  color: $text;
+  font-size: 16px;
+  font-weight: $fw-extrabold;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
 }
 
 .description {
+  max-width: 38rem;
   margin: 0;
+  color: $text-sub;
+  font-size: $text-body;
+  font-weight: $fw-medium;
+  line-height: 1.55;
 }
 
 .actions {
+  margin-top: $space-1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: $space-2;
+}
+
+@media (max-width: 680px) {
+  .root { gap: $space-2; }
+
+  .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-lg;
+  }
 }

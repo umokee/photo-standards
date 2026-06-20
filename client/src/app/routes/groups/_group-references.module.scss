@@ -1,0 +1,542 @@
+@use "@/styles/variables" as *;
+
+.referencesPageV128 {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.referenceHeaderV128 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-4;
+  padding: 18px 20px;
+  border: 1px solid $line;
+  border-radius: 22px;
+  background: color-mix(in srgb, #{$surface} 96%, transparent);
+  box-shadow: $shadow-sm;
+}
+
+.referenceHeaderV128 h1 {
+  margin: 4px 0 4px;
+  color: $text;
+  font-size: clamp(30px, 3vw, 42px);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.referenceHeaderV128 p {
+  margin: 0;
+  color: $text-sub;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.eyebrowV128 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.eyebrowV128 svg {
+  width: 15px;
+  height: 15px;
+  color: $accent;
+}
+
+.referenceSummaryV128 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.referenceSummaryItemV128 {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid $line;
+  border-radius: 18px;
+  background: color-mix(in srgb, #{$surface} 94%, transparent);
+}
+
+.referenceSummaryItemV128 > svg {
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  border-radius: 12px;
+  background: $surface2;
+  color: $accent;
+}
+
+.referenceSummaryItemV128 div {
+  min-width: 0;
+}
+
+.referenceSummaryItemV128 strong {
+  display: inline;
+  color: $text;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.referenceSummaryItemV128 span {
+  margin-left: 6px;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.referenceSummaryItemV128 small {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: $text-hint;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referenceToolbarV128 {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid $line;
+  border-radius: 18px;
+  background: color-mix(in srgb, #{$surface} 90%, transparent);
+}
+
+.referenceSearchV128 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid $control-border;
+  border-radius: 12px;
+  background: $control-bg;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.referenceSearchV128:focus-within {
+  border-color: $control-border-hover;
+  background: $control-bg-focus;
+  box-shadow: $focus-ring;
+}
+
+.referenceSearchV128 svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: $text-hint;
+}
+
+.referenceSearchV128 input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: $text;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.referenceSearchV128 input::placeholder {
+  color: $text-hint;
+}
+
+.searchLabelV128 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.filterPillsV128 {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+}
+
+.filterPillsV128 > svg {
+  width: 18px;
+  height: 18px;
+  color: $text-sub;
+}
+
+.filterPillsV128 button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: $surface;
+  color: $text-sub;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.filterPillsV128 button:hover {
+  border-color: $line-strong;
+  background: $surface2;
+}
+
+.filterPillsV128 .active {
+  border-color: $accent-border;
+  background: $accent-soft;
+  color: $accent;
+}
+
+.referenceListV128 {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  max-height: min(64svh, 620px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.referenceRowV128 {
+  display: grid;
+  grid-template-columns: 156px minmax(0, 1.15fr) minmax(170px, 0.62fr) minmax(180px, auto);
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid $line;
+  border-radius: 20px;
+  background: color-mix(in srgb, #{$surface} 94%, transparent);
+  box-shadow: $shadow-xs;
+}
+
+.referenceRowV128:hover {
+  border-color: $line-strong;
+  background: $surface2;
+}
+
+.referencePreviewV128 {
+  position: relative;
+  display: block;
+  height: 104px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: $surface2;
+  text-decoration: none;
+}
+
+.referencePreviewV128 img,
+.referencePreviewV128 > div {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.referencePreviewV128 > div {
+  display: grid;
+  place-items: center;
+  color: $text-hint;
+}
+
+.referenceInfoV128 {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.referenceTitleRowV128 {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.referenceTitleRowV128 > div:first-child {
+  min-width: 0;
+}
+
+.referenceAngleV128 {
+  display: block;
+  overflow: hidden;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referenceTitleRowV128 h3 {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: $text;
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referenceBadgesV128 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.referenceStatusV128,
+.referenceActiveV128 {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: $surface2;
+  color: $text-sub;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.referenceStatusV128.success {
+  border-color: $success-border;
+  background: $success-soft;
+  color: $success-text;
+}
+
+.referenceStatusV128.warning {
+  border-color: $warning-line;
+  background: $warning-soft;
+  color: $warning-text;
+}
+
+.referenceStatusV128.info {
+  border-color: $accent-border;
+  background: $accent-soft;
+  color: $accent;
+}
+
+.referenceActiveV128 {
+  border-color: $accent-border;
+  background: $accent;
+  color: $on-accent;
+}
+
+.referenceMetaV128 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.referenceProgressV128 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.referenceProgressV128 i {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: $surface3;
+}
+
+.referenceProgressV128 b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: $accent;
+}
+
+.referenceProgressV128 small {
+  color: $text-hint;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.referenceNextV128 {
+  min-width: 0;
+}
+
+.referenceNextV128 span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: $surface2;
+  color: $text-sub;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referenceNextV128 svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: $accent;
+}
+
+.referenceActionsV128 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 180px;
+  padding-left: 14px;
+  border-left: 1px solid $line;
+}
+
+.referenceOpenActionV128,
+.referenceCheckActionV128 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid $control-border;
+  border-radius: $radius-control;
+  background: $surface;
+  color: $text;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.referenceCheckActionV128 {
+  border-color: $accent;
+  background: $accent;
+  color: $on-accent;
+}
+
+.referenceOpenActionV128:hover,
+.referenceCheckActionV128:hover {
+  border-color: $control-border-hover;
+}
+
+.referenceOpenActionV128 svg,
+.referenceCheckActionV128 svg {
+  width: 14px;
+  height: 14px;
+}
+
+.referenceUtilityActionsV128 {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.referenceUtilityActionsV128 button {
+  width: 100%;
+}
+
+.referenceActionButtonV128,
+.referenceDangerButtonV128 {
+  min-width: 0;
+  min-height: 32px;
+  font-size: 12px;
+}
+
+@media (max-width: 1180px) {
+  .referenceRowV128 {
+    grid-template-columns: 132px minmax(0, 1fr) minmax(170px, auto);
+  }
+
+  .referenceNextV128 {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .referenceHeaderV128,
+  .referenceToolbarV128 {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceHeaderV128 {
+    display: grid;
+  }
+
+  .referenceSummaryV128 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceToolbarV128 {
+    display: grid;
+  }
+
+  .filterPillsV128 {
+    justify-content: flex-start;
+  }
+
+  .referenceRowV128 {
+    grid-template-columns: 128px minmax(0, 1fr);
+  }
+
+  .referenceActionsV128 {
+    grid-column: 2;
+    min-width: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .referenceSummaryV128,
+  .referenceRowV128,
+  .referenceActionsV128,
+  .referenceUtilityActionsV128 {
+    grid-template-columns: 1fr;
+  }
+
+  .referencePreviewV128 {
+    height: 160px;
+  }
+
+  .referenceActionsV128 {
+    grid-column: auto;
+  }
+}

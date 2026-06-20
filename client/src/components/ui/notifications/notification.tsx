@@ -20,7 +20,7 @@ export function Notification({ notification }: Props) {
         <span className={s.title}>{notification.title}</span>
         {notification.message && <span className={s.message}>{notification.message}</span>}
       </div>
-      <button type="button" className={s.close} onClick={() => dismiss(notification.id)}>
+      <button type="button" className={s.close} aria-label="Закрыть уведомление" onClick={() => dismiss(notification.id)}>
         <X size={13} strokeWidth={1.75} />
       </button>
     </div>

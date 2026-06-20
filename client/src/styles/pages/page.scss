@@ -5,7 +5,6 @@ body { background: var(--vc-app-bg); color: var(--vc-text); }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
 
-/* v13 global finishing polish */
 html {
   scrollbar-gutter: stable;
 }
@@ -15,7 +14,7 @@ body {
 }
 
 ::selection {
-  color: #061036;
+  color: $accent;
   background: var(--vc-accent-soft);
 }
 
@@ -37,12 +36,11 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* v38 theme-safe page defaults */
 html,
 body,
 #root {
-  background: var(--vc-app-bg) !important;
-  color: var(--vc-text) !important;
+  background: var(--vc-app-bg);
+  color: var(--vc-text);
 }
 
 body {

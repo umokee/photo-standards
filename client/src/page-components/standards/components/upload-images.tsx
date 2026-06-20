@@ -1,17 +1,23 @@
-import p from "@/app/routes/platform-pages.module.scss";
+import p from "./standard-modal.module.scss";
 import Button from "@/components/ui/button/button";
 import ImageInput from "@/components/ui/image-input/image-input";
 import { getFieldError } from "@/lib/errors";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
-import { CheckCircle2, FileImage, ImagePlus, Upload, Wand2 } from "lucide-react";
+import { CheckCircle2, FileImage, Upload, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { buildUploadImagesPayload, useUploadImages } from "../api/upload-images";
 
-export const UploadImages = ({ groupId, standardId }: { groupId: string; standardId: string }) => (
+type UploadImagesProps = {
+  groupId: string;
+  standardId: string;
+  triggerClassName?: string;
+};
+
+export const UploadImages = ({ groupId, standardId, triggerClassName }: UploadImagesProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button icon={Upload} variant="ghost" size="sm">
-        Upload
+      <Button className={triggerClassName} icon={Upload} variant="ghost" size="sm">
+        Загрузить
       </Button>
     </Modal.Trigger>
     <Modal.Content wide>
@@ -62,16 +68,8 @@ const UploadImagesModal = ({ groupId, standardId }: { groupId: string; standardI
 
   return (
     <>
-      <Modal.Header>Upload images</Modal.Header>
+      <Modal.Header>Загрузить фото</Modal.Header>
       <Modal.Body>
-        <div className={p.modalHeroCard}>
-          <div className={p.modalHeroIcon}><ImagePlus /></div>
-          <div>
-            <strong>Кадры эталонного ракурса</strong>
-            <span>Загрузи несколько фото изделия. После загрузки их можно открыть в редакторе и разметить.</span>
-          </div>
-        </div>
-
         <ImageInput
           multiple
           error={formErrors.images ?? getFieldError(mutation.error, "images")}
@@ -80,15 +78,15 @@ const UploadImagesModal = ({ groupId, standardId }: { groupId: string; standardI
         />
 
         <div className={p.uploadSummaryGrid}>
-          <UploadSummary icon={FileImage} label="Selected" value={`${images?.length ?? 0} images`} />
-          <UploadSummary icon={Upload} label="Total size" value={totalSize} />
-          <UploadSummary icon={Wand2} label="Next step" value="Annotate" />
+          <UploadSummary icon={FileImage} label="Выбрано" value={`${images?.length ?? 0} фото`} />
+          <UploadSummary icon={Upload} label="Размер" value={totalSize} />
+          <UploadSummary icon={Wand2} label="Дальше" value="Разметка" />
         </div>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="ghost" onClick={close}>Cancel</Button>
+        <Button variant="ghost" onClick={close}>Отмена</Button>
         <Button icon={CheckCircle2} disabled={mutation.isPending || !images?.length} onClick={handleSubmit}>
-          {mutation.isPending ? "Uploading..." : "Upload images"}
+          {mutation.isPending ? "Загрузка..." : "Загрузить фото"}
         </Button>
       </Modal.Footer>
     </>

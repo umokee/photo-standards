@@ -7,7 +7,7 @@
   grid-template-rows: auto minmax(0, 1fr);
   padding-top: $space-3;
   gap: $space-2;
-  color: var(--vc-text, #111318);
+  color: $text;
 }
 
 .rootHistory {
@@ -44,7 +44,7 @@
 
 .reportDisclosure {
   padding-top: $space-3;
-  border-top: 1px solid var(--vc-border-soft, #ebeff5);
+  border-top: 1px solid $line-soft;
 }
 
 .reportHead {
@@ -53,7 +53,7 @@
   justify-content: space-between;
   gap: $space-3;
   min-height: 24px;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: $text-small;
   font-weight: $fw-semibold;
   line-height: 1.35;
@@ -74,7 +74,7 @@
 
 .reportCount {
   min-width: 1.5rem;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: $text-small;
   font-weight: $fw-medium;
   line-height: 1.35;
@@ -86,17 +86,17 @@
   gap: 0;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: $radius;
-  background: var(--vc-surface, #fff);
+  background: $surface;
 }
 
 .reportEmpty {
   padding: $space-3;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: $radius;
-  color: var(--vc-text-subtle, #7a8497);
-  background: var(--vc-surface, #fff);
+  color: $text-hint;
+  background: $surface;
 }
 
 .row {
@@ -106,9 +106,9 @@
   width: 100%;
   padding: 10px $space-3;
   border: 0;
-  border-bottom: 1px solid var(--vc-border-soft, #ebeff5);
+  border-bottom: 1px solid $line-soft;
   border-radius: 0;
-  color: var(--vc-text, #111318);
+  color: $text;
   text-align: left;
   background: transparent;
 }
@@ -121,13 +121,13 @@
   cursor: pointer;
 
   &:hover {
-    background: var(--vc-surface-2, #f9fafc);
+    background: $surface2;
   }
 }
 
 .rowActive {
   border-left: 0;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 .rowHead {
@@ -161,21 +161,21 @@
 
 .name {
   min-width: 0;
-  color: var(--vc-text, #111318);
+  color: $text;
   font-size: $text-body;
   font-weight: $fw-semibold;
   line-height: 1.35;
 }
 
 .confidence {
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: $text-small;
   font-weight: $fw-medium;
   white-space: nowrap;
 }
 
 .rowText {
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: $text-small;
   line-height: 1.4;
   padding-left: 16px;
@@ -188,7 +188,7 @@
   column-gap: $space-2;
   row-gap: 0;
   padding-left: 16px;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   font-size: 11px;
   line-height: 1.25;
 }
@@ -199,7 +199,7 @@
 
 .empty {
   padding: $space-3;
-  color: var(--vc-text-subtle, #7a8497);
+  color: $text-hint;
   background: transparent;
 }
 
@@ -219,9 +219,9 @@
 .rootHistory .list {
   gap: 0;
   overflow: hidden;
-  border: 1px solid var(--vc-border-soft, #ebeff5);
+  border: 1px solid $line-soft;
   border-radius: $radius;
-  background: var(--vc-surface, #fff);
+  background: $surface;
 }
 
 .rootHistory .row,
@@ -230,7 +230,7 @@
   padding: 9px 10px;
   gap: 3px;
   border: 0;
-  border-bottom: 1px solid var(--vc-border-soft, #ebeff5);
+  border-bottom: 1px solid $line-soft;
   border-radius: 0;
   background: transparent;
 }
@@ -242,7 +242,7 @@
 
 .rootHistory .row:hover,
 .rowHistory:hover {
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 .rootHistory .rowHead {
@@ -274,7 +274,7 @@
 .rootHistory .rowActive,
 .rowHistory.rowActive {
   border-left: 0;
-  background: var(--vc-surface-2, #f9fafc);
+  background: $surface2;
 }
 
 @media (max-width: 767px) {

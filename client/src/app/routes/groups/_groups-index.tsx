@@ -1,11 +1,12 @@
 import { paths } from "@/app/paths";
-import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { CreateGroup } from "@/page-components/groups/components/create-group";
+import { DeleteGroup } from "@/page-components/groups/components/delete-group";
+import { UpdateGroup } from "@/page-components/groups/components/update-group";
 import type { GroupListItem } from "@/types/contracts";
 import { formatDate } from "@/utils/formatDate";
-import { Activity, ArrowRight, Box, CheckCircle2, FolderKanban, Image, ListChecks, Search, Sparkles, Tags, type LucideIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import s from "./_project-assets-strict.module.scss";
@@ -15,7 +16,7 @@ function percent(part: number, total: number) {
   return Math.max(0, Math.min(100, Math.round((part / total) * 100)));
 }
 
-function readiness(group: GroupListItem) {
+function setupScore(group: GroupListItem) {
   const checks = [
     group.stats.standards_count > 0,
     group.stats.images_count > 0,
@@ -23,16 +24,29 @@ function readiness(group: GroupListItem) {
     group.stats.polygons_count > 0,
     group.stats.models_count > 0,
   ];
-  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+
+  return checks.filter(Boolean).length;
 }
 
-function nextAction(group: GroupListItem) {
-  if (!group.stats.standards_count) return "Create reference";
-  if (!group.stats.images_count) return "Upload images";
-  if (!group.stats.segment_classes_count) return "Configure classes";
-  if (!group.stats.polygons_count) return "Annotate polygons";
-  if (!group.stats.models_count) return "Train model";
-  return group.stats.inspections_count ? "Review runs" : "Run inspection";
+function setupPercent(group: GroupListItem) {
+  return Math.round((setupScore(group) / 5) * 100);
+}
+
+function canInspect(group: GroupListItem) {
+  return setupScore(group) === 5;
+}
+
+function setupHint(group: GroupListItem) {
+  if (!group.stats.standards_count) return "нет эталонов";
+  if (!group.stats.images_count) return "нет фото";
+  if (!group.stats.segment_classes_count) return "нет классов";
+  if (!group.stats.polygons_count) return "нет зон контроля";
+  if (!group.stats.models_count) return "нет модели";
+  return "готово к проверке";
+}
+
+function setupLabel(group: GroupListItem) {
+  return canInspect(group) ? "Готово" : "Настроить";
 }
 
 export function Component() {
@@ -56,120 +70,135 @@ export function Component() {
   const filteredGroups = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return groups;
-    return groups.filter((group) => [group.name, group.description ?? ""].some((value) => value.toLowerCase().includes(normalized)));
+    return groups.filter((group) =>
+      [group.name, group.description ?? ""].some((value) => value.toLowerCase().includes(normalized)),
+    );
   }, [groups, query]);
 
-  const readyProjects = groups.filter((group) => readiness(group) >= 80).length;
+  const normalizedQuery = query.trim();
+  const inspectableProjects = groups.filter(canInspect).length;
+  const setupProjects = groups.length - inspectableProjects;
   const globalLabeling = percent(totals.labeled, totals.images);
+  const resultCountLabel = normalizedQuery ? `${filteredGroups.length} из ${groups.length}` : `${groups.length}`;
 
   return (
     <div className={s.workspacePage}>
-      <div className={s.page}>
-        <header className={s.header}>
-          <div>
-            <span className={s.eyebrow}><FolderKanban /> Product workspace</span>
-            <h1>Projects</h1>
-            <p>Изделия, эталоны, классы, разметка, модели и проверки. Страница теперь работает как строгий project registry, а не как промо-блок.</p>
+      <div className={`${s.page} ${s.groupsPageV126}`}>
+        <header className={s.groupsHeaderV126}>
+          <div className={s.groupsTitleV126}>
+            <span className={s.eyebrow}>Каталог изделий</span>
+            <h1>Изделия</h1>
+            <p>{resultCountLabel} в списке · {inspectableProjects} готово · {setupProjects} требует настройки</p>
           </div>
-          <div className={s.headerActions}>
+
+          <div className={s.groupsCreateV126}>
             <CreateGroup />
           </div>
+
+          <label className={`${s.searchBox} ${s.groupsSearchV126}`}>
+            <Search />
+            <input
+              aria-label="Поиск изделий"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Поиск по названию или описанию"
+            />
+          </label>
         </header>
 
-        <section className={`${s.summaryGrid} ${s.summaryGridSix}`}>
-          <MetricCard className={s.metricCard} icon={FolderKanban} value={groups.length} label="Projects" hint={`${readyProjects} ready`} />
-          <MetricCard className={s.metricCard} icon={Box} value={totals.references} label="References" hint="эталонные виды" />
-          <MetricCard className={s.metricCard} icon={Image} value={totals.images} label="Images" hint={`${globalLabeling}% labeled`} />
-          <MetricCard className={s.metricCard} icon={Tags} value={totals.classes} label="Classes" hint={`${totals.polygons} polygons`} />
-          <MetricCard className={s.metricCard} icon={Sparkles} value={totals.models} label="Models" hint="trained/imported" />
-          <MetricCard className={s.metricCard} icon={ListChecks} value={totals.runs} label="Runs" hint="inspection history" />
+        <section className={s.groupsSummaryV126} aria-label="Сводка по изделиям">
+          <span><strong>{groups.length}</strong><small>изделий</small></span>
+          <span><strong>{inspectableProjects}</strong><small>готово</small></span>
+          <span><strong>{setupProjects}</strong><small>настроить</small></span>
+          <span><strong>{globalLabeling}%</strong><small>размечено</small></span>
         </section>
 
-        <section className={s.contentGrid}>
-          <main className={s.panel}>
-            <div className={s.panelHead}>
+        <section className={`${s.contentGrid} ${s.contentGridSingleV87}`}>
+          <main className={`${s.panel} ${s.groupsPanelV126}`}>
+            <div className={s.groupsListHeadV126}>
               <div>
-                <span>Registry</span>
-                <h3>Изделия</h3>
+                <h2>Список изделий</h2>
+                <span>{normalizedQuery ? `Найдено ${filteredGroups.length}` : "Строка открывает обзор изделия"}</span>
               </div>
-              <label className={s.searchBox}>
-                <Search />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects..." />
-              </label>
+              {normalizedQuery ? (
+                <button className={s.groupsClearSearchV126} type="button" onClick={() => setQuery("")}>Сбросить поиск</button>
+              ) : null}
             </div>
 
-            <div className={s.panelBody}>
-              <QueryState isEmpty={!groups.length} size="block" emptyTitle="No projects yet" emptyDescription="Создай первое изделие, затем добавь эталоны, классы и модели.">
-                <div className={s.projectGrid}>
-                  {filteredGroups.map((group) => {
-                    const score = readiness(group);
-                    const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
+            <div className={`${s.panelBody} ${s.groupsPanelBodyV126}`}>
+              <QueryState
+                isEmpty={!groups.length}
+                size="block"
+                emptyTitle="Нет изделий"
+                emptyDescription="Создай изделие и добавь эталоны, классы и модели."
+                action={<CreateGroup />}
+              >
+                {filteredGroups.length > 0 ? (
+                  <div className={s.projectListV126}>
+                    {filteredGroups.map((group) => {
+                      const score = setupScore(group);
+                      const scorePercent = setupPercent(group);
+                      const labeled = percent(group.stats.annotated_images_count, group.stats.images_count);
+                      const inspectable = canInspect(group);
 
-                    return (
-                      <Link className={s.projectCard} key={group.id} to={paths.groupDetail(group.id)}>
-                        <div className={s.projectTop}>
-                          <div className={s.avatar}>{group.name.slice(0, 1).toUpperCase()}</div>
-                          <span className={score >= 80 ? s.donePill : s.openPill}>{score}% ready</span>
-                        </div>
+                      return (
+                        <article className={s.projectRowV126} key={group.id}>
+                          <Link className={s.projectMainLinkV126} to={paths.groupDetail(group.id)} aria-label={`Открыть обзор изделия ${group.name}`}>
+                            <div className={s.projectIdentityV126}>
+                              <strong>{group.name}</strong>
+                              <p>{group.description || "Без описания"}</p>
+                              <small>Создано {formatDate(group.created_at)}</small>
+                            </div>
 
-                        <div className={s.projectTitle}>
-                          <strong>{group.name}</strong>
-                          <p>{group.description || "Изделие с эталонами, разметкой, моделями и проверками."}</p>
-                        </div>
+                            <div className={s.projectSetupV126}>
+                              <div>
+                                <strong className={inspectable ? s.projectSetupReadyV126 : s.projectSetupRequiredV126}>{setupLabel(group)}</strong>
+                                <span>{score}/5 · {setupHint(group)}</span>
+                              </div>
+                              <div
+                                className={`${s.progressTrack} ${s.projectProgressV126}`}
+                                role="progressbar"
+                                aria-label={`Настройка изделия ${group.name}`}
+                                aria-valuemin={0}
+                                aria-valuemax={5}
+                                aria-valuenow={score}
+                              >
+                                <i style={{ width: `${scorePercent}%` }} />
+                              </div>
+                            </div>
 
-                        <div className={s.progressTrack}><i style={{ width: `${score}%` }} /></div>
+                            <div className={s.projectStatsV126} aria-label="Состав изделия">
+                              <span><strong>{group.stats.standards_count}</strong><small>эталоны</small></span>
+                              <span><strong>{group.stats.images_count}</strong><small>фото</small></span>
+                              <span><strong>{labeled}%</strong><small>разметка</small></span>
+                              <span><strong>{group.stats.segment_classes_count}</strong><small>классы</small></span>
+                              <span><strong>{group.stats.models_count}</strong><small>модели</small></span>
+                              <span><strong>{group.stats.inspections_count}</strong><small>проверки</small></span>
+                            </div>
+                          </Link>
 
-                        <div className={s.metaGrid}>
-                          <span><Box /> {group.stats.standards_count} refs</span>
-                          <span><Image /> {group.stats.images_count} images</span>
-                          <span><CheckCircle2 /> {labeled}% labeled</span>
-                          <span><Tags /> {group.stats.segment_classes_count} classes</span>
-                          <span><Sparkles /> {group.stats.models_count} models</span>
-                          <span><Activity /> {group.stats.inspections_count} runs</span>
-                        </div>
-
-                        <div className={s.taskRow}>
-                          <ArrowRight />
-                          <span><strong>{nextAction(group)}</strong><small>Created {formatDate(group.created_at)}</small></span>
-                          <ArrowRight />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {groups.length > 0 && filteredGroups.length === 0 ? (
-                  <div className={s.emptyInline}><Search /><strong>No projects match search</strong><span>Очисти поиск или создай новый проект.</span></div>
-                ) : null}
+                          <div className={s.projectActionsV126}>
+                            <UpdateGroup group={group} triggerClassName={`${s.projectCardAction} ${s.projectUtilityActionV126}`} />
+                            <DeleteGroup group={group} triggerClassName={`${s.projectCardAction} ${s.projectDeleteActionV126}`} />
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={`${s.emptyInline} ${s.emptySearchStateV126}`}>
+                    <Search />
+                    <strong>Ничего не найдено</strong>
+                    <span>По запросу «{normalizedQuery}» нет изделий.</span>
+                    <button className={s.groupsClearSearchV126} type="button" onClick={() => setQuery("")}>Сбросить поиск</button>
+                  </div>
+                )}
               </QueryState>
             </div>
           </main>
-
-          <aside className={s.panel}>
-            <div className={s.panelHead}>
-              <div><span>Lifecycle</span><h3>Зоны ответственности</h3></div>
-            </div>
-            <div className={s.panelBody}>
-              <div className={s.taskList}>
-                <Lifecycle icon={Image} title="Assets" text="References, images, classes and polygons." />
-                <Lifecycle icon={Sparkles} title="Train" text="Models and training/import jobs." />
-                <Lifecycle icon={ListChecks} title="Inspect" text="Photo, snapshot and realtime station." />
-                <Lifecycle icon={Activity} title="Runs" text="Saved inspection history and reports." />
-              </div>
-            </div>
-          </aside>
         </section>
       </div>
-    </div>
-  );
-}
-
-function Lifecycle({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-  return (
-    <div className={s.taskRow}>
-      <Icon />
-      <span><strong>{title}</strong><small>{text}</small></span>
-      <ArrowRight />
     </div>
   );
 }

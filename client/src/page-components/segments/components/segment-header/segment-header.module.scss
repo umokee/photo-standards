@@ -7,7 +7,7 @@
   gap: 12px;
   width: 100%;
   min-width: 0;
-  color: #f6f2ea;
+  color: $text-white;
 }
 
 .left {
@@ -36,8 +36,8 @@
   align-items: center;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(246, 242, 234, 0.72);
+  background: color-mix(in srgb, #{$surface} 7%, transparent);
+  color: color-mix(in srgb, #{$text-white} 72%, transparent);
   font-size: 12px;
   font-weight: 800;
   line-height: 1.2;
@@ -53,11 +53,11 @@
 
 .root button {
   min-height: 32px;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.86);
+  border-color: color-mix(in srgb, #{$surface} 10%, transparent);
+  background: color-mix(in srgb, #{$surface} 6%, transparent);
+  color: color-mix(in srgb, #{$text-white} 86%, transparent);
 
-  &:hover { background: rgba(255, 255, 255, 0.12); }
+  &:hover { background: color-mix(in srgb, #{$surface} 12%, transparent); }
 }
 
 @media (max-width: 767px) {

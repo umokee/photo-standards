@@ -57,13 +57,13 @@ export function Component() {
         >
           {status.label}
         </span>
-        <div className={s.actions}><UpdateCamera camera={camera} /><DeleteCamera id={camera.id} name={camera.name} /></div>
+        <div className={s.actions}><UpdateCamera camera={camera} triggerClassName={s.detailSecondaryAction} /><DeleteCamera id={camera.id} name={camera.name} triggerClassName={s.detailDangerAction} /></div>
       </header>
 
       <div className={s.detailBody}>
         <section className={s.previewCard}>
           <div className={s.cardHead}>
-            <div><h3>Live preview</h3><p>Проверь поток перед использованием в Inspect.</p></div>
+            <div><h3>Preview</h3><p>Проверь поток перед проверкой.</p></div>
             <span>{camera.protocol.toUpperCase()}</span>
           </div>
           <CameraPreviewPanel camera={camera} />
@@ -71,10 +71,10 @@ export function Component() {
 
         <aside className={s.diagnostics}>
           <div className={s.statGrid}>
-            <SourceStat icon={ShieldCheck} label="Active" value={camera.is_active ? "Yes" : "No"} />
+            <SourceStat icon={ShieldCheck} label="Активна" value={camera.is_active ? "Yes" : "No"} />
             <SourceStat icon={Activity} label="Status" value={camera.last_status} />
             <SourceStat icon={Timer} label="Timeout" value={`${camera.timeout_sec} sec`} />
-            <SourceStat icon={Clock3} label="Checked" value={formatCameraDateTime(camera.last_checked_at)} />
+            <SourceStat icon={Clock3} label="Проверено" value={formatCameraDateTime(camera.last_checked_at)} />
           </div>
 
           <section className={s.infoCard}>
@@ -86,9 +86,9 @@ export function Component() {
           </section>
 
           <section className={s.infoCard}>
-            <h3>Diagnostics</h3>
-            <Info icon={Clock3} label="Last checked" value={formatCameraDateTime(camera.last_checked_at)} />
-            <Info icon={CheckCircle2} label="Error" value={camera.last_error || "—"} />
+            <h3>Диагностика</h3>
+            <Info icon={Clock3} label="Последняя проверка" value={formatCameraDateTime(camera.last_checked_at)} />
+            <Info icon={CheckCircle2} label="Ошибка" value={camera.last_error || "—"} />
             <Info icon={Camera} label="Description" value={camera.description || "—"} />
           </section>
         </aside>

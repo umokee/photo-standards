@@ -23,12 +23,15 @@ interface Props {
   groupId: string;
   canTrain: boolean;
   isTrainingLocked: boolean;
+  triggerClassName?: string;
 }
 
-export const TrainModel = ({ groupId, canTrain, isTrainingLocked }: Props) => (
+type TrainModelModalProps = Omit<Props, "triggerClassName">;
+
+export const TrainModel = ({ groupId, canTrain, isTrainingLocked, triggerClassName }: Props) => (
   <Modal>
     <Modal.Trigger>
-      <Button>Запустить обучение</Button>
+      <Button className={triggerClassName}>Запустить обучение</Button>
     </Modal.Trigger>
     <Modal.Content wide>
       <TrainModelModal groupId={groupId} canTrain={canTrain} isTrainingLocked={isTrainingLocked} />
@@ -36,7 +39,7 @@ export const TrainModel = ({ groupId, canTrain, isTrainingLocked }: Props) => (
   </Modal>
 );
 
-const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: Props) => {
+const TrainModelModal = ({ groupId, canTrain, isTrainingLocked }: TrainModelModalProps) => {
   const navigate = useNavigate();
   const close = useModalClose();
 

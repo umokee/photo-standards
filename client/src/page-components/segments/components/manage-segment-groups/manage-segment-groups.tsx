@@ -266,17 +266,15 @@ const UngroupedBlock = ({
 export const ManageSegmentGroups = ({ group, compact, standardId, imageId }: Props) => (
   <Modal>
     <Modal.Trigger>
-      <>
-        {compact ? (
-          <Button variant="ghost" size="sm">
-            Edit classes
-          </Button>
-        ) : (
-          <Button variant="ghost" size="sm">
-            Manage classes
-          </Button>
-        )}
-      </>
+      {compact ? (
+        <Button variant="ghost" size="sm">
+          Edit classes
+        </Button>
+      ) : (
+        <Button variant="ghost" size="sm">
+          Manage classes
+        </Button>
+      )}
     </Modal.Trigger>
 
     <Modal.Content>

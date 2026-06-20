@@ -12,10 +12,15 @@ import {
 } from "../lib/camera-form";
 import { CameraFormFields } from "./camera-form-fields/camera-form-fields";
 
-export const UpdateCamera = ({ camera }: { camera: Camera }) => (
+type UpdateCameraProps = {
+  camera: Camera;
+  triggerClassName?: string;
+};
+
+export const UpdateCamera = ({ camera, triggerClassName }: UpdateCameraProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="ghost">Изменить</Button>
+      <Button className={triggerClassName} variant="ghost">Изменить</Button>
     </Modal.Trigger>
     <Modal.Content wide>
       <UpdateCameraModal camera={camera} />

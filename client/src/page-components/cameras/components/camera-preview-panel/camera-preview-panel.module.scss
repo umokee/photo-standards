@@ -14,9 +14,9 @@
   height: clamp(320px, 48vh, 560px);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--vc-border, #24272c);
-  border-radius: var(--vc-radius-lg, 18px);
-  background: #090a0b;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $text;
 }
 
 .previewAction {
@@ -38,7 +38,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--vc-focus, var(--vc-accent, #2563eb));
+    outline: 2px solid $accent;
     outline-offset: -4px;
   }
 }
@@ -54,10 +54,10 @@
   width: min(100%, 220px);
   min-height: 46px;
   padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--vc-radius-md, 14px);
-  background: rgba(16, 18, 20, 0.82);
-  color: #f4f6f8;
+  border: 1px solid color-mix(in srgb, #{$surface} 12%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #{$text} 82%, transparent);
+  color: $text-white;
   font-size: 13px;
   font-weight: 820;
   line-height: 1.2;
@@ -77,9 +77,9 @@
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--vc-danger, #ef4444) 36%, transparent);
-  border-radius: var(--vc-radius-md, 14px);
-  background: color-mix(in srgb, var(--vc-danger, #ef4444) 10%, transparent);
+  border: 1px solid color-mix(in srgb, #{$danger} 36%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #{$danger} 10%, transparent);
 }
 
 .statusHeader {
@@ -90,14 +90,14 @@
 }
 
 .statusTitle {
-  color: var(--vc-text, #111827);
+  color: $text;
   font-size: 13px;
   font-weight: 850;
   line-height: 1.4;
 }
 
 .statusMessage {
-  color: var(--vc-text-muted, #667085);
+  color: $text-muted;
   font-size: 12px;
   line-height: 1.5;
   overflow-wrap: anywhere;

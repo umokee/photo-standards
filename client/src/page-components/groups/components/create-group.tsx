@@ -1,10 +1,10 @@
 import { paths } from "@/app/paths";
-import p from "@/app/routes/platform-pages.module.scss";
+import p from "./group-modal.module.scss";
 import Button from "@/components/ui/button/button";
 import Input from "@/components/ui/input/input";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
 import { getFieldError } from "@/lib/errors";
-import { CheckCircle2, Database, ImagePlus, Layers3, Plus, Rocket, Tags } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildCreateGroupPayload, useCreateGroup } from "../api/create-group";
@@ -13,7 +13,7 @@ export const CreateGroup = () => (
   <Modal>
     <Modal.Trigger>
       <Button icon={Plus} size="sm">
-        New Dataset
+        Новое изделие
       </Button>
     </Modal.Trigger>
     <Modal.Content wide>
@@ -53,16 +53,8 @@ const CreateGroupModal = () => {
 
   return (
     <>
-      <Modal.Header>New Dataset</Modal.Header>
+      <Modal.Header>Новое изделие</Modal.Header>
       <Modal.Body>
-        <div className={p.modalHeroCard}>
-          <div className={p.modalHeroIcon}><Database /></div>
-          <div>
-            <strong>Dataset изделия</strong>
-            <span>Контейнер для reference views, классов, полигонов, обучения и проверок.</span>
-          </div>
-        </div>
-
         <div className={p.modalFormGrid}>
           <Input
             label="Название"
@@ -97,34 +89,18 @@ const CreateGroupModal = () => {
           />
         </div>
 
-        <div className={p.modalWorkflowGrid}>
-          <WorkflowStep icon={ImagePlus} title="Reference" text="Добавь эталонные ракурсы" />
-          <WorkflowStep icon={Tags} title="Classes" text="Создай классы деталей" />
-          <WorkflowStep icon={Layers3} title="Annotate" text="Разметь контрольные зоны" />
-          <WorkflowStep icon={Rocket} title="Inspect" text="Запускай проверки" />
-        </div>
-
         {formErrors.form ? <div className={p.modalError}>{formErrors.form}</div> : null}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="ghost" onClick={close}>
-          Cancel
+          Отмена
         </Button>
 
         <Button icon={CheckCircle2} disabled={mutation.isPending} onClick={handleSubmit}>
-          {mutation.isPending ? "Creating..." : "Create Dataset"}
+          {mutation.isPending ? "Создание..." : "Создать"}
         </Button>
       </Modal.Footer>
     </>
   );
 };
 
-function WorkflowStep({ icon: Icon, title, text }: { icon: typeof ImagePlus; title: string; text: string }) {
-  return (
-    <div className={p.modalWorkflowStep}>
-      <Icon />
-      <strong>{title}</strong>
-      <span>{text}</span>
-    </div>
-  );
-}

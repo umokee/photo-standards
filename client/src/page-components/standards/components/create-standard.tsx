@@ -1,4 +1,4 @@
-import p from "@/app/routes/platform-pages.module.scss";
+import p from "./standard-modal.module.scss";
 import Button from "@/components/ui/button/button";
 import Input from "@/components/ui/input/input";
 import { Modal, useModalClose } from "@/components/ui/modal/modal";
@@ -6,14 +6,19 @@ import Select from "@/components/ui/select/select";
 import { useAngleOptions } from "@/constants";
 import { getFieldError } from "@/lib/errors";
 import type { Angle } from "@/types/contracts";
-import { Camera, CheckCircle2, Compass, ImagePlus, Layers3, Plus } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { buildCreateStandardPayload, useCreateStandard } from "../api/create-standard";
 
-export const CreateStandard = ({ groupId }: { groupId: string }) => (
+type CreateStandardProps = {
+  groupId: string;
+  triggerClassName?: string;
+};
+
+export const CreateStandard = ({ groupId, triggerClassName }: CreateStandardProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button icon={Plus}>New Reference</Button>
+      <Button className={triggerClassName} icon={Plus}>Новый эталон</Button>
     </Modal.Trigger>
     <Modal.Content wide>
       <CreateStandardModal groupId={groupId} />
@@ -49,16 +54,8 @@ const CreateStandardModal = ({ groupId }: { groupId: string }) => {
 
   return (
     <>
-      <Modal.Header>New Reference</Modal.Header>
+      <Modal.Header>Новый эталон</Modal.Header>
       <Modal.Body>
-        <div className={p.modalHeroCard}>
-          <div className={p.modalHeroIcon}><ImagePlus /></div>
-          <div>
-            <strong>Эталонный ракурс</strong>
-            <span>Reference view хранит изображения и полигоны для переноса на проверяемый кадр.</span>
-          </div>
-        </div>
-
         <div className={p.modalFormGrid}>
           <Input
             label="Название"
@@ -93,32 +90,17 @@ const CreateStandardModal = ({ groupId }: { groupId: string }) => {
           />
         </div>
 
-        <div className={p.modalWorkflowGrid}>
-          <WorkflowStep icon={Camera} title="Capture" text="Загрузи кадры эталона" />
-          <WorkflowStep icon={Compass} title="Angle" text="Зафиксируй ракурс" />
-          <WorkflowStep icon={Layers3} title="Markup" text="Нарисуй зоны деталей" />
-        </div>
-
         {formErrors.form ? <div className={p.modalError}>{formErrors.form}</div> : null}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="ghost" onClick={close}>
-          Cancel
+          Отмена
         </Button>
         <Button icon={CheckCircle2} disabled={mutation.isPending} onClick={handleSubmit}>
-          {mutation.isPending ? "Creating..." : "Create Reference"}
+          {mutation.isPending ? "Создание..." : "Создать эталон"}
         </Button>
       </Modal.Footer>
     </>
   );
 };
 
-function WorkflowStep({ icon: Icon, title, text }: { icon: typeof Camera; title: string; text: string }) {
-  return (
-    <div className={p.modalWorkflowStep}>
-      <Icon />
-      <strong>{title}</strong>
-      <span>{text}</span>
-    </div>
-  );
-}

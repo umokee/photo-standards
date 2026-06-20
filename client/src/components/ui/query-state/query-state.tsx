@@ -1,5 +1,4 @@
 import clsx from "clsx";
-import { AlertTriangle, Box, Loader2, SearchX } from "lucide-react";
 import type { ReactNode } from "react";
 import s from "./query-state.module.scss";
 
@@ -19,16 +18,30 @@ interface Props {
   children?: ReactNode;
 }
 
-const StateContainer = ({ size, tone, children }: { size: Size; tone?: "loading" | "empty" | "error"; children: ReactNode }) => {
-  return <div className={clsx(s.state, s[`state--${size}`], tone && s[`state--${tone}`])}>{children}</div>;
+const StateContainer = ({
+  size,
+  tone,
+  children,
+}: {
+  size: Size;
+  tone?: "loading" | "empty" | "error";
+  children: ReactNode;
+}) => {
+  return (
+    <div
+      className={clsx(s.state, s[`state--${size}`], tone && s[`state--${tone}`])}
+      role={tone === "error" ? "alert" : "status"}
+      aria-live={tone === "error" ? "assertive" : "polite"}
+    >
+      {children}
+    </div>
+  );
 };
 
 const LoadingState = ({ size, text }: { size: Size; text: string }) => {
   return (
     <StateContainer size={size} tone="loading">
-      <div className={clsx(s.icon, s.iconLoading)}>
-        <Loader2 />
-      </div>
+      <span className={clsx(s.kicker, s.kickerLoading)}>Загрузка</span>
       <span className={s.title}>{text}</span>
       {size !== "inline" ? (
         <div className={s.skeletonGrid} aria-hidden="true">
@@ -54,9 +67,7 @@ const ErrorState = ({
 }) => {
   return (
     <StateContainer size={size} tone="error">
-      <div className={clsx(s.icon, s.iconError)}>
-        <AlertTriangle />
-      </div>
+      <span className={clsx(s.kicker, s.kickerError)}>Ошибка</span>
       <span className={clsx(s.title, s.titleError)}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}
@@ -77,9 +88,7 @@ const EmptyState = ({
 }) => {
   return (
     <StateContainer size={size} tone="empty">
-      <div className={s.icon}>
-        {description ? <SearchX /> : <Box />}
-      </div>
+      <span className={s.kicker}>Пусто</span>
       <span className={s.title}>{title}</span>
       {description && <span className={s.sub}>{description}</span>}
       {action && <div className={s.action}>{action}</div>}

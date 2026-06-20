@@ -1,6 +1,4 @@
 import { paths } from "@/app/paths";
-import { RouteHero } from "@/components/layouts/route-hero/route-hero";
-import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import ImageWithFallback from "@/components/ui/image-with-fallback/image-with-fallback";
 import QueryState from "@/components/ui/query-state/query-state";
 import { CreateStandard } from "@/page-components/standards/components/create-standard";
@@ -8,13 +6,12 @@ import { DeleteStandard } from "@/page-components/standards/components/delete-st
 import { UpdateStandard } from "@/page-components/standards/components/update-standard";
 import { UploadImages } from "@/page-components/standards/components/upload-images";
 import type { GroupStandard } from "@/types/contracts";
-import { formatDate } from "@/utils/formatDate";
 import clsx from "clsx";
-import { ArrowRight, CheckCircle2, CircleDashed, Filter, Image, Images, ListChecks, Search, ShieldCheck, Tags, Upload } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleDashed, Filter, Images, ListChecks, Search, ShieldCheck, Tags, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useGroupDetailOutletContext } from "./_group-detail";
-import p from "../platform-pages.module.scss";
+import p from "./_group-references.module.scss";
 
 type ReferenceFilter = "all" | "active" | "draft" | "empty" | "labeled" | "needs-label";
 
@@ -36,18 +33,18 @@ function matchesFilter(reference: GroupStandard, filter: ReferenceFilter) {
 }
 
 function filterLabel(filter: ReferenceFilter) {
-  if (filter === "all") return "All";
-  if (filter === "active") return "Active";
-  if (filter === "draft") return "Draft";
-  if (filter === "empty") return "Empty";
-  if (filter === "labeled") return "Labeled";
-  return "Needs label";
+  if (filter === "all") return "Все";
+  if (filter === "active") return "Активные";
+  if (filter === "draft") return "Черновики";
+  if (filter === "empty") return "Без фото";
+  if (filter === "labeled") return "Размечены";
+  return "Нужна разметка";
 }
 
 function getReferenceStatus(reference: GroupStandard) {
-  if (!reference.images_count) return { label: "empty", tone: "warning" as const };
-  if (reference.annotated_images_count >= reference.images_count) return { label: "ready", tone: "success" as const };
-  return { label: "labeling", tone: "info" as const };
+  if (!reference.images_count) return { label: "без фото", tone: "warning" as const };
+  if (reference.annotated_images_count >= reference.images_count) return { label: "готово", tone: "success" as const };
+  return { label: "разметка", tone: "info" as const };
 }
 
 export function Component() {
@@ -72,31 +69,34 @@ export function Component() {
   const labeledPercent = percent(group.stats.annotated_images_count, group.stats.images_count);
 
   return (
-    <div className={p.referencesPageV25}>
-      <RouteHero
-        eyebrow="Assets / References"
-        icon={Images}
-        title="References"
-        description="Эталонные виды изделия. Каждый reference хранит фотографии, разметку и точку входа в редактор."
-        actions={<CreateStandard groupId={group.id} />}
-      />
+    <div className={p.referencesPageV128}>
+      <header className={p.referenceHeaderV128}>
+        <div>
+          <span className={p.eyebrowV128}><Images /> Эталонные виды</span>
+          <h1>Эталоны</h1>
+          <p>Фото, ракурсы и разметка для проверки изделия.</p>
+        </div>
+        <CreateStandard groupId={group.id} />
+      </header>
 
-      <section className={p.referenceStatsV25}>
-        <Stat icon={Images} value={group.standards.length} label="References" hint={`${readyCount} ready · ${emptyCount} empty`} />
-        <Stat icon={ListChecks} value={needsLabelCount} label="Need labeling" hint="images without polygons" />
-        <Stat icon={Tags} value={group.stats.segment_classes_count} label="Classes" hint={`${group.stats.segment_class_groups_count} categories`} />
-        <Stat icon={ShieldCheck} value={labeledPercent} label="Labeled" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} images`} suffix="%" />
+      <section className={p.referenceSummaryV128} aria-label="Сводка по эталонам">
+        <SummaryItem icon={Images} value={group.standards.length} label="эталонов" hint={`${readyCount} готово · ${emptyCount} без фото`} />
+        <SummaryItem icon={ListChecks} value={needsLabelCount} label="разметить" hint="фото без полигонов" />
+        <SummaryItem icon={Tags} value={group.stats.segment_classes_count} label="классов" hint={`${group.stats.segment_class_groups_count} групп`} />
+        <SummaryItem icon={ShieldCheck} value={`${labeledPercent}%`} label="готово" hint={`${group.stats.annotated_images_count}/${group.stats.images_count} фото`} />
       </section>
 
-      <section className={p.referenceToolbarV25}>
-        <label>
+      <section className={p.referenceToolbarV128}>
+        <label className={p.referenceSearchV128}>
           <Search />
-          <input value={query} placeholder="Search references..." onChange={(event) => setQuery(event.target.value)} />
+          <span className={p.searchLabelV128}>Поиск эталонов</span>
+          <input value={query} placeholder="Поиск по названию или виду..." aria-label="Поиск эталонов" onChange={(event) => setQuery(event.target.value)} />
         </label>
-        <div className={p.filterPillsV25}>
+
+        <div className={p.filterPillsV128}>
           <Filter />
           {filters.map((item) => (
-            <button key={item} type="button" className={clsx(item === filter && p.active)} onClick={() => setFilter(item)}>
+            <button key={item} type="button" aria-pressed={item === filter} className={clsx(item === filter && p.active)} onClick={() => setFilter(item)}>
               {filterLabel(item)}
             </button>
           ))}
@@ -105,12 +105,12 @@ export function Component() {
 
       <QueryState
         isEmpty={!references.length}
-        emptyTitle={group.standards.length ? "No matching references" : "No references yet"}
+        emptyTitle={group.standards.length ? "Ничего не найдено" : "Нет эталонов"}
         emptyDescription={group.standards.length ? "Измени поиск или фильтр." : "Создай первый эталонный вид изделия."}
       >
-        <section className={p.referenceGridV25}>
+        <section className={p.referenceListV128}>
           {references.map((reference) => (
-            <ReferenceCard key={reference.id} reference={reference} groupId={group.id} />
+            <ReferenceRow key={reference.id} reference={reference} groupId={group.id} />
           ))}
         </section>
       </QueryState>
@@ -118,55 +118,66 @@ export function Component() {
   );
 }
 
-function Stat({ icon: Icon, value, label, hint, suffix = "" }: { icon: typeof Images; value: number; label: string; hint: string; suffix?: string }) {
+function SummaryItem({ icon: Icon, value, label, hint }: { icon: typeof Images; value: number | string; label: string; hint: string }) {
   return (
-    <MetricCard
-      className={p.referenceStatCardV25}
-      icon={Icon}
-      value={`${value}${suffix}`}
-      label={label}
-      hint={hint}
-      variant="valueFirst"
-    />
+    <article className={p.referenceSummaryItemV128}>
+      <Icon />
+      <div>
+        <strong>{value}</strong>
+        <span>{label}</span>
+        <small>{hint}</small>
+      </div>
+    </article>
   );
 }
 
-function ReferenceCard({ reference, groupId }: { reference: GroupStandard; groupId: string }) {
+function ReferenceRow({ reference, groupId }: { reference: GroupStandard; groupId: string }) {
   const status = getReferenceStatus(reference);
   const labeled = percent(reference.annotated_images_count, reference.images_count);
 
   return (
-    <article className={p.referenceCardV25}>
-      <Link className={p.referencePreviewV25} to={paths.standardDetail(groupId, reference.id)}>
-        <ImageWithFallback src={reference.reference_path ? `/storage/${reference.reference_path}` : null} iconSize={28} />
-        <span className={clsx(p.referenceStatusV25, p[status.tone])}>{status.label}</span>
-        {reference.is_active ? <b>active</b> : null}
+    <article className={p.referenceRowV128}>
+      <Link className={p.referencePreviewV128} to={paths.standardDetail(groupId, reference.id)} aria-label={`Открыть эталон ${reference.name}`}>
+        <ImageWithFallback src={reference.reference_path ? `/storage/${reference.reference_path}` : null} iconSize={24} />
       </Link>
 
-      <div className={p.referenceCardBodyV25}>
-        <div>
-          <span className={p.eyebrow}>Reference / {reference.angle || "view"}</span>
-          <h3>{reference.name}</h3>
-          <p>{reference.images_count} images · {reference.annotated_images_count} labeled · created {formatDate(reference.created_at)}</p>
+      <div className={p.referenceInfoV128}>
+        <div className={p.referenceTitleRowV128}>
+          <div>
+            <span className={p.referenceAngleV128}>{reference.angle || "вид изделия"}</span>
+            <h3>{reference.name}</h3>
+          </div>
+          <div className={p.referenceBadgesV128}>
+            <span className={clsx(p.referenceStatusV128, p[status.tone])}>{status.label}</span>
+            {reference.is_active ? <span className={p.referenceActiveV128}>активен</span> : null}
+          </div>
         </div>
 
-        <div className={p.referenceProgressV25}>
-          <span><CheckCircle2 /> {labeled}% labeled</span>
+        <div className={p.referenceMetaV128}>
+          <span>{reference.images_count} фото</span>
+          <span>{reference.annotated_images_count} размечено</span>
+          <span>{labeled}% готово</span>
+        </div>
+
+        <div className={p.referenceProgressV128} role="progressbar" aria-label={`Разметка эталона ${reference.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={labeled}>
           <i><b style={{ width: `${labeled}%` }} /></i>
+          <small>{reference.images_count ? `${reference.annotated_images_count}/${reference.images_count}` : "нет фото"}</small>
         </div>
+      </div>
 
-        <div className={p.referenceTodoV25}>
-          {!reference.images_count ? <span><Upload /> Upload images</span> : null}
-          {reference.images_count > 0 && reference.annotated_images_count < reference.images_count ? <span><CircleDashed /> Finish annotation</span> : null}
-          {reference.images_count > 0 && reference.annotated_images_count >= reference.images_count ? <span><CheckCircle2 /> Ready for inspect</span> : null}
-        </div>
+      <div className={p.referenceNextV128}>
+        {!reference.images_count ? <span><Upload /> Загрузить фото</span> : null}
+        {reference.images_count > 0 && reference.annotated_images_count < reference.images_count ? <span><CircleDashed /> Доделать разметку</span> : null}
+        {reference.images_count > 0 && reference.annotated_images_count >= reference.images_count ? <span><CheckCircle2 /> Готов к проверке</span> : null}
+      </div>
 
-        <div className={p.referenceCardActionsV25}>
-          <Link to={paths.standardDetail(groupId, reference.id)}>Open <ArrowRight /></Link>
-          <UploadImages groupId={groupId} standardId={reference.id} />
-          <Link to={paths.inspectionStandard("photo", groupId, reference.id)}>Use in Inspect</Link>
-          <UpdateStandard standard={reference} />
-          <DeleteStandard groupId={groupId} id={reference.id} name={reference.name} />
+      <div className={p.referenceActionsV128}>
+        <Link className={p.referenceOpenActionV128} to={paths.standardDetail(groupId, reference.id)}>Открыть <ArrowRight /></Link>
+        <Link className={p.referenceCheckActionV128} to={paths.inspectionStandard("photo", groupId, reference.id)}>Проверить</Link>
+        <div className={p.referenceUtilityActionsV128} role="group" aria-label="Дополнительные действия эталона">
+          <UploadImages groupId={groupId} standardId={reference.id} triggerClassName={p.referenceActionButtonV128} />
+          <UpdateStandard standard={reference} triggerClassName={p.referenceActionButtonV128} />
+          <DeleteStandard groupId={groupId} id={reference.id} name={reference.name} triggerClassName={p.referenceDangerButtonV128} />
         </div>
       </div>
     </article>

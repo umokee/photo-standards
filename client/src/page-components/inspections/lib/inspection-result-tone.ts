@@ -1,40 +1,50 @@
 import { InspectionSegmentStatus } from "@/types/contracts";
 
+const INSPECTION_RESULT_TONES = {
+  ok: {
+    badge: "success",
+    stroke: "var(--vc-inspection-ok-stroke)",
+    fill: "var(--vc-inspection-ok-fill)",
+    label: "На месте",
+  },
+  missing: {
+    badge: "danger",
+    stroke: "var(--vc-inspection-missing-stroke)",
+    fill: "var(--vc-inspection-missing-fill)",
+    label: "Отсутствует",
+  },
+  extra: {
+    badge: "warning",
+    stroke: "var(--vc-inspection-warning-stroke)",
+    fill: "var(--vc-inspection-warning-fill)",
+    label: "Лишнее",
+  },
+  unmatched: {
+    badge: "warning",
+    stroke: "var(--vc-inspection-warning-stroke)",
+    fill: "var(--vc-inspection-warning-fill)",
+    label: "Не сопоставлено",
+  },
+  fallback: {
+    badge: "info",
+    stroke: "var(--vc-inspection-muted-stroke)",
+    fill: "var(--vc-inspection-muted-fill)",
+  },
+} as const;
+
 export const getInspectionResultTone = (status: InspectionSegmentStatus) => {
   switch (status) {
     case "ok":
-      return {
-        badge: "success" as const,
-        stroke: "#2f7d4f",
-        fill: "rgba(47, 125, 79, 0.10)",
-        label: "На месте",
-      };
+      return INSPECTION_RESULT_TONES.ok;
     case "missing":
-      return {
-        badge: "danger" as const,
-        stroke: "#a23a3a",
-        fill: "rgba(162, 58, 58, 0.10)",
-        label: "Отсутствует",
-      };
+      return INSPECTION_RESULT_TONES.missing;
     case "extra":
-      return {
-        badge: "warning" as const,
-        stroke: "#9a6700",
-        fill: "rgba(154, 103, 0, 0.10)",
-        label: "Лишнее",
-      };
+      return INSPECTION_RESULT_TONES.extra;
     case "unmatched":
-      return {
-        badge: "warning" as const,
-        stroke: "#9a6700",
-        fill: "rgba(154, 103, 0, 0.10)",
-        label: "Не сопоставлено",
-      };
+      return INSPECTION_RESULT_TONES.unmatched;
     default:
       return {
-        badge: "info" as const,
-        stroke: "#57606a",
-        fill: "rgba(87, 96, 106, 0.10)",
+        ...INSPECTION_RESULT_TONES.fallback,
         label: status,
       };
   }

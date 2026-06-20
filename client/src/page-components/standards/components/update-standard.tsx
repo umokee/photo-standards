@@ -10,10 +10,15 @@ import { buildUpdateStandardPayload, useUpdateStandard } from "../api/update-sta
 
 type EditableStandard = Pick<GroupStandard, "id" | "group_id" | "name" | "angle">;
 
-export const UpdateStandard = ({ standard }: { standard: EditableStandard }) => (
+type UpdateStandardProps = {
+  standard: EditableStandard;
+  triggerClassName?: string;
+};
+
+export const UpdateStandard = ({ standard, triggerClassName }: UpdateStandardProps) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="ghost" size="sm">Изменить</Button>
+      <Button className={triggerClassName} variant="ghost" size="sm">Изменить</Button>
     </Modal.Trigger>
     <Modal.Content>
       <UpdateStandardModal standard={standard} />

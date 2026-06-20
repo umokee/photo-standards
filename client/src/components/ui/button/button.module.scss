@@ -1,22 +1,23 @@
-
 @use "@/styles/variables" as *;
 
 .button {
-  --button-bg: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
-  --button-bg-hover: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
-  --button-fg: var(--vc-text, #101113);
-  --button-border: var(--vc-line, rgba(15, 23, 42, 0.12));
-  --button-ring: var(--vc-focus-ring, rgba(37, 99, 235, 0.18));
+  --button-bg: var(--vc-action-soft-bg);
+  --button-bg-hover: var(--vc-action-soft-bg-hover);
+  --button-fg: var(--vc-action-soft-fg);
+  --button-fg-hover: var(--vc-action-soft-fg-hover);
+  --button-border: var(--vc-action-soft-border);
+  --button-border-hover: var(--vc-action-soft-border-hover);
+  --button-ring: var(--vc-focus-ring);
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
-  height: var(--vc-control-height, 36px);
-  padding: 0 14px;
+  height: $control-height;
+  padding: 0 12px;
   border: 1px solid var(--button-border);
-  border-radius: var(--vc-radius-control, 10px);
+  border-radius: $radius-control;
   background: var(--button-bg);
   color: var(--button-fg);
   font: inherit;
@@ -51,7 +52,9 @@
   }
 
   &:hover:not(:disabled) {
+    border-color: var(--button-border-hover);
     background: var(--button-bg-hover);
+    color: var(--button-fg-hover);
     transform: translateY(-1px);
   }
 
@@ -61,7 +64,7 @@
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px var(--button-ring);
+    box-shadow: var(--button-ring);
   }
 
   &:disabled {
@@ -102,46 +105,48 @@
 .full { width: 100%; }
 
 .primary {
-  --button-bg: var(--vc-accent, #2563eb);
-  --button-bg-hover: var(--vc-accent-hover, #1d4ed8);
-  --button-fg: var(--vc-on-accent, #ffffff);
-  --button-border: color-mix(in srgb, var(--vc-accent, #2563eb), #000 8%);
-  --button-ring: color-mix(in srgb, var(--vc-accent, #2563eb), transparent 78%);
+  --button-bg: var(--vc-action-primary-bg);
+  --button-bg-hover: var(--vc-action-primary-bg-hover);
+  --button-fg: var(--vc-action-primary-fg);
+  --button-fg-hover: var(--vc-action-primary-fg-hover);
+  --button-border: var(--vc-action-primary-border);
+  --button-border-hover: var(--vc-action-primary-border-hover);
 }
 
 .ghost {
-  --button-bg: var(--vc-control-bg, var(--vc-surface-2, #ffffff));
-  --button-bg-hover: var(--vc-control-hover, var(--vc-surface-3, #f4f4f5));
-  --button-fg: var(--vc-text, #101113);
-  --button-border: var(--vc-line, rgba(15, 23, 42, 0.12));
+  --button-bg: var(--vc-action-soft-bg);
+  --button-bg-hover: var(--vc-action-soft-bg-hover);
+  --button-fg: var(--vc-action-soft-fg);
+  --button-fg-hover: var(--vc-action-soft-fg-hover);
+  --button-border: var(--vc-action-soft-border);
+  --button-border-hover: var(--vc-action-soft-border-hover);
 }
 
 .warning {
-  --button-bg: var(--vc-warning-soft, rgba(245, 158, 11, 0.12));
-  --button-bg-hover: var(--vc-warning, #d97706);
-  --button-fg: var(--vc-warning-text, #92400e);
-  --button-border: var(--vc-warning-line, rgba(245, 158, 11, 0.34));
-  --button-ring: rgba(245, 158, 11, 0.18);
-
-  &:hover:not(:disabled) { color: #fff; }
+  --button-bg: var(--vc-action-warning-bg);
+  --button-bg-hover: var(--vc-action-warning-bg-hover);
+  --button-fg: var(--vc-action-warning-fg);
+  --button-fg-hover: var(--vc-action-warning-fg-hover);
+  --button-border: var(--vc-action-warning-border);
+  --button-border-hover: var(--vc-action-warning-border-hover);
+  --button-ring: 0 0 0 3px var(--vc-warning-soft);
 }
 
 .danger {
-  --button-bg: var(--vc-danger-soft, rgba(239, 68, 68, 0.10));
-  --button-bg-hover: var(--vc-danger, #dc2626);
-  --button-fg: var(--vc-danger-text, #b91c1c);
-  --button-border: var(--vc-danger-line, rgba(239, 68, 68, 0.30));
-  --button-ring: rgba(239, 68, 68, 0.18);
-
-  &:hover:not(:disabled) { color: #fff; }
+  --button-bg: var(--vc-action-danger-bg);
+  --button-bg-hover: var(--vc-action-danger-bg-hover);
+  --button-fg: var(--vc-action-danger-fg);
+  --button-fg-hover: var(--vc-action-danger-fg-hover);
+  --button-border: var(--vc-action-danger-border);
+  --button-border-hover: var(--vc-action-danger-border-hover);
+  --button-ring: 0 0 0 3px var(--vc-danger-soft);
 }
 
 .ml {
-  --button-bg: var(--vc-accent-soft, rgba(37, 99, 235, 0.10));
-  --button-bg-hover: var(--vc-accent, #2563eb);
-  --button-fg: var(--vc-accent-text, var(--vc-accent, #2563eb));
-  --button-border: var(--vc-accent-line, rgba(37, 99, 235, 0.22));
-  --button-ring: color-mix(in srgb, var(--vc-accent, #2563eb), transparent 80%);
-
-  &:hover:not(:disabled) { color: var(--vc-on-accent, #fff); }
+  --button-bg: var(--vc-action-ml-bg);
+  --button-bg-hover: var(--vc-action-ml-bg-hover);
+  --button-fg: var(--vc-action-ml-fg);
+  --button-fg-hover: var(--vc-action-ml-fg-hover);
+  --button-border: var(--vc-action-ml-border);
+  --button-border-hover: var(--vc-action-ml-border-hover);
 }

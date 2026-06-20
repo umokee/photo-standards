@@ -6,14 +6,19 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: $space-3 $space-4 $space-3 $space-3;
+  background: $surface;
+  color: $text;
 }
 
 .summary {
   display: grid;
   gap: $space-2;
   padding: 0 0 $space-3;
-  border-bottom: 1px solid $line-soft;
+  border-bottom: 1px solid $line;
 }
 
 .summaryHead {
@@ -24,7 +29,7 @@
 }
 
 .eyebrow {
-  color: $text-hint;
+  color: $text-sub;
   font-size: 11px;
   font-weight: $fw-semibold;
   text-transform: uppercase;
@@ -63,7 +68,7 @@
 }
 
 .summaryLabel {
-  color: $text-hint;
+  color: $text-sub;
   max-width: 96px;
   font-size: 11px;
   line-height: 1.25;
@@ -93,7 +98,7 @@
 }
 
 .summaryHint {
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-small;
 }
 
@@ -102,7 +107,7 @@
   display: grid;
   gap: $space-2;
   padding: $space-3 0 0;
-  border-top: 1px solid $line-soft;
+  border-top: 1px solid $line;
   background: transparent;
 }
 
@@ -114,7 +119,7 @@
 }
 
 .saveHint {
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-small;
   line-height: 1.35;
 }
@@ -139,7 +144,7 @@
 }
 
 .saveStateText {
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-small;
   line-height: 1.35;
 }
@@ -201,7 +206,7 @@
 
 
 .saveMeta {
-  color: $text-hint;
+  color: $text-sub;
   font-size: $text-small;
   line-height: 1.35;
   white-space: nowrap;
@@ -233,9 +238,6 @@
 }
 
 
-
-
-
 .resultStatus {
   color: $text-sub;
   font-size: $text-small;
@@ -256,48 +258,3 @@
   color: $danger-text;
 }
 
-/* v32 inspect result panel bounded scroll */
-.root {
-  min-height: 0;
-  height: 100%;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-/* v43 inspect strict result panel */
-.root {
-  height: 100%;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  background: var(--vc-surface, #ffffff);
-  color: var(--vc-text, #101114);
-}
-
-.summary,
-.saveDock {
-  border-color: var(--vc-line, rgba(127, 127, 127, 0.18));
-}
-
-.eyebrow,
-.summaryLabel,
-.summaryHint,
-.saveHint,
-.saveStateText,
-.saveMeta {
-  color: var(--vc-muted, #6f737b);
-}
-
-.summaryValue,
-.summaryTitle,
-.saveStateTitle,
-.summaryRatio {
-  color: var(--vc-text, #101114);
-}
-
-.summaryText,
-.resultStatus,
-.noteSummary {
-  color: var(--vc-muted, #6f737b);
-}

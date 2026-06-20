@@ -33,12 +33,13 @@ import s from "./import-model.module.scss";
 
 interface Props {
   groupId: string;
+  triggerClassName?: string;
 }
 
-export const ImportModel = ({ groupId }: Props) => (
+export const ImportModel = ({ groupId, triggerClassName }: Props) => (
   <Modal>
     <Modal.Trigger>
-      <Button variant="ghost">Импорт</Button>
+      <Button className={triggerClassName} variant="ghost">Импорт</Button>
     </Modal.Trigger>
     <Modal.Content wide>
       <ImportModelModal groupId={groupId} />
