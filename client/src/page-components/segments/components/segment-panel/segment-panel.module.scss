@@ -71,7 +71,7 @@
   margin: 8px 6px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, #{$danger} 24%, transparent);
-  border-radius: 10px;
+  border-radius: $radius-control;
   background: color-mix(in srgb, #{$danger} 10%, transparent);
   color: color-mix(in srgb, #{$danger} 42%, #{$surface});
   font-size: 12px;
@@ -106,7 +106,7 @@
   gap: 9px;
   min-height: 34px;
   padding: 7px 9px;
-  border-radius: 10px;
+  border-radius: $radius-control;
   cursor: pointer;
   border: 1px solid transparent;
   color: color-mix(in srgb, #{$surface2} 76%, transparent);
@@ -172,7 +172,7 @@
   padding: 22px 12px;
   text-align: center;
   border: 1px dashed color-mix(in srgb, #{$surface} 12%, transparent);
-  border-radius: 12px;
+  border-radius: $radius-control;
   font-size: 12px;
   color: color-mix(in srgb, #{$surface2} 42%, transparent);
   line-height: 1.5;
@@ -193,7 +193,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 8px;
+  border-radius: $radius-control;
   color: color-mix(in srgb, #{$surface2} 46%, transparent);
   cursor: pointer;
   opacity: 0;
@@ -235,7 +235,7 @@
   display: flex;
   align-items: center;
   min-height: 36px;
-  border-radius: 12px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
   background: color-mix(in srgb, #{$surface} 4%, transparent);
   color: color-mix(in srgb, #{$surface} 50%, transparent);
@@ -279,7 +279,7 @@
 .classItem,
 .annItem {
   min-height: 36px;
-  border-radius: 11px;
+  border-radius: $radius-control;
 }
 
 .classItem:hover,
@@ -388,7 +388,7 @@
   justify-content: center;
   gap: 7px;
   border: 1px solid color-mix(in srgb, #{$surface} 8%, transparent);
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: color-mix(in srgb, #{$surface} 4%, transparent);
   color: color-mix(in srgb, #{$surface2} 72%, transparent);
   font-size: 12px;
@@ -450,6 +450,6 @@
 
 .actions button {
   height: 36px;
-  border-radius: 12px;
+  border-radius: $radius-control;
   font-weight: 900;
 }

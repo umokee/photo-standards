@@ -12,16 +12,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   height: $control-height;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid var(--button-border);
   border-radius: $radius-control;
   background: var(--button-bg);
   color: var(--button-fg);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 720;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -31,13 +31,12 @@
   flex-shrink: 0;
   box-shadow: none;
   transition:
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease,
-    transform 140ms ease;
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 
-  span {
+  > span {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -45,8 +44,8 @@
 
   svg {
     display: block;
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     stroke-width: 2;
     flex-shrink: 0;
   }
@@ -55,11 +54,6 @@
     border-color: var(--button-border-hover);
     background: var(--button-bg-hover);
     color: var(--button-fg-hover);
-    transform: translateY(-1px);
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
   }
 
   &:focus-visible {
@@ -72,37 +66,62 @@
     cursor: not-allowed;
     pointer-events: none;
     box-shadow: none;
-    transform: none;
   }
 }
 
+.xs {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+
+  svg { width: 12px; height: 12px; }
+}
+
 .sm {
-  height: 30px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 9px;
   font-size: 12px;
-  border-radius: 9px;
 
   svg { width: 13px; height: 13px; }
 }
 
 .lg {
-  height: 42px;
-  padding: 0 17px;
-  font-size: 14px;
-  border-radius: 12px;
+  height: 36px;
+  padding: 0 13px;
+  font-size: 13px;
 
-  svg { width: 16px; height: 16px; }
+  svg { width: 15px; height: 15px; }
 }
 
 .icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
 
-  span { display: none; }
+  > span { display: none; }
 }
 
 .full { width: 100%; }
+
+.unstyled {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  white-space: normal;
+  flex-shrink: 1;
+
+  &:hover:not(:disabled) {
+    border-color: transparent;
+    background: transparent;
+    color: inherit;
+  }
+}
 
 .primary {
   --button-bg: var(--vc-action-primary-bg);
@@ -122,6 +141,25 @@
   --button-border-hover: var(--vc-action-soft-border-hover);
 }
 
+.plain {
+  --button-bg: transparent;
+  --button-bg-hover: var(--vc-hover);
+  --button-fg: var(--vc-text);
+  --button-fg-hover: var(--vc-text);
+  --button-border: transparent;
+  --button-border-hover: var(--vc-line);
+}
+
+.success {
+  --button-bg: var(--vc-success-soft);
+  --button-bg-hover: var(--vc-success);
+  --button-fg: var(--vc-success-text);
+  --button-fg-hover: var(--vc-on-success);
+  --button-border: var(--vc-success-line);
+  --button-border-hover: var(--vc-success);
+  --button-ring: 0 0 0 2px var(--vc-success-soft);
+}
+
 .warning {
   --button-bg: var(--vc-action-warning-bg);
   --button-bg-hover: var(--vc-action-warning-bg-hover);
@@ -129,7 +167,7 @@
   --button-fg-hover: var(--vc-action-warning-fg-hover);
   --button-border: var(--vc-action-warning-border);
   --button-border-hover: var(--vc-action-warning-border-hover);
-  --button-ring: 0 0 0 3px var(--vc-warning-soft);
+  --button-ring: 0 0 0 2px var(--vc-warning-soft);
 }
 
 .danger {
@@ -139,7 +177,7 @@
   --button-fg-hover: var(--vc-action-danger-fg-hover);
   --button-border: var(--vc-action-danger-border);
   --button-border-hover: var(--vc-action-danger-border-hover);
-  --button-ring: 0 0 0 3px var(--vc-danger-soft);
+  --button-ring: 0 0 0 2px var(--vc-danger-soft);
 }
 
 .ml {

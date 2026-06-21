@@ -70,7 +70,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid $line;
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $text-sub;
   font: inherit;
@@ -86,7 +86,7 @@
 .searchBox kbd {
   padding: 2px 6px;
   border: 1px solid $line;
-  border-radius: 6px;
+  border-radius: $radius-control;
   background: $surface3;
   color: $text-hint;
   font-size: 10px;
@@ -109,7 +109,7 @@
   gap: 8px;
   padding: 5px 8px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: $radius-control;
   background: transparent;
   color: $text2;
   text-decoration: none;
@@ -166,7 +166,7 @@
   gap: 9px;
   padding: 8px;
   border: 1px solid $line;
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $text;
   cursor: pointer;
@@ -207,7 +207,7 @@
   overflow: hidden;
   padding: 8px;
   border: 1px solid $line;
-  border-radius: 18px;
+  border-radius: $radius-control;
   background: $elevated;
   color: $text;
   box-shadow: $shadow;
@@ -235,7 +235,7 @@
   gap: 9px;
   padding: 9px;
   border: 1px solid transparent;
-  border-radius: 13px;
+  border-radius: $radius-control;
   color: $text;
   text-decoration: none;
 }
@@ -249,7 +249,7 @@
   gap: 8px;
   padding: 8px;
   border: 1px dashed $line;
-  border-radius: 13px;
+  border-radius: $radius-control;
   color: $accent;
   text-decoration: none;
   font-weight: 820;
@@ -282,7 +282,7 @@
   display: inline-grid;
   place-items: center;
   border: 1px solid $line;
-  border-radius: 10px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $accent;
   opacity: 0;
@@ -303,10 +303,10 @@
   gap: 8px;
   padding: 6px;
   border: 1px solid $line;
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: $surface2;
 }
-.profileAvatar { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: $profile-avatar; color: $text-inverse; font-weight: 900; }
+.profileAvatar { width: 28px; height: 28px; display: grid; place-items: center; border-radius: $radius-control; background: $profile-avatar; color: $text-inverse; font-weight: 900; }
 .profileBody { min-width: 0; display: grid; line-height: 1.15; }
 .profileBody strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .profileBody small { color: $text-sub; font-size: 11px; }
@@ -408,7 +408,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid $line;
-  border-radius: 24px;
+  border-radius: $radius-control;
   background: $elevated;
   color: $text;
   box-shadow: $shadow;
@@ -423,14 +423,14 @@
 }
 .commandSearchRow svg { width: 18px; height: 18px; color: $text-sub; }
 .commandSearchRow input { min-width: 0; border: 0; outline: none; background: transparent; color: $text; font: inherit; font-size: 15px; }
-.commandSearchRow button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid $line; border-radius: 12px; background: $surface2; color: $text-sub; cursor: pointer; }
+.commandSearchRow button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid $line; border-radius: $radius-control; background: $surface2; color: $text-sub; cursor: pointer; }
 .commandMetaRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 16px; color: $text-sub; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
 .commandMetaRow span { display: inline-flex; align-items: center; gap: 6px; }
 .commandMetaRow svg { width: 12px; height: 12px; }
 .commandList { min-height: 0; overflow: auto; display: grid; gap: 6px; padding: 8px; }
-.commandItem { min-width: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px; border: 1px solid transparent; border-radius: 14px; color: $text; text-decoration: none; }
+.commandItem { min-width: 0; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px; border: 1px solid transparent; border-radius: $radius-control; color: $text; text-decoration: none; }
 .commandItem:hover { background: $surface2; border-color: $line; }
-.commandIcon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: $accent-soft; color: $accent; }
+.commandIcon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: $radius-control; background: $accent-soft; color: $accent; }
 .commandIcon svg { width: 18px; height: 18px; }
 .commandText { min-width: 0; display: grid; gap: 2px; }
 .commandText strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
@@ -448,7 +448,7 @@
   .mobileBackdropVisible { opacity: 1; pointer-events: auto; }
   .topbar { grid-template-columns: minmax(0, 1fr) auto; }
   .topbarCenter { display: none; }
-  .mobileMenu { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid $line; background: $surface2; color: $text; border-radius: 12px; }
+  .mobileMenu { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid $line; background: $surface2; color: $text; border-radius: $radius-control; }
   .mobileMenu svg { width: 17px; height: 17px; }
 }
 
@@ -467,7 +467,7 @@
   padding: 8px;
   overflow-y: auto;
   border: 1px solid var(--vc-line);
-  border-radius: 18px;
+  border-radius: $radius-control;
   background: color-mix(in srgb, var(--vc-modal) 74%, transparent);
   box-shadow: var(--vc-shadow-lg);
   backdrop-filter: blur(22px) saturate(1.1);
@@ -496,7 +496,7 @@
   min-height: 48px;
   padding: 8px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: $radius-control;
   color: var(--vc-text);
   text-decoration: none;
 }

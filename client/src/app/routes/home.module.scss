@@ -43,7 +43,7 @@
   gap: 14px;
   align-items: stretch;
   padding: 16px;
-  border-radius: 26px;
+  border-radius: $radius-control;
   position: relative;
   overflow: hidden;
 }
@@ -96,7 +96,7 @@
 .homeScoreCardV18 {
   min-height: 150px;
   border: 1px solid color-mix(in srgb, #{$line-soft} 70%, transparent);
-  border-radius: 22px;
+  border-radius: $radius-control;
   background: linear-gradient(145deg, color-mix(in srgb, #{$surface} 82%, transparent), color-mix(in srgb, #{$surface2} 78%, transparent));
   padding: 16px;
   display: grid;
@@ -155,7 +155,7 @@
 .homeStatV18 {
   min-height: 68px;
   padding: 10px;
-  border-radius: 17px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 70%, transparent);
   background: color-mix(in srgb, #{$surface} 78%, transparent);
   display: grid;
@@ -193,7 +193,7 @@
 
 .homePanelV18 {
   min-height: 0;
-  border-radius: 24px;
+  border-radius: $radius-control;
   padding: 16px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -240,7 +240,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border-radius: 17px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 68%, transparent);
   background: color-mix(in srgb, #{$surface} 76%, transparent);
   color: $text;
@@ -259,7 +259,7 @@
   height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border-radius: $radius-control;
   color: $text-white;
   font-weight: 900;
   background: linear-gradient(135deg, $accent, $success);
@@ -297,7 +297,7 @@
 
 .homeRunSummaryV18 div {
   padding: 10px;
-  border-radius: 16px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 68%, transparent);
   background: color-mix(in srgb, #{$surface} 76%, transparent);
 }
@@ -323,7 +323,7 @@
   gap: 9px;
   align-items: center;
   padding: 9px 10px;
-  border-radius: 15px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 62%, transparent);
   background: color-mix(in srgb, #{$surface} 72%, transparent);
   color: $text;
@@ -355,7 +355,7 @@
   align-items: center;
   min-height: 48px;
   padding: 9px;
-  border-radius: 16px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 62%, transparent);
   background: color-mix(in srgb, #{$surface} 72%, transparent);
 }
@@ -366,7 +366,7 @@
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: $radius-control;
   background: $surface;
   color: $text-hint;
   font-weight: 900;
@@ -401,7 +401,7 @@
   justify-content: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 14px;
+  border-radius: $radius-control;
   border: 1px solid color-mix(in srgb, #{$line-soft} 72%, transparent);
   background: var(--vc-surface);
   color: $text;

@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Button from "@/components/ui/button/button";
 import type { GroupDetail } from "@/types/contracts";
 import { FolderPlus, ListPlus, Save, Search, Tags, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
@@ -175,57 +176,56 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
               <h2>Категории</h2>
               <p>Фильтр списка и группы классов.</p>
             </div>
-            <button type="button" className={s.iconAction} onClick={categoryActions.add} title="Создать категорию">
-              <FolderPlus />
-            </button>
+            <Button className={s.iconAction} variant="ghost" size="icon" icon={FolderPlus} onClick={categoryActions.add} title="Создать категорию" aria-label="Создать категорию" />
           </div>
 
           <div className={s.categoryList}>
-            <button
-              type="button"
+            <Button
               className={clsx(s.categoryItem, categoryFilter === "all" && s.categoryItemActive)}
+              variant="plain"
               onClick={() => setCategoryFilter("all")}
             >
               <span>Все классы</span>
               <b>{flatClasses.length}</b>
-            </button>
+            </Button>
 
             {categories.map((category) => (
               <div
                 key={category.key}
                 className={clsx(s.categoryRow, categoryFilter === category.key && s.categoryRowActive)}
               >
-                <button
-                  type="button"
+                <Button
                   className={s.categoryItem}
+                  variant="plain"
                   onClick={() => setCategoryFilter(category.key)}
                 >
                   <span>{category.name || "Без названия"}</span>
                   <b>{category.segmentClasses.length}</b>
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   className={s.rowDangerButton}
+                  variant="danger"
+                  size="icon"
+                  icon={Trash2}
                   title="Удалить категорию"
+                  aria-label="Удалить категорию"
                   onClick={() => {
                     if (!window.confirm(`Удалить категорию «${category.name || "без названия"}»? Классы перейдут в «Без категории».`)) return;
                     categoryActions.remove(category.key);
                     setCategoryFilter("all");
                   }}
-                >
-                  <Trash2 />
-                </button>
+                />
               </div>
             ))}
 
-            <button
-              type="button"
+            <Button
               className={clsx(s.categoryItem, categoryFilter === "ungrouped" && s.categoryItemActive)}
+              variant="plain"
               onClick={() => setCategoryFilter("ungrouped")}
             >
               <span>Без категории</span>
               <b>{ungroupedClasses.length}</b>
-            </button>
+            </Button>
           </div>
 
           {selectedCategory ? (
@@ -261,10 +261,9 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
                 />
               </label>
 
-              <button type="button" className={s.primaryAction} onClick={handleAddClass}>
-                <ListPlus />
+              <Button className={s.primaryAction} icon={ListPlus} onClick={handleAddClass}>
                 {selectedCategory ? "Класс в категорию" : "Добавить класс"}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -340,17 +339,18 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
                         />
                       </label>
 
-                      <button
-                        type="button"
+                      <Button
                         className={s.rowDangerButton}
+                        variant="danger"
+                        size="icon"
+                        icon={Trash2}
                         title="Удалить класс"
+                        aria-label="Удалить класс"
                         onClick={(event) => {
                           event.stopPropagation();
                           handleDeleteClass(location, item.name);
                         }}
-                      >
-                        <Trash2 />
-                      </button>
+                      />
                     </div>
                   );
                 })}
@@ -369,13 +369,12 @@ export function ClassesWorkspace({ group }: { group: GroupDetail }) {
               {saving ? "Сохранение..." : isDirty ? "Есть несохранённые изменения" : savedAt ? `Сохранено ${savedAt.toLocaleTimeString()}` : "Изменений нет"}
             </div>
             <div className={s.footerActions}>
-              <button type="button" className={s.secondaryAction} disabled={!isDirty || saving} onClick={reset}>
+              <Button className={s.secondaryAction} variant="ghost" disabled={!isDirty || saving} onClick={reset}>
                 Отменить
-              </button>
-              <button type="button" className={s.primaryAction} disabled={!isDirty || saving} onClick={handleSave}>
-                <Save />
+              </Button>
+              <Button className={s.primaryAction} icon={Save} disabled={!isDirty || saving} onClick={handleSave}>
                 {saving ? "Сохранение..." : "Сохранить"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

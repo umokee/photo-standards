@@ -37,7 +37,7 @@
 
   &:focus,
   &:focus-visible {
-    border-color: $accent;
+    border-color: $control-border-hover;
     background-color: $control-bg-focus;
     box-shadow: $focus-ring;
   }

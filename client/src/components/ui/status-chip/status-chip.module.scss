@@ -9,7 +9,7 @@
   min-height: 24px;
   padding: 0 8px;
   border: 1px solid $line;
-  border-radius: 999px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $text-sub;
   font-size: 11px;

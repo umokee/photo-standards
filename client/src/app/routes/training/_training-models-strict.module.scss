@@ -38,13 +38,13 @@
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  padding: 16px 18px;
+  padding: 12px 14px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-xl);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface);
-  box-shadow: $shadow-sm;
+  box-shadow: none;
 }
 
 .headerCopy {
@@ -71,7 +71,7 @@
 .header h1 {
   margin: 6px 0 2px;
   color: var(--train-text);
-  font-size: clamp(30px, 3.2vw, 44px);
+  font-size: clamp(24px, 2.2vw, 34px);
   font-weight: 930;
   line-height: 0.95;
   letter-spacing: -0.06em;
@@ -79,7 +79,7 @@
 
 .header p {
   margin: 0;
-  max-width: 680px;
+  max-width: 600px;
   color: var(--train-muted);
   font-size: 13px;
   line-height: 1.45;
@@ -92,10 +92,10 @@
 }
 
 .headerStats div {
-  min-height: 54px;
-  padding: 9px 11px;
+  min-height: 42px;
+  padding: 7px 9px;
   border: 1px solid var(--train-line);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--train-surface-2);
 }
 
@@ -129,7 +129,7 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   overflow: visible;
@@ -143,7 +143,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-xl);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface);
   position: sticky;
   top: 12px;
@@ -163,13 +163,13 @@
 }
 
 .search {
-  height: 38px;
+  height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 11px;
   border: 1px solid var(--train-line);
-  border-radius: 13px;
+  border-radius: $radius-control;
   background: var(--train-surface-2);
   color: var(--train-muted);
 }
@@ -219,67 +219,15 @@
 
 .filterButton,
 .sortButton,
-.collapseButton,
-.softButton,
-.primaryButton,
-.dangerButton,
-.iconButton {
-  min-height: 34px;
-  border: 1px solid var(--train-line);
-  border-radius: 12px;
-  background: var(--train-surface-2);
-  color: var(--train-text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 750;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.filterButton,
-.sortButton,
-.collapseButton,
-.softButton,
-.primaryButton,
-.dangerButton {
-  padding: 0 11px;
-}
-
-.iconButton {
-  width: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.iconButton svg,
-.softButton svg,
-.primaryButton svg,
-.dangerButton svg {
-  width: 14px;
-  height: 14px;
-}
-
-.filterButton:hover,
-.sortButton:hover,
-.collapseButton:hover,
-.softButton:hover,
-.iconButton:hover {
-  border-color: var(--train-line-strong);
-  background: var(--train-surface-3);
+.collapseButton {
+  min-height: 26px;
 }
 
 .filterActive,
-.sortActive,
-.primaryButton {
+.sortActive {
   border-color: color-mix(in srgb, var(--train-accent) 48%, transparent);
   background: color-mix(in srgb, var(--train-accent) 12%, var(--train-surface));
   color: var(--train-accent);
-}
-
-.dangerButton {
-  color: var(--train-danger);
-  background: color-mix(in srgb, var(--train-danger) 10%, var(--train-surface));
 }
 
 .railSummary {
@@ -292,7 +240,7 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--train-line);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--train-surface-2);
 }
 
@@ -347,10 +295,10 @@
   width: 100%;
   min-width: 0;
   display: grid;
-  gap: 9px;
-  padding: 11px;
+  gap: 8px;
+  padding: 9px;
   border: 1px solid var(--train-line);
-  border-radius: 16px;
+  border-radius: $radius-control;
   background: var(--train-surface-2);
   color: var(--train-text);
   text-align: left;
@@ -394,7 +342,7 @@
 
 .modelMetrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -402,7 +350,7 @@
   min-width: 0;
   padding: 7px;
   border: 1px solid var(--train-line);
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: var(--train-surface);
 }
 
@@ -429,7 +377,7 @@
   place-items: center;
   padding: 18px;
   border: 1px dashed var(--train-line-strong);
-  border-radius: var(--train-radius-lg);
+  border-radius: var(--train-radius-md);
   color: var(--train-muted);
   text-align: center;
 }
@@ -448,9 +396,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: stretch;
-  padding: 13px 16px;
+  padding: 12px 14px;
   border: 1px solid var(--train-line);
-  border-radius: 20px;
+  border-radius: $radius-control;
   background: var(--train-surface);
 }
 
@@ -463,26 +411,26 @@
 
 .modelAvatar {
   flex: 0 0 auto;
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
   border: 1px solid var(--train-line);
-  border-radius: 16px;
+  border-radius: $radius-control;
   background: var(--train-surface-2);
   color: var(--train-accent);
 }
 
 .modelAvatar svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .modelIdentity h2 {
   margin: 0;
   overflow: hidden;
   color: var(--train-text);
-  font-size: clamp(24px, 2.6vw, 34px);
+  font-size: clamp(20px, 2vw, 28px);
   font-weight: 900;
   letter-spacing: -0.04em;
   text-overflow: ellipsis;
@@ -529,9 +477,9 @@
 
 .metricCard {
   min-width: 0;
-  padding: 14px;
+  padding: 10px 12px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-lg);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface);
 }
 
@@ -549,16 +497,16 @@
 
 .metricCard strong {
   display: block;
-  margin-top: 8px;
+  margin-top: 5px;
   color: var(--train-text);
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 920;
   letter-spacing: -0.04em;
 }
 
 .metricCard small {
   display: block;
-  margin-top: 5px;
+  margin-top: 3px;
   color: var(--train-faint);
   font-size: 11px;
 }
@@ -566,7 +514,7 @@
 .block {
   min-width: 0;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-xl);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface);
   overflow: hidden;
 }
@@ -632,7 +580,7 @@
   min-height: 266px;
   padding: 12px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-lg);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface-2);
 }
 
@@ -664,7 +612,7 @@
   min-height: 190px;
   display: block;
   border: 1px solid var(--train-line);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--train-surface);
   outline: none;
   touch-action: none;
@@ -773,7 +721,7 @@
   place-items: center;
   padding: 18px;
   border: 1px dashed var(--train-line-strong);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--train-surface);
   color: var(--train-muted);
   text-align: center;
@@ -793,7 +741,7 @@
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-lg);
+  border-radius: var(--train-radius-md);
   background: var(--train-surface-2);
 }
 
@@ -836,7 +784,7 @@
 .progressFill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--train-accent), var(--train-accent-2));
+  background: var(--train-accent);
 }
 
 .jobActions {
@@ -897,62 +845,6 @@
   background: var(--train-accent);
 }
 
-.compareGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
-}
-
-.compareCard {
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--train-line);
-  border-radius: var(--train-radius-lg);
-  background: var(--train-surface-2);
-}
-
-.compareCard header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.compareCard strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compareBars {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.compareRow {
-  display: grid;
-  grid-template-columns: 80px minmax(0, 1fr) 46px;
-  gap: 8px;
-  align-items: center;
-  color: var(--train-muted);
-  font-size: 11px;
-}
-
-.compareBar {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--train-surface-3);
-}
-
-.compareFill {
-  --compare-width: 0%;
-  height: 100%;
-  width: var(--compare-width);
-  border-radius: inherit;
-  background: var(--train-accent);
-}
 
 @media (max-width: 1180px) {
   .shell {
@@ -1011,8 +903,7 @@
 .metricGrid,
 .chartGrid,
 .metaGrid,
-.classGrid,
-.compareGrid {
+.classGrid {
   min-height: 0;
 }
 

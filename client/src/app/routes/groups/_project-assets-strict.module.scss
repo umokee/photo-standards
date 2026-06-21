@@ -468,7 +468,7 @@
 .previewThumb {
   width: 62px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: $radius-control;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -652,7 +652,7 @@
 .annotationMedia {
   position: relative;
   aspect-ratio: 1.35;
-  border-radius: 14px;
+  border-radius: $radius-control;
   overflow: hidden;
   background: var(--asset-surface-3);
 }
@@ -760,7 +760,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px;
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: var(--asset-surface-2);
   color: var(--asset-muted);
   font-size: 12px;
@@ -884,7 +884,7 @@
 .annotationCardMain:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--asset-accent) 70%, transparent);
   outline-offset: 3px;
-  border-radius: 14px;
+  border-radius: $radius-control;
 }
 
 .annotationCardActions {
@@ -981,7 +981,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 9px 10px;
-  border-radius: 12px;
+  border-radius: $radius-control;
   background: var(--asset-surface-2);
   font-size: 12px;
   font-weight: 850;
@@ -1009,7 +1009,7 @@
   align-items: center;
   padding: 7px;
   border: 1px solid var(--asset-line);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--asset-surface-2);
   color: var(--asset-text);
   text-align: left;
@@ -1023,7 +1023,7 @@
 .poolRailItem img {
   width: 54px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: $radius-control;
   object-fit: cover;
   background: var(--asset-surface-3);
 }
@@ -1059,7 +1059,7 @@
   gap: 7px;
   padding: 18px 12px;
   border: 1px dashed var(--asset-line-strong);
-  border-radius: 16px;
+  border-radius: $radius-control;
   background: var(--asset-surface-2);
   color: var(--asset-muted);
   text-align: center;
@@ -1134,7 +1134,7 @@
 
 .detailStatusStripV103 {
     width: 100%;
-    border-radius: 16px;
+    border-radius: $radius-control;
 }
 }
 
@@ -1221,7 +1221,7 @@
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--vc-border-soft);
-  border-radius: 20px;
+  border-radius: $radius-control;
   background: var(--vc-surface);
   box-shadow: var(--vc-shadow-xs);
 }
@@ -1291,7 +1291,7 @@
   gap: 10px;
   padding: 9px 12px;
   border: 1px solid var(--vc-border-soft);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: var(--vc-surface);
 }
 
@@ -1385,7 +1385,7 @@
   gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--vc-border-soft);
-  border-radius: 15px;
+  border-radius: $radius-control;
   background: var(--vc-surface);
   transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }

@@ -109,9 +109,9 @@ html[data-theme="light"] {
   --vc-control-hover: var(--vc-surface-2);
   --vc-control-border: color-mix(in srgb, var(--vc-line-strong) 68%, var(--vc-line));
   --vc-control-border-hover: color-mix(in srgb, var(--vc-line-strong) 82%, var(--vc-line));
-  --vc-control-height: 34px;
-  --vc-control-height-lg: 38px;
-  --vc-control-h: 38px;
+  --vc-control-height: 32px;
+  --vc-control-height-lg: 34px;
+  --vc-control-h: 34px;
 
   --vc-action-primary-bg: var(--vc-accent);
   --vc-action-primary-bg-hover: var(--vc-accent-hover);
@@ -151,21 +151,21 @@ html[data-theme="light"] {
   --vc-overlay: rgba(15, 23, 42, 0.48);
   --vc-backdrop: var(--vc-overlay);
 
-  --vc-radius-xs: 8px;
-  --vc-radius-sm: 10px;
-  --vc-radius-md: 14px;
-  --vc-radius: 14px;
-  --vc-radius-lg: 18px;
-  --vc-radius-xl: 24px;
-  --vc-radius-control: 10px;
-  --vc-panel-pad: 16px;
-  --vc-gap: 12px;
-  --vc-page-pad: clamp(14px, 1.6vw, 24px);
+  --vc-radius-xs: 3px;
+  --vc-radius-sm: 4px;
+  --vc-radius-md: 4px;
+  --vc-radius: 4px;
+  --vc-radius-lg: 4px;
+  --vc-radius-xl: 4px;
+  --vc-radius-control: 4px;
+  --vc-panel-pad: 12px;
+  --vc-gap: 10px;
+  --vc-page-pad: clamp(10px, 1.3vw, 18px);
   --vc-page-padding: var(--vc-page-pad);
-  --vc-page-pad-x: clamp(14px, 2vw, 24px);
-  --vc-page-pad-y: clamp(12px, 1.8vw, 20px);
-  --vc-topbar-height: 64px;
-  --vc-topbar-h: 54px;
+  --vc-page-pad-x: clamp(10px, 1.5vw, 18px);
+  --vc-page-pad-y: clamp(10px, 1.4vw, 16px);
+  --vc-topbar-height: 54px;
+  --vc-topbar-h: 48px;
   --vc-sidebar-width: 256px;
   --vc-sidebar-w: 244px;
 
@@ -175,16 +175,16 @@ html[data-theme="light"] {
   --vc-space-4: 16px;
   --vc-space-5: 20px;
 
-  --vc-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --vc-shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --vc-shadow-md: 0 18px 48px rgba(15, 23, 42, 0.09);
-  --vc-shadow-lg: 0 28px 90px rgba(15, 23, 42, 0.14);
-  --vc-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
-  --vc-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.06);
+  --vc-shadow-xs: none;
+  --vc-shadow-sm: none;
+  --vc-shadow-md: none;
+  --vc-shadow-lg: none;
+  --vc-shadow: none;
+  --vc-shadow-soft: none;
   --vc-shadow-focus: 0 0 0 2px rgba(37, 99, 235, 0.12);
   --vc-focus-ring: var(--vc-shadow-focus);
-  --vc-shadow-popover: 0 18px 48px rgba(15, 23, 42, 0.16);
-  --vc-shadow-modal: 0 28px 84px rgba(15, 23, 42, 0.28);
+  --vc-shadow-popover: 0 10px 28px rgba(15, 23, 42, 0.16);
+  --vc-shadow-modal: 0 20px 58px rgba(15, 23, 42, 0.24);
   --vc-scroll-thumb: #cbd5e1;
 }
 
@@ -330,16 +330,16 @@ html[data-theme="dark"] {
   --vc-overlay: rgba(0, 0, 0, 0.64);
   --vc-backdrop: var(--vc-overlay);
 
-  --vc-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --vc-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.26);
-  --vc-shadow-md: 0 20px 60px rgba(0, 0, 0, 0.36);
-  --vc-shadow-lg: 0 28px 100px rgba(0, 0, 0, 0.42);
-  --vc-shadow: 0 16px 48px rgba(0, 0, 0, 0.26);
+  --vc-shadow-xs: none;
+  --vc-shadow-sm: none;
+  --vc-shadow-md: none;
+  --vc-shadow-lg: none;
+  --vc-shadow: none;
   --vc-shadow-soft: none;
   --vc-shadow-focus: 0 0 0 2px rgba(138, 180, 255, 0.14);
   --vc-focus-ring: var(--vc-shadow-focus);
-  --vc-shadow-popover: 0 18px 52px rgba(0, 0, 0, 0.48);
-  --vc-shadow-modal: 0 30px 90px rgba(0, 0, 0, 0.62);
+  --vc-shadow-popover: 0 12px 36px rgba(0, 0, 0, 0.44);
+  --vc-shadow-modal: 0 22px 64px rgba(0, 0, 0, 0.58);
   --vc-scroll-thumb: rgba(255, 255, 255, 0.2);
 }
 

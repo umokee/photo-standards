@@ -31,7 +31,7 @@
 .messageBox {
   border: 1px solid $line;
   background: $surface;
-  box-shadow: $shadow-sm;
+  box-shadow: none;
 }
 
 .listPanel h2 {
@@ -60,7 +60,7 @@
   font-size: 12px;
   font-weight: 850;
   text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
 
   svg {
     width: 14px;
@@ -388,7 +388,7 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 13px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $accent;
 
@@ -603,7 +603,7 @@
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 16px;
+  border-radius: $radius-control;
   background: color-mix(in srgb, $accent 11%, $surface);
   color: $accent;
 
@@ -809,7 +809,7 @@
     align-items: center;
     min-height: 30px;
     padding: 7px 8px;
-    border-radius: 12px;
+    border-radius: $radius-control;
     background: $surface2;
   }
 

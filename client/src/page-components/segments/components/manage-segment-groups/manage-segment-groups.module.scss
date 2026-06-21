@@ -192,7 +192,7 @@
 .workspaceToolbar {
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, #{$surface2} 90%, transparent);
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: linear-gradient(135deg, color-mix(in srgb, #{$surface} 96%, transparent), color-mix(in srgb, #{$surface2} 72%, transparent));
 }
 
@@ -230,7 +230,7 @@
 
 .workspace .group {
   border-color: $surface2;
-  border-radius: 14px;
+  border-radius: $radius-control;
   overflow: hidden;
   background: var(--vc-surface);
 }
@@ -251,7 +251,7 @@
   bottom: 0;
   padding: 12px;
   border: 1px solid $surface2;
-  border-radius: 14px;
+  border-radius: $radius-control;
   background: color-mix(in srgb, #{$surface} 92%, transparent);
   backdrop-filter: blur(12px);
 }

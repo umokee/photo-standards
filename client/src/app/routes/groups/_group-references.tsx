@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import Button from "@/components/ui/button/button";
 import ImageWithFallback from "@/components/ui/image-with-fallback/image-with-fallback";
 import QueryState from "@/components/ui/query-state/query-state";
 import { CreateStandard } from "@/page-components/standards/components/create-standard";
@@ -96,9 +97,16 @@ export function Component() {
         <div className={p.filterPillsV128}>
           <Filter />
           {filters.map((item) => (
-            <button key={item} type="button" aria-pressed={item === filter} className={clsx(item === filter && p.active)} onClick={() => setFilter(item)}>
+            <Button
+              key={item}
+              variant={item === filter ? "primary" : "ghost"}
+              size="sm"
+              aria-pressed={item === filter}
+              className={clsx(p.referenceFilterButtonV131, item === filter && p.active)}
+              onClick={() => setFilter(item)}
+            >
               {filterLabel(item)}
-            </button>
+            </Button>
           ))}
         </div>
       </section>

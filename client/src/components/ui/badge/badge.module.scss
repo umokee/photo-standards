@@ -10,7 +10,7 @@
   width: fit-content;
   padding: 2px 8px;
   border: 1px solid $line;
-  border-radius: 999px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $text-sub;
   font-size: 11px;
@@ -50,7 +50,7 @@
 .colorDot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: $radius-control;
   flex-shrink: 0;
   box-shadow: 0 0 0 2px $surface;
 }

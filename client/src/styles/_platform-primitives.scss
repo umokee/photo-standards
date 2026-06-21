@@ -39,7 +39,7 @@ select,
 textarea {
   min-height: $control-h;
   border: 1px solid $border;
-  border-radius: $radius-md;
+  border-radius: $radius-control;
   background: $surface;
   color: $text;
 }
@@ -69,22 +69,22 @@ button:disabled,
   border: 1px solid $border;
   background: $surface;
   color: $text;
-  box-shadow: $shadow-xs;
+  box-shadow: none;
 }
 
 .vc-panel,
 .vc-card {
-  border-radius: $radius-lg;
+  border-radius: $radius;
 }
 
 .vc-toolbar {
   min-height: 52px;
-  border-radius: $radius-lg;
+  border-radius: $radius;
 }
 
 .vc-rail,
 .vc-inspector {
-  border-radius: $radius-lg;
+  border-radius: $radius;
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
@@ -109,7 +109,7 @@ button:disabled,
   gap: 8px;
   padding: 0 14px;
   border: 1px solid $border;
-  border-radius: $radius-md;
+  border-radius: $radius-control;
   background: $surface;
   color: $text;
   font-weight: 750;

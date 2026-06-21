@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import Button from "@/components/ui/button/button";
 import { MetricCard } from "@/components/ui/metric-card/metric-card";
 import QueryState from "@/components/ui/query-state/query-state";
 import { StatusChip, type StatusChipTone } from "@/components/ui/status-chip/status-chip";
@@ -21,14 +22,12 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Boxes,
   Brain,
   CalendarClock,
   CheckCircle2,
   Clock3,
   ChevronDown,
   ChevronRight,
-  CircleDashed,
   Database,
   FileJson,
   Filter,
@@ -52,7 +51,7 @@ import { useTrainingModelOutletContext } from "./_training-detail";
 
 type FilterMode = "all" | "active" | "trained" | "draft" | "withTask";
 type SortMode = "created" | "score" | "name";
-type BlockKey = "metrics" | "loss" | "lr" | "metadata" | "classes" | "compare";
+type BlockKey = "metrics" | "loss" | "lr" | "metadata" | "classes";
 type SeriesSource = "live" | "checkpoint" | "artifact" | "summary" | "empty";
 
 type ChartDefinition = {
@@ -325,7 +324,7 @@ function CollapsibleBlock({
 }) {
   return (
     <section className={s.block}>
-      <button className={s.blockHeader} type="button" onClick={() => onToggle(id)}>
+      <Button unstyled className={s.blockHeader} onClick={() => onToggle(id)}>
         <span className={s.blockHeaderTitle}>
           <Icon />
           <span>
@@ -334,7 +333,7 @@ function CollapsibleBlock({
           </span>
         </span>
         {open ? <ChevronDown /> : <ChevronRight />}
-      </button>
+      </Button>
       {open ? <div className={s.blockBody}>{children}</div> : null}
     </section>
   );
@@ -417,7 +416,7 @@ function ChartCard({ model, history, chart }: { model: MlModel | null; history?:
               <line x1={activePoint.x} x2={activePoint.x} y1={chartBox.padTop} y2={chartBox.height - chartBox.padBottom} />
               <circle cx={activePoint.x} cy={activePoint.y} r="5" />
               <g transform={`translate(${Math.min(Math.max(activePoint.x - 62, chartBox.padLeft), chartBox.width - 142)}, ${Math.max(activePoint.y - 46, chartBox.padTop)})`}>
-                <rect width="124" height="38" rx="9" />
+                <rect width="124" height="38" rx="4" />
                 <text x="10" y="15">epoch {activePoint.epoch}</text>
                 <text x="10" y="30">{chartValueLabel(chart, activePoint.value)}</text>
               </g>
@@ -482,41 +481,12 @@ function JobPanel({ task, groupId }: { task: ReturnType<typeof getModelTask> | n
       <p className={s.chartLegend}>{task.stage ?? "stage"} · {task.message ?? task.error ?? "No message"}</p>
       {isActiveTaskStatus(task.status) ? (
         <div className={s.jobActions}>
-          <button className={s.softButton} type="button" onClick={() => pauseTask.mutate(task.id)}><Pause /> Pause</button>
-          <button className={s.softButton} type="button" onClick={() => resumeTask.mutate(task.id)}><Play /> Resume</button>
-          <button className={s.dangerButton} type="button" onClick={() => cancelTask.mutate(task.id)}><AlertTriangle /> Cancel</button>
+          <Button className={s.softButton} variant="ghost" size="sm" icon={Pause} onClick={() => pauseTask.mutate(task.id)}>Pause</Button>
+          <Button className={s.softButton} variant="ghost" size="sm" icon={Play} onClick={() => resumeTask.mutate(task.id)}>Resume</Button>
+          <Button className={s.dangerButton} variant="danger" size="sm" icon={AlertTriangle} onClick={() => cancelTask.mutate(task.id)}>Cancel</Button>
         </div>
       ) : null}
     </article>
-  );
-}
-
-function CompareBlock({ models }: { models: MlModel[] }) {
-  if (!models.length) return <div className={s.emptyMain}>Выбери модели слева, чтобы сравнить их метрики.</div>;
-
-  return (
-    <div className={s.compareGrid}>
-      {models.map((model) => (
-        <article className={s.compareCard} key={model.id}>
-          <header>
-            <strong>{modelName(model)}</strong>
-            {model.is_active ? <StatusChip tone="accent" icon={ShieldCheck}>active</StatusChip> : null}
-          </header>
-          <div className={s.compareBars}>
-            {metricKeys.map((key) => {
-              const value = metricValue(model, key);
-              return (
-                <div className={s.compareRow} key={key}>
-                  <span>{key}</span>
-                  <div className={s.compareBar}><div className={s.compareFill} style={{ "--compare-width": `${(value ?? 0) * 100}%` } as CSSProperties} /></div>
-                  <strong>{formatPercent(value)}</strong>
-                </div>
-              );
-            })}
-          </div>
-        </article>
-      ))}
-    </div>
   );
 }
 
@@ -528,14 +498,12 @@ export function Component() {
   const [filter, setFilter] = useState<FilterMode>("all");
   const [sort, setSort] = useState<SortMode>("created");
   const [railOpen, setRailOpen] = useState(true);
-  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [openBlocks, setOpenBlocks] = useState<Record<BlockKey, boolean>>({
     metrics: true,
-    loss: true,
+    loss: false,
     lr: false,
     metadata: true,
-    classes: true,
-    compare: false,
+    classes: false,
   });
 
   const canTrain = group.stats.standards_count > 0 && group.stats.images_count > 0 && group.stats.annotated_images_count > 0 && group.stats.segment_classes_count > 0;
@@ -553,7 +521,6 @@ export function Component() {
   const modelQuery = useGetModel(selectedFromList?.id ?? null);
   const selectedModel = modelQuery.data ?? selectedFromList;
   const selectedTask = selectedModel ? taskFor(selectedModel, tasks) : null;
-  const selectedCompareModels = compareIds.map((id) => models.find((model) => model.id === id)).filter((model): model is MlModel => Boolean(model));
 
   const metricsQuery = useQuery({
     queryKey: ["training", "metrics-history", selectedModel?.id ?? "none"],
@@ -580,9 +547,6 @@ export function Component() {
     return Array.from(groups.entries());
   }, [filteredModels]);
 
-  const toggleCompare = (model: MlModel) => {
-    setCompareIds((current) => current.includes(model.id) ? current.filter((id) => id !== model.id) : [...current, model.id].slice(-4));
-  };
 
   const toggleBlock = (id: BlockKey) => setOpenBlocks((current) => ({ ...current, [id]: !current[id] }));
   const metricHistory = metricsQuery.data;
@@ -593,7 +557,7 @@ export function Component() {
         <div className={s.headerCopy}>
           <span className={s.eyebrow}><Brain /> Train / Models</span>
           <h1>Модели</h1>
-          <p>Выбор активной модели, запуск обучения и анализ качества по live/checkpoint метрикам.</p>
+          <p>Активная модель, обучение и интерактивные метрики качества.</p>
         </div>
 
         <div className={s.headerStats}>
@@ -617,8 +581,7 @@ export function Component() {
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск модели..." />
             </label>
             <div className={s.railControls}>
-              <button className={s.collapseButton} type="button" onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Скрыть" : "Модели"}</button>
-              {compareIds.length ? <button className={s.softButton} type="button" onClick={() => setCompareIds([])}>Сбросить</button> : null}
+              <Button className={s.collapseButton} variant="ghost" size="sm" onClick={() => setRailOpen((value) => !value)}>{railOpen ? "Скрыть" : "Модели"}</Button>
             </div>
           </div>
 
@@ -627,23 +590,23 @@ export function Component() {
               <div className={s.filters}>
                 <Filter />
                 {(["all", "active", "trained", "draft", "withTask"] as FilterMode[]).map((value) => (
-                  <button key={value} className={`${s.filterButton} ${filter === value ? s.filterActive : ""}`} type="button" onClick={() => setFilter(value)}>
+                  <Button key={value} className={`${s.filterButton} ${filter === value ? s.filterActive : ""}`} variant={filter === value ? "primary" : "ghost"} size="sm" onClick={() => setFilter(value)}>
                     {value === "all" ? "Все" : value === "active" ? "Активные" : value === "trained" ? "Обученные" : value === "draft" ? "Черновики" : "Задания"}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
               <div className={s.sortBar}>
                 <SlidersHorizontal />
                 {(["created", "score", "name"] as SortMode[]).map((value) => (
-                  <button key={value} className={`${s.sortButton} ${sort === value ? s.sortActive : ""}`} type="button" onClick={() => setSort(value)}>{value === "created" ? "Новые" : value === "score" ? "Качество" : "Имя"}</button>
+                  <Button key={value} className={`${s.sortButton} ${sort === value ? s.sortActive : ""}`} variant={sort === value ? "primary" : "ghost"} size="sm" onClick={() => setSort(value)}>{value === "created" ? "Новые" : value === "score" ? "Качество" : "Имя"}</Button>
                 ))}
               </div>
 
               <div className={s.railSummary}>
                 <div className={s.miniStat}><span>Всего</span><strong>{models.length}</strong></div>
                 <div className={s.miniStat}><span>Активные</span><strong>{models.filter((model) => model.is_active).length}</strong></div>
-                <div className={s.miniStat}><span>Сравнение</span><strong>{compareIds.length}</strong></div>
+                <div className={s.miniStat}><span>Обученные</span><strong>{models.filter((model) => model.trained_at || model.weights_path).length}</strong></div>
               </div>
 
               <div className={s.railBody}>
@@ -654,7 +617,6 @@ export function Component() {
                         <header className={s.familyHeader}><span>{family}</span><b>{items.length}</b></header>
                         {items.map((model) => {
                           const selected = selectedModel?.id === model.id;
-                          const checked = compareIds.includes(model.id);
                           const statusMeta = modelStatusMeta(model, tasks);
                           return (
                             <article key={model.id} className={`${s.modelCard} ${selected ? s.modelCardActive : ""}`} role="button" tabIndex={0} onClick={() => navigate(paths.trainingModel(group.id, model.id))} onKeyDown={(event) => { if (event.key === "Enter") navigate(paths.trainingModel(group.id, model.id)); }}>
@@ -673,9 +635,6 @@ export function Component() {
                               <span className={s.railControls}>
                                 <StatusChip tone="neutral">{model.architecture}</StatusChip>
                                 <StatusChip tone="neutral">{model.num_classes ?? "—"} classes</StatusChip>
-                                <button className={s.iconButton} type="button" title="Compare" onClick={(event) => { event.stopPropagation(); toggleCompare(model); }}>
-                                  {checked ? <CheckCircle2 /> : <CircleDashed />}
-                                </button>
                               </span>
                             </article>
                           );
@@ -711,9 +670,9 @@ export function Component() {
                     </div>
                   </div>
                   <div className={s.modelActions}>
-                    {!selectedModel.is_active ? <button className={s.primaryButton} type="button" onClick={() => activateModel.mutate(selectedModel.id)}><ShieldCheck /> Сделать активной</button> : null}
-                    <button className={s.softButton} type="button" onClick={() => metricsQuery.refetch()}><RefreshCw /> Обновить метрики</button>
-                    <button className={s.dangerButton} type="button" onClick={() => window.confirm("Удалить модель?") && deleteModel.mutate(selectedModel.id)}><Trash2 /> Удалить</button>
+                    {!selectedModel.is_active ? <Button className={s.primaryButton} icon={ShieldCheck} onClick={() => activateModel.mutate(selectedModel.id)}>Сделать активной</Button> : null}
+                    <Button className={s.softButton} variant="ghost" icon={RefreshCw} onClick={() => metricsQuery.refetch()}>Обновить метрики</Button>
+                    <Button className={s.dangerButton} variant="danger" icon={Trash2} onClick={() => window.confirm("Удалить модель?") && deleteModel.mutate(selectedModel.id)}>Удалить</Button>
                   </div>
                 </section>
 
@@ -776,10 +735,6 @@ export function Component() {
                     ) : (
                       <div className={s.emptyMain}>Нет class metadata. Для импортированных моделей backend должен вернуть class_meta после анализа весов.</div>
                     )}
-                  </CollapsibleBlock>
-
-                  <CollapsibleBlock id="compare" title="Сравнение" description="Сравнение до четырёх выбранных моделей" icon={Boxes} open={openBlocks.compare} onToggle={toggleBlock}>
-                    <CompareBlock models={selectedCompareModels} />
                   </CollapsibleBlock>
                 </div>
               </>

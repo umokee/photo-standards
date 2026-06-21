@@ -1,4 +1,5 @@
 import { paths } from "@/app/paths";
+import Button from "@/components/ui/button/button";
 import QueryState from "@/components/ui/query-state/query-state";
 import { useGetGroups } from "@/page-components/groups/api/get-groups";
 import { CreateGroup } from "@/page-components/groups/components/create-group";
@@ -122,7 +123,7 @@ export function Component() {
                 <span>{normalizedQuery ? `Найдено ${filteredGroups.length}` : "Строка открывает обзор изделия"}</span>
               </div>
               {normalizedQuery ? (
-                <button className={s.groupsClearSearchV126} type="button" onClick={() => setQuery("")}>Сбросить поиск</button>
+                <Button className={s.groupsClearSearchV126} variant="ghost" size="sm" onClick={() => setQuery("")}>Сбросить поиск</Button>
               ) : null}
             </div>
 
@@ -191,7 +192,7 @@ export function Component() {
                     <Search />
                     <strong>Ничего не найдено</strong>
                     <span>По запросу «{normalizedQuery}» нет изделий.</span>
-                    <button className={s.groupsClearSearchV126} type="button" onClick={() => setQuery("")}>Сбросить поиск</button>
+                    <Button className={s.groupsClearSearchV126} variant="ghost" size="sm" onClick={() => setQuery("")}>Сбросить поиск</Button>
                   </div>
                 )}
               </QueryState>

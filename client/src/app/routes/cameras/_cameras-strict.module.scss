@@ -278,7 +278,7 @@
   width: 58px;
   height: 58px;
   border: 1px solid $line;
-  border-radius: 18px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $accent;
 
@@ -314,7 +314,7 @@
   width: 44px;
   height: 44px;
   border: 1px solid $line;
-  border-radius: 16px;
+  border-radius: $radius-control;
   background: $surface2;
   color: $accent;
 

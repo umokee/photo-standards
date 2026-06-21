@@ -3,11 +3,11 @@
 /* Common component primitives for old generic UI pieces.
    Semantic color tokens are owned by _theme-runtime.scss. */
 :root {
-  --vc-control-height: 34px;
-  --vc-control-height-lg: 38px;
-  --vc-radius-control: 10px;
-  --vc-radius: 14px;
-  --vc-radius-lg: 18px;
+  --vc-control-height: 32px;
+  --vc-control-height-lg: 34px;
+  --vc-radius-control: 4px;
+  --vc-radius: 4px;
+  --vc-radius-lg: 4px;
 
   --vc-control-bg: var(--vc-surface);
   --vc-control-bg-focus: var(--vc-surface);
